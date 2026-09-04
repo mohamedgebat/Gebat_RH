@@ -201,21 +201,21 @@ const EmployeeLogin = () => {
 
         </div>
 
-        {/* Right Side: Exactly 50% Half Screen - Zoomed Out Crisp GEBAT Hero Photo */}
-        <div className="relative min-h-[380px] lg:min-h-full overflow-hidden bg-slate-900 flex items-end p-6 lg:p-8 border-l border-slate-200">
+        {/* Right Side: Exactly 50% Half Screen - Bright Crisp GEBAT Hero Photo */}
+        <div className="relative min-h-[380px] lg:min-h-full overflow-hidden bg-slate-100 flex items-end p-6 lg:p-8 border-l border-slate-200">
           
-          {/* Zoomed-Out Crisp Photo Fitting Entire Scene & Subject */}
+          {/* Ultra Clear Front & Center Visible Hero Photo */}
           <img 
             src="/gebat_hero_bg.jpg" 
-            alt="Chantier GEBAT avec le vrai logo et professionnelle souriante en plan large" 
-            className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-500"
+            alt="Ingénieure souriante GEBAT visible en plan moyen sur le chantier" 
+            className="absolute inset-0 w-full h-full object-cover object-[center_25%] transition-all duration-500"
           />
 
-          {/* Bottom Gradient for Text Overlay Readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent"></div>
+          {/* Light Bottom Gradient Only for Badge Readability */}
+          <div className="absolute inset-x-0 bottom-0 h-36 bg-gradient-to-t from-slate-950/70 via-slate-950/20 to-transparent"></div>
 
           {/* Overlay Badge at Bottom Right */}
-          <div className="relative z-10 bg-slate-900/85 backdrop-blur-md border border-amber-400/40 p-4 rounded-2xl max-w-sm space-y-1 shadow-2xl text-white">
+          <div className="relative z-10 bg-slate-900/80 backdrop-blur-md border border-amber-400/40 p-4 rounded-2xl max-w-sm space-y-1 shadow-2xl text-white">
             <div className="flex items-center gap-2 text-xs font-black text-[#E5A110]">
               <span className="w-2.5 h-2.5 rounded-full bg-[#E5A110] animate-pulse"></span> Portail Salarié GEBAT
             </div>
