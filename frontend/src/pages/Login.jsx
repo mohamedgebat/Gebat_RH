@@ -80,11 +80,11 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50/40 to-slate-200 flex items-center justify-center p-4 lg:p-8 font-sans selection:bg-[#E5A110] selection:text-slate-950">
       
-      {/* Main GEBAT Card Container */}
-      <div className="max-w-7xl w-full rounded-[2.5rem] bg-white shadow-2xl border border-slate-200 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[680px]">
+      {/* Main GEBAT Card Container (Exact 50/50 Half Screen Split) */}
+      <div className="max-w-6xl w-full rounded-[2.5rem] bg-white shadow-2xl border border-slate-200 overflow-hidden grid grid-cols-1 lg:grid-cols-2 min-h-[640px]">
         
-        {/* Left Side: Clean Form Container (5 cols on large screens for maximum photo space) */}
-        <div className="lg:col-span-5 p-8 lg:p-12 bg-white text-slate-900 flex flex-col justify-between relative z-10 space-y-6">
+        {/* Left Side: 50% Form Container */}
+        <div className="p-8 lg:p-12 bg-white text-slate-900 flex flex-col justify-between relative z-10 space-y-6">
           
           {/* Top Logo Header */}
           <div className="space-y-3">
@@ -104,7 +104,7 @@ const Login = () => {
           </div>
 
           {/* Center Hero Headline */}
-          <div className="space-y-2.5 my-1">
+          <div className="space-y-2 my-1">
             <h2 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight tracking-tight">
               Pilotez vos équipes.<br />
               <span className="text-[#E5A110]">Maîtrisez chaque détail.</span>
@@ -112,7 +112,7 @@ const Login = () => {
             <p className="text-xs text-slate-600 font-semibold leading-relaxed">
               La plateforme intégrée pour gérer vos collaborateurs BTP de la planification à la performance.
             </p>
-            <div className="w-12 h-1.5 bg-[#E5A110] rounded-full mt-2"></div>
+            <div className="w-12 h-1 bg-[#E5A110] rounded-full mt-2"></div>
           </div>
 
           {/* Segmented Tab Switcher (RH vs Salarié) */}
@@ -144,10 +144,10 @@ const Login = () => {
           </div>
 
           {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-3.5">
             
             {/* Field 1: Email / Username */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700">
                 {activeTab === 'admin' ? "Adresse e-mail" : "Identifiant Employé GEBAT"}
               </label>
@@ -158,14 +158,14 @@ const Login = () => {
                   required 
                   value={username} 
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 outline-none focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 transition-all placeholder:text-slate-400"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 outline-none focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 transition-all placeholder:text-slate-400"
                   placeholder={activeTab === 'admin' ? "nom@gebat-sa.com" : "employe@gebat-sa.com ou 001"}
                 />
               </div>
             </div>
 
             {/* Field 2: Password + Forgot Link */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-700">Mot de passe</label>
                 <a href="#" onClick={(e) => { e.preventDefault(); alert('Veuillez contacter votre administrateur GEBAT RH.'); }} className="text-xs text-[#2563EB] hover:underline font-bold">
@@ -179,7 +179,7 @@ const Login = () => {
                   required 
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-11 py-3.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 outline-none focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 transition-all placeholder:text-slate-400"
+                  className="w-full pl-11 pr-11 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 outline-none focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 transition-all placeholder:text-slate-400"
                   placeholder="••••••••••••"
                 />
                 <button 
@@ -193,7 +193,7 @@ const Login = () => {
             </div>
 
             {/* Remember Me Checkbox */}
-            <div className="flex items-center text-xs pt-1">
+            <div className="flex items-center text-xs pt-0.5">
               <label className="flex items-center gap-2 cursor-pointer select-none text-slate-700 font-bold">
                 <input 
                   type="checkbox" 
@@ -207,7 +207,7 @@ const Login = () => {
 
             {/* Error Display */}
             {err && (
-              <div className="bg-rose-50 text-rose-700 p-3.5 rounded-xl text-xs font-bold border border-rose-200 flex items-center gap-2 animate-fadeIn">
+              <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-xs font-bold border border-rose-200 flex items-center gap-2 animate-fadeIn">
                 <ShieldCheck size={16} className="shrink-0 text-rose-600" />
                 <span>{err}</span>
               </div>
@@ -217,7 +217,7 @@ const Login = () => {
             <button 
               disabled={loading}
               type="submit" 
-              className="w-full py-4 bg-gradient-to-r from-[#E5A110] via-[#F59E0B] to-[#D97706] text-slate-950 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 hover:brightness-105 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-gradient-to-r from-[#E5A110] via-[#F59E0B] to-[#D97706] text-slate-950 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 hover:brightness-105 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin"></div>
@@ -231,7 +231,7 @@ const Login = () => {
           </form>
 
           {/* Quick Fill Demo Badges */}
-          <div className="pt-1">
+          <div>
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Accès rapide Démo GEBAT</span>
               <span className="text-[9px] font-bold text-[#2563EB] flex items-center gap-1">
@@ -242,7 +242,7 @@ const Login = () => {
               <button 
                 type="button" 
                 onClick={() => handleFillDemo('admin')}
-                className="p-2.5 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl text-slate-800 text-left transition-all"
+                className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl text-slate-800 text-left transition-all"
               >
                 <div className="text-[10px] font-black uppercase text-[#2563EB]">Compte RH</div>
                 <div className="text-[9px] text-slate-500 font-semibold">admin@sirh.ci</div>
@@ -250,7 +250,7 @@ const Login = () => {
               <button 
                 type="button" 
                 onClick={() => handleFillDemo('employee')}
-                className="p-2.5 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl text-slate-800 text-left transition-all"
+                className="p-2 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl text-slate-800 text-left transition-all"
               >
                 <div className="text-[10px] font-black uppercase text-amber-600">Employé</div>
                 <div className="text-[9px] text-slate-500 font-semibold">employe@sirh.ci</div>
@@ -270,21 +270,21 @@ const Login = () => {
 
         </div>
 
-        {/* Right Side: Crisp, Fully Visible Hero Construction Image (7 cols) */}
-        <div className="lg:col-span-7 relative min-h-[420px] lg:min-h-full overflow-hidden bg-slate-100 flex items-end p-8 border-l border-slate-200">
+        {/* Right Side: Exactly 50% Half Screen - Zoomed Out Crisp GEBAT Hero Photo */}
+        <div className="relative min-h-[380px] lg:min-h-full overflow-hidden bg-slate-900 flex items-end p-6 lg:p-8 border-l border-slate-200">
           
-          {/* Crisp, Perfectly Framed Hero Photo */}
+          {/* Zoomed-Out Crisp Photo Fitting Entire Scene & Subject */}
           <img 
             src="/gebat_hero_bg.jpg" 
-            alt="Chantier GEBAT avec le vrai logo et professionnelle souriante" 
-            className="absolute inset-0 w-full h-full object-cover object-[72%_center]"
+            alt="Chantier GEBAT avec le vrai logo et professionnelle souriante en plan large" 
+            className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-500"
           />
 
-          {/* Subtle Bottom Gradient for Text Badge Readability (No washing out on left!) */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>
+          {/* Bottom Gradient for Text Overlay Readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent"></div>
 
           {/* Overlay Badge at Bottom Right */}
-          <div className="relative z-10 bg-slate-900/85 backdrop-blur-md border border-amber-400/40 p-4 rounded-2xl max-w-md space-y-1 shadow-2xl text-white">
+          <div className="relative z-10 bg-slate-900/85 backdrop-blur-md border border-amber-400/40 p-4 rounded-2xl max-w-sm space-y-1 shadow-2xl text-white">
             <div className="flex items-center gap-2 text-xs font-black text-[#E5A110]">
               <span className="w-2.5 h-2.5 rounded-full bg-[#E5A110] animate-pulse"></span> GEBAT RH & Capital Humain
             </div>

@@ -52,11 +52,11 @@ const EmployeeLogin = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50/40 to-slate-200 flex items-center justify-center p-4 lg:p-8 font-sans selection:bg-[#E5A110] selection:text-slate-950">
       
-      {/* Main GEBAT Card Container */}
-      <div className="max-w-7xl w-full rounded-[2.5rem] bg-white shadow-2xl border border-slate-200 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[680px]">
+      {/* Main GEBAT Card Container (Exact 50/50 Half Screen Split) */}
+      <div className="max-w-6xl w-full rounded-[2.5rem] bg-white shadow-2xl border border-slate-200 overflow-hidden grid grid-cols-1 lg:grid-cols-2 min-h-[640px]">
         
-        {/* Left Side: Clean Form Container (5 cols) */}
-        <div className="lg:col-span-5 p-8 lg:p-12 bg-white text-slate-900 flex flex-col justify-between relative z-10 space-y-6">
+        {/* Left Side: 50% Form Container */}
+        <div className="p-8 lg:p-12 bg-white text-slate-900 flex flex-col justify-between relative z-10 space-y-6">
           
           {/* Top Logo Header */}
           <div className="space-y-3">
@@ -88,10 +88,10 @@ const EmployeeLogin = () => {
           </div>
 
           {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-3.5">
             
             {/* Field 1: Username */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="text-xs font-bold text-slate-700">Identifiant Salarié GEBAT</label>
               <div className="relative flex items-center group">
                 <User className="absolute left-4 text-slate-400 group-focus-within:text-[#2563EB] transition-colors" size={18} />
@@ -100,14 +100,14 @@ const EmployeeLogin = () => {
                   required 
                   value={username} 
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 outline-none focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 transition-all placeholder:text-slate-400"
+                  className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 outline-none focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 transition-all placeholder:text-slate-400"
                   placeholder="employe@gebat-sa.com ou 001"
                 />
               </div>
             </div>
 
             {/* Field 2: Password */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-slate-700">Mot de passe</label>
                 <a href="#" onClick={(e) => { e.preventDefault(); alert('Veuillez contacter le Service RH GEBAT.'); }} className="text-xs text-[#2563EB] hover:underline font-bold">
@@ -121,7 +121,7 @@ const EmployeeLogin = () => {
                   required 
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-11 pr-11 py-3.5 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 outline-none focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 transition-all placeholder:text-slate-400"
+                  className="w-full pl-11 pr-11 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold text-slate-900 outline-none focus:bg-white focus:border-[#2563EB] focus:ring-2 focus:ring-[#2563EB]/20 transition-all placeholder:text-slate-400"
                   placeholder="••••••••••••"
                 />
                 <button 
@@ -135,7 +135,7 @@ const EmployeeLogin = () => {
             </div>
 
             {/* Remember Me Checkbox */}
-            <div className="flex items-center text-xs pt-1">
+            <div className="flex items-center text-xs pt-0.5">
               <label className="flex items-center gap-2 cursor-pointer select-none text-slate-700 font-bold">
                 <input 
                   type="checkbox" 
@@ -149,7 +149,7 @@ const EmployeeLogin = () => {
 
             {/* Error Display */}
             {error && (
-              <div className="bg-rose-50 text-rose-700 p-3.5 rounded-xl text-xs font-bold border border-rose-200 flex items-center gap-2 animate-fadeIn">
+              <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-xs font-bold border border-rose-200 flex items-center gap-2 animate-fadeIn">
                 <ShieldCheck size={16} className="shrink-0 text-rose-600" />
                 <span>{error}</span>
               </div>
@@ -159,7 +159,7 @@ const EmployeeLogin = () => {
             <button 
               disabled={loading}
               type="submit" 
-              className="w-full py-4 bg-gradient-to-r from-[#E5A110] via-[#F59E0B] to-[#D97706] text-slate-950 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 hover:brightness-105 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-gradient-to-r from-[#E5A110] via-[#F59E0B] to-[#D97706] text-slate-950 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/25 hover:brightness-105 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <div className="w-5 h-5 border-2 border-slate-950/30 border-t-slate-950 rounded-full animate-spin"></div>
@@ -173,11 +173,11 @@ const EmployeeLogin = () => {
           </form>
 
           {/* Quick Fill Demo Button */}
-          <div className="pt-1">
+          <div>
             <button 
               type="button" 
               onClick={handleFillDemo}
-              className="w-full p-3 bg-amber-50/80 hover:bg-amber-100/80 border border-amber-200 rounded-xl text-slate-900 text-left transition-all flex items-center justify-between"
+              className="w-full p-2.5 bg-amber-50/80 hover:bg-amber-100/80 border border-amber-200 rounded-xl text-slate-900 text-left transition-all flex items-center justify-between"
             >
               <div>
                 <div className="text-[10px] font-black uppercase text-amber-700">Compte Salarié Démo</div>
@@ -201,21 +201,21 @@ const EmployeeLogin = () => {
 
         </div>
 
-        {/* Right Side: Crisp, Fully Visible Hero Construction Image (7 cols) */}
-        <div className="lg:col-span-7 relative min-h-[420px] lg:min-h-full overflow-hidden bg-slate-100 flex items-end p-8 border-l border-slate-200">
+        {/* Right Side: Exactly 50% Half Screen - Zoomed Out Crisp GEBAT Hero Photo */}
+        <div className="relative min-h-[380px] lg:min-h-full overflow-hidden bg-slate-900 flex items-end p-6 lg:p-8 border-l border-slate-200">
           
-          {/* Crisp, Perfectly Framed Hero Photo */}
+          {/* Zoomed-Out Crisp Photo Fitting Entire Scene & Subject */}
           <img 
             src="/gebat_hero_bg.jpg" 
-            alt="Chantier GEBAT avec le vrai logo et professionnelle souriante" 
-            className="absolute inset-0 w-full h-full object-cover object-[72%_center]"
+            alt="Chantier GEBAT avec le vrai logo et professionnelle souriante en plan large" 
+            className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-500"
           />
 
-          {/* Subtle Bottom Gradient for Text Badge Readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>
+          {/* Bottom Gradient for Text Overlay Readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/85 via-slate-950/20 to-transparent"></div>
 
           {/* Overlay Badge at Bottom Right */}
-          <div className="relative z-10 bg-slate-900/85 backdrop-blur-md border border-amber-400/40 p-4 rounded-2xl max-w-md space-y-1 shadow-2xl text-white">
+          <div className="relative z-10 bg-slate-900/85 backdrop-blur-md border border-amber-400/40 p-4 rounded-2xl max-w-sm space-y-1 shadow-2xl text-white">
             <div className="flex items-center gap-2 text-xs font-black text-[#E5A110]">
               <span className="w-2.5 h-2.5 rounded-full bg-[#E5A110] animate-pulse"></span> Portail Salarié GEBAT
             </div>
