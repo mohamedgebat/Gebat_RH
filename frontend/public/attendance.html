@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Borne de Pointage - SIRH CI</title>
+    <title>Borne de Pointage - Gebat RH</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -11,8 +11,8 @@
                 extend: {
                     colors: {
                         ci: {
-                            green: '#009E49',
-                            orange: '#F77F00',
+                            green: '#2563EB',
+                            orange: '#E5A110',
                             text: '#2d3436',
                             muted: '#636e72',
                             bg: '#f0f2f5',
@@ -28,21 +28,21 @@
     <style>
         .terminal-bg { background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%); }
         .num-pad button:active { transform: scale(0.9); background: #2d3436; }
-        .glow-green { box-shadow: 0 0 20px rgba(0, 158, 73, 0.3); }
-        .glow-orange { box-shadow: 0 0 20px rgba(247, 127, 0, 0.3); }
-        .bg-gradient-ci { background: linear-gradient(135deg, #009E49 0%, #F77F00 100%); }
+        .glow-green { box-shadow: 0 0 20px rgba(37, 99, 235, 0.3); }
+        .glow-orange { box-shadow: 0 0 20px rgba(229, 161, 16, 0.3); }
+        .bg-gradient-ci { background: linear-gradient(135deg, #2563EB 0%, #E5A110 100%); }
     </style>
 </head>
 <body class="terminal-bg min-h-screen flex items-center justify-center p-4 overflow-hidden">
     <div class="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
         <div class="text-center lg:text-left space-y-8">
             <div class="inline-flex items-center gap-4">
-                <div class="w-16 h-16 bg-gradient-ci rounded-3xl flex items-center justify-center shadow-2xl transform rotate-3">
-                    <i data-lucide="clock" class="w-10 h-10 text-white"></i>
+                <div class="bg-white p-2 rounded-3xl shadow-2xl border-2 border-[#E5A110] flex items-center justify-center shrink-0">
+                    <img src="/gebat_logo.png" alt="GEBAT Logo" class="h-12 object-contain" />
                 </div>
                 <div>
-                    <h1 class="text-4xl font-black text-white tracking-tighter">POINTAGE</h1>
-                    <p class="text-ci-green font-bold tracking-[0.3em] uppercase text-xs">SIRH Côte d'Ivoire</p>
+                    <h1 class="text-4xl font-black text-white tracking-tighter flex items-center gap-2">GEBAT <span class="text-[#E5A110]">RH</span></h1>
+                    <p class="text-[#2563EB] font-bold tracking-[0.3em] uppercase text-xs">Terminal Borne de Pointage</p>
                 </div>
             </div>
             <div class="space-y-2">

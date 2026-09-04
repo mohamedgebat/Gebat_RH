@@ -160,12 +160,12 @@ const AttendanceTerminal = () => {
         {/* Left Side: Branding & Big Digital Clock */}
         <div className="text-center lg:text-left space-y-8">
           <div className="inline-flex items-center gap-4">
-            <div className="w-16 h-16 bg-gradient-to-br from-[#009E49] to-[#F77F00] rounded-3xl flex items-center justify-center shadow-2xl transform rotate-3">
-              <Clock className="w-10 h-10 text-white" />
+            <div className="bg-white p-2 rounded-3xl shadow-2xl border-2 border-[#E5A110] flex items-center justify-center shrink-0">
+              <img src="/gebat_logo.png" alt="GEBAT Logo" className="h-12 object-contain" />
             </div>
             <div>
-              <h1 className="text-4xl font-black text-white tracking-tighter">POINTAGE</h1>
-              <p className="text-[#009E49] font-bold tracking-[0.3em] uppercase text-xs">SIRH Côte d'Ivoire</p>
+              <h1 className="text-4xl font-black text-white tracking-tighter flex items-center gap-2">GEBAT <span className="text-[#E5A110]">RH</span></h1>
+              <p className="text-[#2563EB] font-bold tracking-[0.3em] uppercase text-xs">Terminal Borne de Pointage</p>
             </div>
           </div>
 

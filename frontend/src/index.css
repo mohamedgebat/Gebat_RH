@@ -8,10 +8,14 @@
 
 body {
   margin: 0;
-  background-color: #f0f2f5;
-  color: #2d3436;
+  background-color: #f8fafc;
+  color: #1e293b;
 }
 
-.bg-gradient-ci {
-  background: linear-gradient(135deg, #009E49 0%, #F77F00 100%);
+.bg-gradient-ci, .bg-gradient-gebat {
+  background: linear-gradient(135deg, #2563EB 0%, #E5A110 100%);
+}
+
+.border-gebat-frame {
+  border: 2px solid #E5A110;
 }
