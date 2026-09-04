@@ -580,22 +580,23 @@ function ensureDemoUsers() {
     db.serialize(() => {
         db.get("SELECT count(*) as count FROM companies", (err, row) => {
             if (row && row.count === 0) {
-                console.log("Seeding default company tenant...");
-                db.run(`INSERT INTO companies (id, name, rc, cc, cnps_employer, address, phone, email, tenantSlug, saasPlan, maxEmployees)
-                        VALUES (1, 'ENTREPRISE IVOIRIENNE SAS', 'CI-ABJ-03-2024-B12-12345', '2401234 A', '12345678', 'Abidjan, Plateau', '+225 27 20 00 00 00', 'contact@entreprise.ci', 'demo.sirh-civ.ci', 'BUSINESS PRO', 100)`);
+                console.log("Seeding default company tenant GEBAT SA...");
+                db.run(`INSERT INTO companies (id, name, rc, cc, cnps_employer, address, phone, email, logo, primaryColor, secondaryColor, tenantSlug, saasPlan, maxEmployees)
+                        VALUES (1, 'La Générale du Bâtiment et des Travaux Publics (GEBAT SA)', 'CI-ABJ-2008-B-5234', '0815234 G', '235890', 'Cocody II Plateaux 7e Tranche, Rue L139, 06 BP 235 Abidjan 06', '+225 27 22 52 34 23', 'gebat@gebat-sa.com', '/gebat_logo.png', '#2563EB', '#E5A110', 'gebat-sa.ci', 'BUSINESS PRO', 250)`);
             }
         });
 
         db.get("SELECT count(*) as count FROM departments", (err, row) => {
             if (row && row.count === 0) {
-                console.log("Seeding default departments...");
+                console.log("Seeding 7 official GEBAT directions...");
                 const depts = [
-                    [1, 'DEP-01', 'Comptabilité & Finance', 'Gestion comptable, paie et fiscalité DGI'],
-                    [1, 'DEP-02', 'Ressources Humaines', 'Recrutement, contrats, congés et climat social'],
-                    [1, 'DEP-03', 'Sécurité & Hygiène', 'Surveillance des sites et prévention des risques'],
-                    [1, 'DEP-04', 'Direction Générale', 'Pilotage stratégique et gouvernance'],
-                    [1, 'DEP-05', 'BTP & Travaux', 'Gestion des chantiers et opérations'],
-                    [1, 'DEP-06', 'Logistique & Transport', 'Gestion de la flotte et des expéditions']
+                    [1, 'DIR-01', 'Direction Générale', 'Gouvernance, pilotage stratégique et relations institutionnelles GEBAT'],
+                    [1, 'DIR-02', 'Direction Administrative et des Ressources Humaines', 'Capital humain, recrutement, paie, contrats et administration du personnel'],
+                    [1, 'DIR-03', 'Direction Technique', 'Bureau d\'études intégré, ingénierie, conception et suivi de travaux BTP'],
+                    [1, 'DIR-04', 'Direction des Achats', 'Sourcing, approvisionnement en matériaux et gestion fournisseurs'],
+                    [1, 'DIR-05', 'Direction de la Logistique', 'Parc d\'engins, gestion du carburant et maintenance du matériel'],
+                    [1, 'DIR-06', 'Direction Contrôle QHSE', 'Qualité, Hygiène, Sécurité et respect des normes environnementales'],
+                    [1, 'DIR-07', 'Direction Comptabilité et Facturation', 'Comptabilité générale, facturation travaux, décomptes et fiscalité']
                 ];
                 const stmt = db.prepare(`INSERT INTO departments (company_id, code, nom, description) VALUES (?,?,?,?)`);
                 depts.forEach(d => stmt.run(d));
@@ -605,12 +606,15 @@ function ensureDemoUsers() {
 
         db.get("SELECT count(*) as count FROM positions", (err, row) => {
             if (row && row.count === 0) {
-                console.log("Seeding default positions...");
+                console.log("Seeding default GEBAT positions...");
                 const positions = [
-                    [1, 'Comptable Senior', 'Comptabilité & Finance', 400000, 800000, 'Gestion paie et comptabilité'],
-                    [1, 'Responsable RH', 'Ressources Humaines', 500000, 1000000, 'Direction des Ressources Humaines'],
-                    [1, 'Agent de Sécurité', 'Sécurité & Hygiène', 150000, 300000, 'Surveillance des sites'],
-                    [1, 'Chef de Chantier', 'BTP & Travaux', 350000, 750000, 'Suivi et conduite de travaux']
+                    [1, 'Directeur Administratif & RH', 'Direction Administrative et des Ressources Humaines', 1200000, 2500000, 'Direction et gestion du capital humain GEBAT'],
+                    [1, 'Chef de Projet BTP / Ingénieur Civil', 'Direction Technique', 800000, 1800000, 'Ingénierie, conduite et suivi des grands chantiers'],
+                    [1, 'Ingénieur Bureau d\'Études', 'Direction Technique', 700000, 1500000, 'Calculs de structures et plans hydrauliques'],
+                    [1, 'Responsable QHSE', 'Direction Contrôle QHSE', 600000, 1400000, 'Contrôle qualité et sécurité sur les chantiers'],
+                    [1, 'Responsable Logistique & Engins', 'Direction de la Logistique', 500000, 1200000, 'Gestion de la flotte et du parc matériel'],
+                    [1, 'Chef Comptable', 'Direction Comptabilité et Facturation', 700000, 1500000, 'Comptabilité générale et facturation décomptes'],
+                    [1, 'Acheteur BTP Senior', 'Direction des Achats', 500000, 1100000, 'Négociation et commandes de matériaux']
                 ];
                 const stmt = db.prepare(`INSERT INTO positions (company_id, titre, departement, salaireMin, salaireMax, description) VALUES (?,?,?,?,?,?)`);
                 positions.forEach(p => stmt.run(p));
@@ -682,8 +686,8 @@ function seedData() {
     console.log("Seeding rich Ivory Coast data...");
     
     // 1. Seed Settings
-    db.run(`INSERT INTO settings (id, companyName, rc, cc, cnps_employer, address, phone, email) 
-            VALUES (1, 'ENTREPRISE IVOIRIENNE SAS', 'CI-ABJ-03-2024-B12-12345', '2401234 A', '12345678', 'Abidjan, Plateau, Avenue Marchand', '+225 27 20 00 00 00', 'contact@entreprise.ci')`);
+    db.run(`INSERT INTO settings (id, companyName, rc, cc, cnps_employer, address, phone, email, logo, primaryColor, secondaryColor, slogan) 
+            VALUES (1, 'La Générale du Bâtiment et des Travaux Publics (GEBAT SA)', 'CI-ABJ-2008-B-5234', '0815234 G', '235890', 'Cocody II Plateaux 7e Tranche, Rue L139, 06 BP 235 Abidjan 06', '+225 27 22 52 34 23', 'gebat@gebat-sa.com', '/gebat_logo.png', '#2563EB', '#E5A110', 'Constructeur d''Infrastructures & Capital Humain')`);
 
     // 2. Seed 12 Employees
     const emps = [
