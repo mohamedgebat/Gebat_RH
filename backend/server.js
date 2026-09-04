@@ -1631,15 +1631,161 @@ app.patch('/api/assessments/:id', authenticateToken, validateIdParam('id'), auth
     });
 });
 
-app.get('/api/admin/assessments/:id', authenticateToken, validateIdParam('id'), authorizeRoles('admin'), async (req, res) => {
+// --- MOTEUR INTELLIGENT DE NOTIFICATIONS RH & CHANTIERS ---
+async function generateSmartNotifications() {
     try {
-        const assessment = await queryAll("SELECT * FROM assessments WHERE id = ?", [req.params.id]);
-        if (!assessment || assessment.length === 0) return sendError(res, 404, 'Test introuvable', 'NOT_FOUND');
-        const questions = await queryAll("SELECT * FROM assessment_questions WHERE assessment_id = ?", [req.params.id]);
-        res.json({ ...assessment[0], questions });
-    } catch (error) {
-        sendError(res, 500, error.message, 'DATABASE_ERROR');
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        // 1. Détection des Contrats à Échéance (CDD / Intermédiaires sous 60 jours)
+        const contracts = await queryAll(`
+            SELECT c.*, e.nom, e.prenoms 
+            FROM contracts c 
+            JOIN employees e ON c.empId = e.id 
+            WHERE c.fin IS NOT NULL AND c.fin != '' AND c.statut = 'Actif' AND c.is_deleted = 0
+        `);
+
+        for (const contract of contracts) {
+            const endDate = new Date(contract.fin);
+            const today = new Date();
+            const diffDays = Math.ceil((endDate - today) / (1000 * 60 * 60 * 24));
+            
+            if (diffDays <= 60 && diffDays >= -5) {
+                const isUrgent = diffDays <= 15;
+                const title = isUrgent ? `🚨 Fin de Contrat Imminente (${diffDays} j)` : `📜 Échéance de Contrat Proche (${diffDays} j)`;
+                const type = isUrgent ? 'urgente' : 'importante';
+                const message = `Le contrat ${contract.type} de ${contract.nom} ${contract.prenoms} arrive à échéance le ${contract.fin}. Planifiez le renouvellement ou l'issue de contrat.`;
+                
+                // Insérer ou mettre à jour la notification
+                const existing = await queryAll(`SELECT id FROM notifications WHERE title = ? AND message = ?`, [title, message]);
+                if (existing.length === 0) {
+                    await queryRun(`INSERT INTO notifications (company_id, title, message, type, is_read, created_at) VALUES (1, ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+                        [title, message, type]);
+                }
+            }
+        }
+
+        // 2. Détection des Demandes de Congés en Attente
+        const pendingLeaves = await queryAll(`
+            SELECT l.*, e.nom, e.prenoms 
+            FROM leaves l 
+            JOIN employees e ON l.empId = e.id 
+            WHERE l.statut = 'En attente' AND l.is_deleted = 0
+        `);
+
+        for (const leave of pendingLeaves) {
+            const title = `🌴 Demande de Congé à Valider`;
+            const message = `${leave.nom} ${leave.prenoms} demande un congé (${leave.type}) du ${leave.debut} au ${leave.fin}. Validation RH requise.`;
+            const existing = await queryAll(`SELECT id FROM notifications WHERE title = ? AND message = ?`, [title, message]);
+            if (existing.length === 0) {
+                await queryRun(`INSERT INTO notifications (company_id, title, message, type, is_read, created_at) VALUES (1, ?, ?, 'importante', 0, CURRENT_TIMESTAMP)`,
+                    [title, message]);
+            }
+        }
+
+        // 3. Détection des Demandes d'Attestations RH
+        const pendingCerts = await queryAll(`
+            SELECT id, nom, prenoms, attestationTravail, attestationSalaire, attestationStage 
+            FROM employees 
+            WHERE is_deleted = 0 AND (attestationTravail = 1 OR attestationSalaire = 1 OR attestationStage = 1)
+        `);
+
+        for (const certEmp of pendingCerts) {
+            const typesStr = [
+                certEmp.attestationTravail ? 'Travail' : null,
+                certEmp.attestationSalaire ? 'Salaire' : null,
+                certEmp.attestationStage ? 'Stage' : null
+            ].filter(Boolean).join(', ');
+
+            const title = `📑 Demande d'Attestation RH (${typesStr})`;
+            const message = `${certEmp.nom} ${certEmp.prenoms} a sollicité la génération d'une attestation de ${typesStr}.`;
+            const existing = await queryAll(`SELECT id FROM notifications WHERE title = ? AND message = ?`, [title, message]);
+            if (existing.length === 0) {
+                await queryRun(`INSERT INTO notifications (company_id, title, message, type, is_read, created_at) VALUES (1, ?, ?, 'importante', 0, CURRENT_TIMESTAMP)`,
+                    [title, message]);
+            }
+        }
+
+        // 4. Détection des Procédures Disciplinaires Actives
+        const activeDisc = await queryAll(`
+            SELECT d.*, e.nom, e.prenoms 
+            FROM disciplinary d 
+            JOIN employees e ON d.empId = e.id 
+            WHERE d.statut = 'En cours'
+        `);
+
+        for (const disc of activeDisc) {
+            const title = `⚖️ Procédure Disciplinaire Ouverte`;
+            const message = `Dossier disciplinaire (${disc.faute}) concernant ${disc.nom} ${disc.prenoms}. Convocation ou sanction en attente.`;
+            const existing = await queryAll(`SELECT id FROM notifications WHERE title = ? AND message = ?`, [title, message]);
+            if (existing.length === 0) {
+                await queryRun(`INSERT INTO notifications (company_id, title, message, type, is_read, created_at) VALUES (1, ?, ?, 'urgente', 0, CURRENT_TIMESTAMP)`,
+                    [title, message]);
+            }
+        }
+
+        // 5. Détection des Demandes d'Avances sur Salaire
+        const pendingAdvances = await queryAll(`
+            SELECT a.*, e.nom, e.prenoms 
+            FROM advances a 
+            JOIN employees e ON a.empId = e.id 
+            WHERE a.statut = 'En attente'
+        `);
+
+        for (const adv of pendingAdvances) {
+            const title = `💰 Avance sur Salaire à Traiter`;
+            const message = `${adv.nom} ${adv.prenoms} sollicite une avance de ${adv.montant ? adv.montant.toLocaleString('fr-FR') : 0} F CFA.`;
+            const existing = await queryAll(`SELECT id FROM notifications WHERE title = ? AND message = ?`, [title, message]);
+            if (existing.length === 0) {
+                await queryRun(`INSERT INTO notifications (company_id, title, message, type, is_read, created_at) VALUES (1, ?, ?, 'importante', 0, CURRENT_TIMESTAMP)`,
+                    [title, message]);
+            }
+        }
+
+    } catch (err) {
+        console.error("Erreur lors de la génération intelligente des notifications:", err);
     }
+}
+
+// --- ENDPOINTS NOTIFICATIONS INTELLIGENTES ---
+app.get('/api/notifications', authenticateToken, async (req, res) => {
+    try {
+        await generateSmartNotifications();
+        const rows = await queryAll(`
+            SELECT * FROM notifications 
+            ORDER BY 
+                CASE type 
+                    WHEN 'urgente' THEN 1 
+                    WHEN 'importante' THEN 2 
+                    ELSE 3 
+                END, 
+                created_at DESC 
+            LIMIT 50
+        `);
+        res.json(rows);
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.put('/api/notifications/:id/read', authenticateToken, validateIdParam('id'), (req, res) => {
+    db.run("UPDATE notifications SET is_read = 1 WHERE id = ?", [req.params.id], function(err) {
+        if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+        res.json({ message: 'Notification marquée comme lue' });
+    });
+});
+
+app.put('/api/notifications/read-all', authenticateToken, (req, res) => {
+    db.run("UPDATE notifications SET is_read = 1", [], function(err) {
+        if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+        res.json({ message: 'Toutes les notifications ont été marquées comme lues' });
+    });
+});
+
+app.delete('/api/notifications/:id', authenticateToken, validateIdParam('id'), (req, res) => {
+    db.run("DELETE FROM notifications WHERE id = ?", [req.params.id], function(err) {
+        if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+        res.json({ message: 'Notification supprimée' });
+    });
 });
 
 // --- DEMARRAGE DU SERVEUR ---
