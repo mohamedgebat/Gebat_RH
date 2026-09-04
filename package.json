@@ -1,0 +1,13 @@
+{
+  "name": "sirh-ivoire",
+  "version": "1.0.0",
+  "description": "SIRH Côte d'Ivoire - Système d'Information des Ressources Humaines",
+  "scripts": {
+    "start": "cd backend && npm start",
+    "backend": "cd backend && npm start",
+    "install-all": "cd backend && npm install"
+  },
+  "keywords": ["sirh", "hris", "cote-divoire", "payroll"],
+  "author": "",
+  "license": "ISC"
+}

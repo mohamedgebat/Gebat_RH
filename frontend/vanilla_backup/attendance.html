@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Borne de Pointage - SIRH CI</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23009E49%22/><path d=%22M30 40h40v30H30z%22 fill=%22white%22/><path d=%22M40 30h20v10H40z%22 fill=%22%23F77F00%22/></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .terminal-bg { background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%); }
+        .num-pad button:active { transform: scale(0.9); background: #2d3436; }
+        .glow-green { box-shadow: 0 0 20px rgba(46, 204, 113, 0.3); }
+        .glow-orange { box-shadow: 0 0 20px rgba(230, 126, 34, 0.3); }
+    </style>
+</head>
+<body class="terminal-bg min-h-screen flex items-center justify-center p-4 overflow-hidden">
+    <div class="max-w-4xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+        
+        <!-- Left: Branding & Clock -->
+        <div class="text-center lg:text-left space-y-8 animate-fadeIn">
+            <div class="inline-flex items-center gap-4">
+                <div class="w-16 h-16 bg-gradient-ci rounded-3xl flex items-center justify-center shadow-2xl transform rotate-3">
+                    <i data-lucide="clock" class="w-10 h-10 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-4xl font-black text-white tracking-tighter">POINTAGE</h1>
+                    <p class="text-ci-green font-bold tracking-[0.3em] uppercase text-xs">SIRH Côte d'Ivoire</p>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <div id="currentTime" class="text-7xl md:text-9xl font-black text-white tracking-tighter tabular-nums">00:00</div>
+                <div id="currentSeconds" class="text-2xl font-bold text-ci-green/50 tabular-nums">00</div>
+                <div id="currentDate" class="text-xl font-medium text-white/40 uppercase tracking-widest pt-4">Samedi 13 Juin 2026</div>
+            </div>
+
+            <div class="hidden lg:block pt-12">
+                <p class="text-white/20 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                    <i data-lucide="map-pin" class="w-4 h-4"></i> Terminal Sécurisé - Zone : Abidjan Plateau
+                </p>
+            </div>
+        </div>
+
+        <!-- Right: Interface -->
+        <div class="bg-white rounded-[40px] shadow-2xl p-8 lg:p-12 relative animate-scaleIn">
+            <div id="successOverlay" class="absolute inset-0 bg-ci-green z-50 rounded-[40px] flex flex-col items-center justify-center text-white hidden animate-fadeIn">
+                <div class="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6">
+                    <i data-lucide="check" class="w-12 h-12"></i>
+                </div>
+                <h3 class="text-3xl font-black mb-2">MERCI !</h3>
+                <p id="userNameLabel" class="text-xl opacity-90 font-medium">Kouamé Jean-Baptiste</p>
+                <p id="actionLabel" class="mt-4 px-6 py-2 bg-white/10 rounded-full text-sm font-bold tracking-widest uppercase">Entrée enregistrée</p>
+            </div>
+
+            <div class="space-y-8">
+                <div class="text-center space-y-2">
+                    <h2 class="text-2xl font-black text-ci-text">IDENTIFICATION</h2>
+                    <p class="text-ci-muted text-sm font-medium">Saisissez votre matricule ou badge</p>
+                </div>
+
+                <div class="relative">
+                    <input type="text" id="matriculeDisplay" readonly placeholder="--- --- ---" class="w-full text-center py-6 bg-ci-bg border-none rounded-3xl text-3xl font-black tracking-[0.2em] text-ci-text placeholder:text-ci-border">
+                </div>
+
+                <!-- Virtual Num Pad -->
+                <div class="grid grid-cols-3 gap-4 num-pad">
+                    ${[1,2,3,4,5,6,7,8,9].map(n => `<button onclick="tapNum('${n}')" class="h-16 rounded-2xl bg-ci-bg text-2xl font-black text-ci-text hover:bg-ci-border transition-all">${n}</button>`).join('')}
+                    <button onclick="tapClear()" class="h-16 rounded-2xl bg-red-50 text-ci-danger font-black text-sm uppercase tracking-widest">Effacer</button>
+                    <button onclick="tapNum('0')" class="h-16 rounded-2xl bg-ci-bg text-2xl font-black text-ci-text hover:bg-ci-border transition-all">0</button>
+                    <button onclick="tapDelete()" class="h-16 rounded-2xl bg-ci-bg text-ci-text flex items-center justify-center"><i data-lucide="delete" class="w-6 h-6"></i></button>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6 pt-4">
+                    <button onclick="processPointage('IN')" class="group flex flex-col items-center gap-3 p-6 bg-white border-2 border-ci-green rounded-3xl hover:bg-ci-green transition-all glow-green">
+                        <i data-lucide="log-in" class="w-8 h-8 text-ci-green group-hover:text-white transition-colors"></i>
+                        <span class="font-black text-ci-green group-hover:text-white uppercase tracking-widest text-xs">Arrivée</span>
+                    </button>
+                    <button onclick="processPointage('OUT')" class="group flex flex-col items-center gap-3 p-6 bg-white border-2 border-ci-orange rounded-3xl hover:bg-ci-orange transition-all glow-orange">
+                        <i data-lucide="log-out" class="w-8 h-8 text-ci-orange group-hover:text-white transition-colors"></i>
+                        <span class="font-black text-ci-orange group-hover:text-white uppercase tracking-widest text-xs">Départ</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-8 text-center">
+                <a href="login.html" class="text-xs font-bold text-ci-muted hover:text-ci-text transition-colors flex items-center justify-center gap-2">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> QUITTER LE TERMINAL
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+        let currentInput = "";
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('currentTime').innerText = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', ' : ');
+            document.getElementById('currentSeconds').innerText = now.getSeconds().toString().padStart(2, '0');
+            document.getElementById('currentDate').innerText = now.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function tapNum(n) {
+            if (currentInput.length < 8) {
+                currentInput += n;
+                updateDisplay();
+            }
+        }
+        function tapClear() { currentInput = ""; updateDisplay(); }
+        function tapDelete() { currentInput = currentInput.slice(0,-1); updateDisplay(); }
+        function updateDisplay() {
+            document.getElementById('matriculeDisplay').value = currentInput || "--- --- ---";
+        }
+
+        async function processPointage(type) {
+            // Pour la démo, si vide on simule EMP-001
+            const val = currentInput || "1";
+            const matricule = "EMP-" + val.padStart(3, '0');
+            
+            try {
+                const response = await fetch(`${API_URL}/sirh-data`);
+                const data = await response.json();
+                const emp = data.employees.find(e => e.matricule === matricule);
+
+                if (!emp) {
+                    alert('Matricule inconnu !');
+                    tapClear();
+                    return;
+                }
+
+                data.attendance.push({
+                    id: Date.now(),
+                    empId: emp.id,
+                    matricule: emp.matricule,
+                    nom: `${emp.nom} ${emp.prenoms}`,
+                    type: type,
+                    timestamp: new Date().toISOString(),
+                    site: emp.site
+                });
+
+                await fetch(`${API_URL}/sirh-data`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+
+                showSuccess(emp.nom + " " + emp.prenoms, type);
+            } catch (error) {
+                alert('Erreur serveur.');
+            }
+        }
+
+        function showSuccess(name, type) {
+            const overlay = document.getElementById('successOverlay');
+            document.getElementById('userNameLabel').innerText = name;
+            document.getElementById('actionLabel').innerText = type === 'IN' ? 'Entrée enregistrée' : 'Départ enregistré';
+            overlay.classList.remove('hidden');
+            overlay.classList.add('bg-' + (type === 'IN' ? 'ci-green' : 'ci-orange'));
+            
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                tapClear();
+            }, 3000);
+        }
+
+        lucide.createIcons();
+    </script>
+</body>
+</html>

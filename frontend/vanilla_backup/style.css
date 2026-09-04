@@ -1,0 +1,127 @@
+/* Custom Styles for SIRH Côte d'Ivoire */
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #b2bec3; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #636e72; }
+
+/* Navigation Active State */
+.nav-btn.active {
+    background: linear-gradient(135deg, #F77F00, #009E49);
+    color: white !important;
+    font-weight: 500;
+}
+.nav-btn.active i { color: white; }
+
+/* Card Hover */
+.stat-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(0,0,0,0.1);
+}
+
+/* Table Rows */
+.table-row {
+    transition: background-color 0.15s ease;
+}
+.table-row:hover {
+    background-color: #f8f9fa;
+}
+
+/* Progress Bar Animation */
+.progress-fill {
+    transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Pulse animation for notifications */
+@keyframes pulse-dot {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.5); opacity: 0.5; }
+}
+.pulse-dot { animation: pulse-dot 2s infinite; }
+
+/* Badge Colors */
+.badge-success { background: #e8f5e9; color: #009E49; }
+.badge-warning { background: #fff3e0; color: #F77F00; }
+.badge-danger { background: #ffeaea; color: #d63031; }
+.badge-info { background: #e3f2fd; color: #0984e3; }
+.badge-muted { background: #f0f2f5; color: #636e72; }
+
+/* Gradient backgrounds */
+.bg-gradient-ci {
+    background: linear-gradient(135deg, #F77F00 0%, #009E49 100%);
+}
+.bg-gradient-ci-reverse {
+    background: linear-gradient(135deg, #009E49 0%, #F77F00 100%);
+}
+
+/* Print styles */
+@media print {
+    .no-print { display: none !important; }
+    body { background: white; }
+    aside { display: none !important; }
+    main { margin: 0 !important; padding: 0 !important; }
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+    .stat-card { margin-bottom: 0.5rem; }
+}
+
+/* Smooth transitions for module switching */
+#moduleContainer {
+    animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Toast notification */
+.toast {
+    animation: slideIn 0.3s ease, slideOut 0.3s ease 2.7s;
+}
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideOut {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+}
+
+/* Payroll slip styles */
+.payroll-slip {
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+}
+.payroll-slip table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.payroll-slip td {
+    padding: 2px 4px;
+}
+
+/* Chart bars */
+.chart-bar {
+    transition: height 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Contract template */
+.contract-content h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid #dfe6e9;
+    padding-bottom: 0.25rem;
+}
+.contract-content p {
+    margin-bottom: 0.5rem;
+    text-align: justify;
+}

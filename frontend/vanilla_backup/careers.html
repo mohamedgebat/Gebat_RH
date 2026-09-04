@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace Carrières - SIRH CI</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23009E49%22/><path d=%22M30 40h40v30H30z%22 fill=%22white%22/><path d=%22M40 30h20v10H40z%22 fill=%22%23F77F00%22/></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ci: {
+                            orange: '#F77F00',
+                            green: '#009E49',
+                            greenDark: '#007A38',
+                            orangeLight: '#FFF3E0',
+                            greenLight: '#E8F5E9',
+                            dark: '#1a1a2e',
+                            bg: '#f8fafc',
+                            text: '#0f172a',
+                            muted: '#64748b',
+                            border: '#e2e8f0',
+                        }
+                    },
+                    fontFamily: { inter: ['Inter', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    <style>
+        .hero-mesh {
+            background-color: #0f172a;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(0, 158, 73, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(247, 127, 0, 0.1) 0px, transparent 50%);
+        }
+        .job-card { transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .job-card:hover { transform: translateY(-12px); }
+        .glass { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.5); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+        .card-header-gradient { height: 6px; width: 100%; position: absolute; top: 0; left: 0; }
+        .file-input-wrapper { position: relative; overflow: hidden; display: inline-block; width: 100%; }
+        .file-input-wrapper input[type=file] { position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    </style>
+</head>
+<body class="font-inter bg-ci-bg min-h-screen text-ci-text">
+
+    <!-- Header / Navbar -->
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-ci-border">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-gradient-to-br from-ci-green to-ci-greenDark rounded-2xl flex items-center justify-center shadow-lg transform rotate-3">
+                    <i data-lucide="briefcase" class="w-6 h-6 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="font-black text-2xl tracking-tighter leading-none">CARRIÈRES</h1>
+                    <p class="text-[10px] font-bold text-ci-green uppercase tracking-[0.2em] mt-1">SIRH Côte d'Ivoire</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-6">
+                <a href="login.html" class="hidden md:flex items-center gap-2 text-sm font-bold text-ci-muted hover:text-ci-text transition-colors">
+                    <i data-lucide="user-circle" class="w-5 h-5"></i> Espace Candidat
+                </a>
+                <a href="index.html" class="px-6 py-2.5 bg-ci-text text-white text-xs font-black rounded-full hover:bg-black transition-all shadow-md uppercase tracking-widest">Admin</a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-mesh py-24 text-white relative overflow-hidden text-center">
+        <div class="max-w-5xl mx-auto px-6 relative z-10">
+            <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full text-[11px] font-black uppercase tracking-[0.2em] mb-8 border border-white/10">
+                <span class="w-2.5 h-2.5 bg-ci-green rounded-full animate-pulse shadow-[0_0_10px_#009E49]"></span>
+                Opportunités de Carrière
+            </div>
+            <h2 class="text-6xl md:text-8xl font-black mb-8 tracking-tighter leading-[0.9] drop-shadow-2xl">VOTRE FUTUR <br><span class="text-ci-green italic">COMMENCE ICI</span>.</h2>
+            <p class="text-xl text-white/50 max-w-2xl mx-auto font-semibold leading-relaxed">Découvrez des postes passionnants dans la finance, la sécurité, le BTP et l'éducation.</p>
+        </div>
+        <div class="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-ci-bg to-transparent"></div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-6 -mt-12 pb-24 relative z-20">
+        <!-- Search & Filter Bar -->
+        <div class="bg-white rounded-[3rem] shadow-2xl p-8 border border-ci-border flex flex-col lg:flex-row gap-8 mb-20">
+            <div class="flex-1 relative group">
+                <i data-lucide="search" class="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-ci-muted group-focus-within:text-ci-green transition-colors"></i>
+                <input type="text" id="jobSearch" oninput="filterOffers()" placeholder="Quel poste recherchez-vous ?" class="w-full pl-16 pr-6 py-6 bg-ci-bg border-none rounded-[2rem] text-sm font-black focus:ring-4 focus:ring-ci-green/10 transition-all outline-none">
+            </div>
+            <div class="flex flex-wrap gap-4">
+                <div class="relative min-w-[200px]">
+                    <i data-lucide="map-pin" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ci-muted"></i>
+                    <select id="siteFilter" onchange="filterOffers()" class="w-full pl-12 pr-10 py-6 bg-ci-bg border-none rounded-[2rem] text-xs font-black text-ci-text uppercase tracking-widest focus:ring-4 focus:ring-ci-green/10 cursor-pointer outline-none appearance-none">
+                        <option value="">Toute la CI</option>
+                        <option value="abidjan">Abidjan</option>
+                        <option value="bouake">Bouaké</option>
+                        <option value="sanpedro">San Pedro</option>
+                    </select>
+                </div>
+                <div class="relative min-w-[200px]">
+                    <i data-lucide="layers" class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ci-muted"></i>
+                    <select id="deptFilter" onchange="filterOffers()" class="w-full pl-12 pr-10 py-6 bg-ci-bg border-none rounded-[2rem] text-xs font-black text-ci-text uppercase tracking-widest focus:ring-4 focus:ring-ci-green/10 cursor-pointer outline-none appearance-none">
+                        <option value="">Tous les Secteurs</option>
+                        <option>Comptabilité</option>
+                        <option>Sécurité</option>
+                        <option>BTP</option>
+                        <option>Pédagogie</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Jobs Grid -->
+        <div id="offersContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+            <!-- Loading -->
+            <div class="col-span-full py-20 text-center">
+                <div class="animate-spin w-12 h-12 border-4 border-ci-green border-t-transparent rounded-full mx-auto mb-6"></div>
+                <p class="text-ci-muted font-black tracking-[0.3em] uppercase text-xs">Chargement des offres...</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Detail Modal -->
+    <div id="detailModal" class="fixed inset-0 bg-ci-text/95 backdrop-blur-md hidden z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[4rem] w-full max-w-5xl shadow-2xl animate-scaleIn overflow-hidden max-h-[90vh] flex flex-col">
+            <div class="p-10 lg:p-16 overflow-y-auto custom-scrollbar">
+                <div class="flex items-start justify-between mb-12">
+                    <div class="flex items-center gap-8">
+                        <div id="modalIconContainer" class="w-24 h-24 rounded-[2.5rem] flex items-center justify-center border-4 border-ci-bg shadow-xl">
+                            <i data-lucide="briefcase" class="w-12 h-12 text-white"></i>
+                        </div>
+                        <div>
+                            <h3 id="detailPoste" class="text-4xl font-black tracking-tighter text-ci-text">Poste</h3>
+                            <div class="flex flex-wrap gap-4 mt-4">
+                                <span id="detailBadge" class="px-5 py-2 bg-ci-bg text-ci-text text-[11px] font-black rounded-full uppercase tracking-widest">CDI</span>
+                                <span id="detailLoc" class="px-5 py-2 bg-ci-bg text-ci-muted text-[11px] font-black rounded-full uppercase tracking-widest">Abidjan</span>
+                                <span id="detailDept" class="px-5 py-2 bg-ci-bg text-ci-muted text-[11px] font-black rounded-full uppercase tracking-widest">Secteur</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="closeDetailModal()" class="w-14 h-14 bg-ci-bg rounded-[1.5rem] flex items-center justify-center text-ci-muted hover:text-ci-text hover:rotate-90 transition-all">
+                        <i data-lucide="x" class="w-8 h-8"></i>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-16">
+                    <div class="lg:col-span-2 space-y-12">
+                        <div>
+                            <h4 class="text-xs font-black text-ci-text uppercase tracking-[0.4em] mb-6 flex items-center gap-4">
+                                <span class="w-12 h-1 bg-ci-green rounded-full"></span> À propos du rôle
+                            </h4>
+                            <p class="text-lg text-ci-muted leading-relaxed font-medium">Nous recherchons un profil dynamique et motivé pour rejoindre nos équipes multi-sites en Côte d'Ivoire.</p>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-black text-ci-text uppercase tracking-[0.4em] mb-6 flex items-center gap-4">
+                                <span class="w-12 h-1 bg-ci-green rounded-full"></span> Vos Missions
+                            </h4>
+                            <ul class="space-y-4 text-ci-muted font-semibold">
+                                <li class="flex items-center gap-4"><i data-lucide="zap" class="w-5 h-5 text-ci-orange"></i> Analyse et optimisation opérationnelle.</li>
+                                <li class="flex items-center gap-4"><i data-lucide="zap" class="w-5 h-5 text-ci-orange"></i> Gestion et coordination d'équipes.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="space-y-8">
+                        <div class="p-10 bg-ci-bg rounded-[3rem] border border-ci-border">
+                            <h4 class="text-xs font-black text-ci-text uppercase tracking-[0.4em] mb-10 text-center">Récapitulatif</h4>
+                            <div class="space-y-6">
+                                <div class="flex justify-between border-b border-ci-border pb-4"><span class="text-[10px] font-black text-ci-muted uppercase">Expérience</span><span class="text-xs font-black text-ci-text">2 - 5 ans</span></div>
+                                <div class="flex justify-between border-b border-ci-border pb-4"><span class="text-[10px] font-black text-ci-muted uppercase">Contrat</span><span class="text-xs font-black text-ci-text">CDI</span></div>
+                                <div class="flex justify-between"><span class="text-[10px] font-black text-ci-muted uppercase">Dispo.</span><span class="text-xs font-black text-ci-green">Immédiate</span></div>
+                            </div>
+                        </div>
+                        <button onclick="openApplyFromDetail()" class="w-full py-6 bg-ci-text text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.3em] shadow-2xl hover:bg-black transition-all transform hover:-translate-y-2">POSTULER MAINTENANT</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Modal -->
+    <div id="applyModal" class="fixed inset-0 bg-ci-text/98 backdrop-blur-2xl hidden z-[110] flex items-center justify-center p-4">
+        <div class="bg-white rounded-[4rem] w-full max-w-xl shadow-2xl animate-scaleIn overflow-hidden max-h-[95vh] flex flex-col">
+            <div class="px-12 py-10 bg-ci-text text-white flex items-center justify-between">
+                <div>
+                    <h3 id="modalPoste" class="text-4xl font-black tracking-tighter uppercase">Postuler</h3>
+                    <p class="text-white/40 text-[10px] font-black uppercase tracking-[0.4em] mt-2">Dossier de candidature</p>
+                </div>
+                <button onclick="closeApplyModal()" class="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center hover:bg-white/20 transition-all"><i data-lucide="x" class="w-8 h-8"></i></button>
+            </div>
+            <form id="applyForm" onsubmit="submitApplication(event)" class="p-12 space-y-8 overflow-y-auto custom-scrollbar">
+                <input type="hidden" id="offerId" name="offerId">
+                
+                <div class="space-y-3">
+                    <label class="text-[11px] font-black text-ci-text uppercase tracking-widest ml-1 text-ci-green">Identité *</label>
+                    <input type="text" name="nom_complet" required placeholder="Nom et Prénoms" class="w-full px-8 py-5 bg-ci-bg border-none rounded-[2rem] text-sm font-black focus:ring-4 focus:ring-ci-green/20 outline-none">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    <div class="space-y-3">
+                        <label class="text-[11px] font-black text-ci-text uppercase tracking-widest ml-1 text-ci-green">Email *</label>
+                        <input type="email" name="email" required placeholder="contact@exemple.ci" class="w-full px-8 py-5 bg-ci-bg border-none rounded-[2rem] text-sm font-black focus:ring-4 focus:ring-ci-green/20 outline-none">
+                    </div>
+                    <div class="space-y-3">
+                        <label class="text-[11px] font-black text-ci-text uppercase tracking-widest ml-1 text-ci-green">Téléphone *</label>
+                        <input type="tel" name="telephone" required placeholder="+225" class="w-full px-8 py-5 bg-ci-bg border-none rounded-[2rem] text-sm font-black focus:ring-4 focus:ring-ci-green/20 outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    <div class="space-y-3">
+                        <label class="text-[11px] font-black text-ci-text uppercase tracking-widest ml-1 text-ci-orange">Curriculum Vitae (CV) *</label>
+                        <div class="file-input-wrapper">
+                            <div id="cvLabel" class="w-full px-8 py-5 bg-ci-orangeLight border-2 border-dashed border-ci-orange rounded-[2rem] text-center text-xs font-black text-ci-orange uppercase tracking-widest flex items-center justify-center gap-2">
+                                <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+                                <span>Choisir mon CV</span>
+                            </div>
+                            <input type="file" name="cvFile" id="cvInput" required accept=".pdf,.doc,.docx" onchange="updateFileLabel(this, 'cvLabel', 'CV sélectionné')">
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <label class="text-[11px] font-black text-ci-text uppercase tracking-widest ml-1 text-ci-muted">Lettre de Motivation</label>
+                        <div class="file-input-wrapper">
+                            <div id="lmLabel" class="w-full px-8 py-5 bg-ci-bg border-2 border-dashed border-ci-border rounded-[2rem] text-center text-xs font-black text-ci-muted uppercase tracking-widest flex items-center justify-center gap-2">
+                                <i data-lucide="file-plus" class="w-5 h-5"></i>
+                                <span>Ajouter une lettre</span>
+                            </div>
+                            <input type="file" name="lmFile" id="lmInput" accept=".pdf,.doc,.docx" onchange="updateFileLabel(this, 'lmLabel', 'Lettre ajoutée')">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" id="submitBtn" class="w-full py-6 bg-ci-green text-white rounded-[2.5rem] font-black text-sm uppercase tracking-[0.4em] shadow-2xl hover:bg-ci-greenDark transition-all flex items-center justify-center gap-4 group mt-4">
+                    <span>TRANSMETTRE MON DOSSIER</span>
+                    <i data-lucide="send" class="w-6 h-6 group-hover:translate-x-2 transition-transform"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = '/api';
+        let allOffers = [];
+        let currentOffer = null;
+
+        const themes = {
+            'Comptabilité': { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', btn: 'bg-blue-600', iconBg: 'bg-blue-600' },
+            'Sécurité': { bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-200', btn: 'bg-orange-600', iconBg: 'bg-orange-600' },
+            'BTP': { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', btn: 'bg-emerald-600', iconBg: 'bg-emerald-600' },
+            'Pédagogie': { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200', btn: 'bg-purple-600', iconBg: 'bg-purple-600' },
+            'Ressources Humaines': { bg: 'bg-pink-50', text: 'text-pink-700', border: 'border-pink-200', btn: 'bg-pink-600', iconBg: 'bg-pink-600' },
+            'default': { bg: 'bg-slate-50', text: 'text-slate-700', border: 'border-slate-200', btn: 'bg-slate-800', iconBg: 'bg-slate-800' }
+        };
+
+        function updateFileLabel(input, labelId, successText) {
+            const label = document.getElementById(labelId);
+            if (input.files.length > 0) {
+                const fileName = input.files[0].name;
+                label.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5"></i> ${successText} (${fileName.substring(0, 10)}...)`;
+                label.classList.remove('bg-ci-bg', 'text-ci-muted', 'border-ci-border');
+                label.classList.add('bg-ci-greenLight', 'text-ci-green', 'border-ci-green');
+            }
+            lucide.createIcons();
+        }
+
+        async function loadOffers() {
+            try {
+                const response = await fetch(`${API_URL}/sirh-data`);
+                if (response.ok) {
+                    const data = await response.json();
+                    allOffers = (data.recruitment || []).filter(o => o.statut !== 'Clôturé');
+                    renderOffers(allOffers);
+                } else {
+                    document.getElementById('offersContainer').innerHTML = `<p class="col-span-full text-center py-20 font-black uppercase text-ci-danger">Erreur de chargement des offres.</p>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('offersContainer').innerHTML = `
+                    <div class="col-span-full bg-white border border-ci-border rounded-[2rem] p-10 text-center shadow-sm">
+                        <div class="w-14 h-14 bg-ci-orangeLight rounded-2xl mx-auto mb-5 flex items-center justify-center">
+                            <i data-lucide="wifi-off" class="w-7 h-7 text-ci-orange"></i>
+                        </div>
+                        <h3 class="text-xl font-black text-ci-text mb-2">Offres indisponibles</h3>
+                        <p class="text-ci-muted text-sm font-semibold">Impossible de contacter le serveur RH pour le moment.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+        }
+
+        function renderOffers(offers) {
+            const container = document.getElementById('offersContainer');
+            if (offers.length === 0) {
+                container.innerHTML = `<p class="col-span-full text-center py-20 font-black uppercase tracking-widest text-ci-muted">Aucune opportunité pour le moment.</p>`;
+                lucide.createIcons();
+                return;
+            }
+            container.innerHTML = offers.map(o => {
+                const theme = themes[o.departement] || themes.default;
+                return `
+                <div class="job-card ${theme.bg} rounded-[3rem] p-10 border-2 ${theme.border} relative overflow-hidden flex flex-col h-full group cursor-pointer shadow-sm hover:shadow-2xl" onclick="openDetailModal(${o.id})">
+                    <div class="card-header-gradient ${theme.btn}"></div>
+                    <div class="flex items-start justify-between mb-10">
+                        <div class="w-16 h-16 ${theme.iconBg} rounded-2xl flex items-center justify-center shadow-lg group-hover:rotate-6 transition-transform">
+                            <i data-lucide="zap" class="w-8 h-8 text-white"></i>
+                        </div>
+                        <span class="px-5 py-2 bg-white/80 backdrop-blur-md ${theme.text} text-[10px] font-black rounded-full uppercase tracking-widest border ${theme.border}">${o.type}</span>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-3xl font-black text-ci-text mb-4 tracking-tighter leading-[1] group-hover:text-ci-green transition-colors">${o.poste}</h3>
+                        <div class="flex flex-wrap items-center gap-4 text-[10px] font-black ${theme.text} mb-10 uppercase tracking-widest">
+                            <span class="bg-white/50 px-3 py-1.5 rounded-lg flex items-center gap-2"><i data-lucide="map-pin" class="w-4 h-4"></i>${o.site.toUpperCase()}</span>
+                            <span class="bg-white/50 px-3 py-1.5 rounded-lg flex items-center gap-2"><i data-lucide="layers" class="w-4 h-4"></i>${o.departement}</span>
+                        </div>
+                    </div>
+                    <div class="pt-10 border-t border-black/5 flex items-center justify-between mt-auto">
+                        <div class="flex flex-col">
+                            <span class="text-[9px] font-black opacity-40 uppercase tracking-widest">Candidats</span>
+                            <span class="text-lg font-black text-ci-text">${o.candidats} postulants</span>
+                        </div>
+                        <button class="w-16 h-16 ${theme.iconBg} text-white rounded-[1.5rem] flex items-center justify-center group-hover:scale-110 transition-all shadow-lg">
+                            <i data-lucide="chevron-right" class="w-8 h-8"></i>
+                        </button>
+                    </div>
+                </div>
+            `;}).join('');
+            lucide.createIcons();
+        }
+
+        function filterOffers() {
+            const query = document.getElementById('jobSearch').value.toLowerCase();
+            const site = document.getElementById('siteFilter').value.toLowerCase();
+            const dept = document.getElementById('deptFilter').value;
+            const filtered = allOffers.filter(o => {
+                const matchQuery = o.poste.toLowerCase().includes(query) || o.departement.toLowerCase().includes(query);
+                const matchSite = !site || o.site.toLowerCase() === site;
+                const matchDept = !dept || o.departement === dept;
+                return matchQuery && matchSite && matchDept;
+            });
+            renderOffers(filtered);
+        }
+
+        function openDetailModal(id) {
+            currentOffer = allOffers.find(o => o.id === id);
+            if (!currentOffer) return;
+            const theme = themes[currentOffer.departement] || themes.default;
+            
+            document.getElementById('detailPoste').innerText = currentOffer.poste;
+            document.getElementById('detailDept').innerText = currentOffer.departement;
+            document.getElementById('detailLoc').innerText = currentOffer.site.toUpperCase();
+            document.getElementById('detailBadge').innerText = currentOffer.type;
+            
+            const iconCont = document.getElementById('modalIconContainer');
+            iconCont.className = `w-24 h-24 rounded-[2.5rem] flex items-center justify-center border-4 border-ci-bg shadow-xl \${theme.iconBg}`;
+
+            document.getElementById('detailModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+            lucide.createIcons();
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detailModal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function openApplyFromDetail() {
+            closeDetailModal();
+            setTimeout(() => {
+                document.getElementById('offerId').value = currentOffer.id;
+                document.getElementById('modalPoste').innerText = currentOffer.poste;
+                document.getElementById('applyModal').classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                lucide.createIcons();
+            }, 300);
+        }
+
+        function closeApplyModal() {
+            document.getElementById('applyModal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // Helper to convert file to base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+            });
+        }
+
+        async function submitApplication(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const formData = new FormData(e.target);
+            btn.disabled = true;
+            btn.innerHTML = '<div class="w-8 h-8 border-[4px] border-white/30 border-t-white rounded-full animate-spin"></div>';
+
+            try {
+                const response = await fetch(`${API_URL}/sirh-data`);
+                if (!response.ok) throw new Error();
+                const data = await response.json();
+
+                const cvFile = document.getElementById('cvInput').files[0];
+                const lmFile = document.getElementById('lmInput').files[0];
+
+                const cvBase64 = cvFile ? await fileToBase64(cvFile) : null;
+                const lmBase64 = lmFile ? await fileToBase64(lmFile) : null;
+
+                await fetch(`${API_URL}/applications`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        offerId: currentOffer.id,
+                        nom: formData.get('nom_complet'),
+                        email: formData.get('email'),
+                        telephone: formData.get('telephone'),
+                        cv: cvBase64,
+                        lm: lmBase64,
+                        date: new Date().toISOString(),
+                        statut: 'Nouveau'
+                    })
+                });
+
+                alert('Votre candidature a été transmise avec succès !');
+                closeApplyModal();
+                e.target.reset();
+                // Reset labels
+                document.getElementById('cvLabel').innerHTML = '<i data-lucide="upload-cloud" class="w-5 h-5"></i><span>Choisir mon CV</span>';
+                document.getElementById('lmLabel').innerHTML = '<i data-lucide="file-plus" class="w-5 h-5"></i><span>Ajouter une lettre</span>';
+            } catch (error) {
+                alert("Erreur lors de l'envoi du dossier.");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<span>TRANSMETTRE MON DOSSIER</span><i data-lucide="send" class="w-6 h-6"></i>';
+                lucide.createIcons();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadOffers);
+    </script>
+</body>
+</html>

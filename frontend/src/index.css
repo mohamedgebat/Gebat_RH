@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background-color: #f0f2f5;
+  color: #2d3436;
+}
+
+.bg-gradient-ci {
+  background: linear-gradient(135deg, #009E49 0%, #F77F00 100%);
+}

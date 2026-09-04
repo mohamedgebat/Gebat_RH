@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - SIRH Côte d'Ivoire</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23009E49%22/><path d=%22M30 40h40v30H30z%22 fill=%22white%22/><path d=%22M40 30h20v10H40z%22 fill=%22%23F77F00%22/></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .login-bg {
+            background: radial-gradient(circle at top right, rgba(46, 204, 113, 0.1), transparent),
+                        radial-gradient(circle at bottom left, rgba(230, 126, 34, 0.1), transparent);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="bg-ci-bg min-h-screen flex items-center justify-center p-4 login-bg">
+    <div class="max-w-md w-full space-y-8 animate-fadeIn">
+        <div class="text-center">
+            <div class="inline-flex p-4 rounded-3xl bg-white shadow-xl mb-6 transform hover:rotate-6 transition-transform">
+                <div class="w-16 h-16 bg-gradient-ci rounded-2xl flex items-center justify-center shadow-inner">
+                    <i data-lucide="shield-check" class="w-10 h-10 text-white"></i>
+                </div>
+            </div>
+            <h1 class="text-4xl font-black text-ci-text tracking-tight">SIRH <span class="text-ci-green">CI</span></h1>
+            <p class="text-ci-muted mt-2 font-medium">Votre partenaire RH de confiance</p>
+        </div>
+
+        <div class="glass-card rounded-3xl shadow-2xl p-8 border border-white/20 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-ci"></div>
+            
+            <form onsubmit="handleLogin(event)" class="space-y-6">
+                <div>
+                    <label class="block text-sm font-bold text-ci-text mb-2 ml-1">Identifiant professionnel</label>
+                    <div class="group relative">
+                        <i data-lucide="mail" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-ci-muted group-focus-within:text-ci-green transition-colors"></i>
+                        <input type="text" id="username" required class="w-full pl-12 pr-4 py-3.5 bg-ci-bg border-2 border-transparent rounded-2xl text-sm focus:outline-none focus:border-ci-green focus:bg-white transition-all shadow-sm" placeholder="nom@entreprise.ci">
+                    </div>
+                </div>
+                
+                <div>
+                    <div class="flex items-center justify-between mb-2 ml-1">
+                        <label class="text-sm font-bold text-ci-text">Mot de passe</label>
+                        <a href="#" class="text-xs font-bold text-ci-orange hover:underline">Oublié ?</a>
+                    </div>
+                    <div class="group relative">
+                        <i data-lucide="lock" class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-ci-muted group-focus-within:text-ci-orange transition-colors"></i>
+                        <input type="password" id="password" required class="w-full pl-12 pr-12 py-3.5 bg-ci-bg border-2 border-transparent rounded-2xl text-sm focus:outline-none focus:border-ci-orange focus:bg-white transition-all shadow-sm" placeholder="••••••••">
+                        <button type="button" onclick="togglePassword()" class="absolute right-4 top-1/2 -translate-y-1/2 text-ci-muted hover:text-ci-text">
+                            <i data-lucide="eye" id="eyeIcon" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="errorMessage" class="hidden animate-shake bg-red-50 text-ci-danger p-3 rounded-xl text-xs font-bold border border-red-100 flex items-center gap-2">
+                    <i data-lucide="alert-circle" class="w-4 h-4"></i>
+                    <span>Identifiants invalides</span>
+                </div>
+
+                <button type="submit" id="loginBtn" class="w-full py-4 bg-ci-text text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-black transition-all transform active:scale-95 shadow-lg flex items-center justify-center gap-2 group">
+                    <span>Connexion</span>
+                    <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+                </button>
+            </form>
+
+            <div class="mt-10 pt-8 border-t border-ci-border">
+                <p class="text-[10px] text-ci-muted uppercase font-bold tracking-widest text-center mb-4">Accès Rapide Démo</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="quickFill('admin@sirh.ci', 'admin')" class="flex flex-col items-center gap-1 p-3 rounded-2xl hover:bg-ci-bg border border-transparent hover:border-ci-border transition-all group">
+                        <div class="w-10 h-10 bg-ci-greenLight rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i data-lucide="user-cog" class="w-5 h-5 text-ci-green"></i>
+                        </div>
+                        <span class="text-xs font-bold text-ci-text">Administrateur</span>
+                    </button>
+                    <button onclick="quickFill('jb.kouame@sirh.ci', 'employe')" class="flex flex-col items-center gap-1 p-3 rounded-2xl hover:bg-ci-bg border border-transparent hover:border-ci-border transition-all group">
+                        <div class="w-10 h-10 bg-ci-orangeLight rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                            <i data-lucide="users" class="w-5 h-5 text-ci-orange"></i>
+                        </div>
+                        <span class="text-xs font-bold text-ci-text">Collaborateur</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-center gap-6">
+            <a href="careers.html" class="flex items-center gap-2 text-xs font-bold text-ci-muted hover:text-ci-green transition-colors">
+                <i data-lucide="briefcase" class="w-4 h-4"></i> Carrières
+            </a>
+            <div class="w-1 h-1 bg-ci-border rounded-full"></div>
+            <a href="attendance.html" class="flex items-center gap-2 text-xs font-bold text-ci-muted hover:text-ci-orange transition-colors">
+                <i data-lucide="clock" class="w-4 h-4"></i> Pointage
+            </a>
+        </div>
+    </div>
+
+    <script>
+        function togglePassword() {
+            const pwd = document.getElementById('password');
+            const icon = document.getElementById('eyeIcon');
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+                icon.setAttribute('data-lucide', 'eye-off');
+            } else {
+                pwd.type = 'password';
+                icon.setAttribute('data-lucide', 'eye');
+            }
+            lucide.createIcons();
+        }
+
+        function quickFill(u, p) {
+            document.getElementById('username').value = u;
+            document.getElementById('password').value = p;
+            document.getElementById('errorMessage').classList.add('hidden');
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            const err = document.getElementById('errorMessage');
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+
+            btn.disabled = true;
+            btn.innerHTML = '<div class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>';
+            err.classList.add('hidden');
+
+            setTimeout(() => {
+                if (u === 'admin@sirh.ci' && p === 'admin') {
+                    localStorage.setItem('sirh_user', JSON.stringify({ role: 'admin', name: 'Admin RH' }));
+                    window.location.href = 'index.html';
+                } else if (u.includes('@sirh.ci') && p === 'employe') {
+                    localStorage.setItem('sirh_user', JSON.stringify({ role: 'employe', email: u }));
+                    window.location.href = 'employee_portal.html';
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = '<span>Connexion</span><i data-lucide="arrow-right" class="w-4 h-4"></i>';
+                    err.classList.remove('hidden');
+                    lucide.createIcons();
+                }
+            }, 1000);
+        }
+        lucide.createIcons();
+    </script>
+</body>
+</html>

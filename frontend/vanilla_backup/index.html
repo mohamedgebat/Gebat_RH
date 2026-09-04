@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIRH Côte d'Ivoire - Système d'Information des Ressources Humaines</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23009E49%22/><path d=%22M30 40h40v30H30z%22 fill=%22white%22/><path d=%22M40 30h20v10H40z%22 fill=%22%23F77F00%22/></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        ci: {
+                            orange: '#F77F00',
+                            green: '#009E49',
+                            greenDark: '#007A38',
+                            orangeLight: '#FFF3E0',
+                            greenLight: '#E8F5E9',
+                            dark: '#1a1a2e',
+                            sidebar: '#16213e',
+                            card: '#ffffff',
+                            bg: '#f0f2f5',
+                            text: '#2d3436',
+                            muted: '#636e72',
+                            border: '#dfe6e9',
+                            success: '#00b894',
+                            warning: '#fdcb6e',
+                            danger: '#d63031',
+                            info: '#0984e3',
+                        }
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="font-inter bg-ci-bg min-h-screen">
+
+    <!-- Mobile Overlay -->
+    <div id="mobileOverlay" class="fixed inset-0 bg-black/50 z-40 hidden lg:hidden" onclick="toggleSidebar()"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-ci-sidebar z-50 transform -translate-x-full lg:translate-x-0 transition-transform duration-300 flex flex-col">
+        <div class="p-5 border-b border-white/10">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-ci-orange to-ci-green rounded-lg flex items-center justify-center">
+                    <i data-lucide="building-2" class="w-5 h-5 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-white font-bold text-lg leading-tight">SIRH</h1>
+                    <p class="text-white/50 text-xs">Côte d'Ivoire 🇨🇮</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-4 border-b border-white/10">
+            <label class="text-white/40 text-xs uppercase tracking-wider mb-2 block">Site</label>
+            <select id="siteSelector" class="w-full bg-white/10 text-white text-sm rounded-lg px-3 py-2 border border-white/10 focus:outline-none focus:border-ci-orange" onchange="changeSite(this.value)">
+                <option value="all">🌍 Tous les sites</option>
+                <option value="abidjan">🏢 Abidjan - Plateau</option>
+                <option value="cocody">🏢 Cocody - Siège</option>
+                <option value="yopougon">🏭 Yopougon - Usine</option>
+                <option value="bouake">🏗️ Bouaké - Chantier</option>
+                <option value="sanpedro">📦 San Pedro</option>
+            </select>
+        </div>
+
+        <nav class="flex-1 overflow-y-auto p-3 space-y-1">
+            <button onclick="showModule('dashboard')" class="nav-btn active w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all" data-module="dashboard">
+                <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                <span>Tableau de bord</span>
+            </button>
+            <button onclick="showModule('employees')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all" data-module="employees">
+                <i data-lucide="users" class="w-4 h-4"></i>
+                <span>Employés</span>
+            </button>
+            <button onclick="showModule('leaves')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all" data-module="leaves">
+                <i data-lucide="palmtree" class="w-4 h-4"></i>
+                <span>Congés</span>
+                <span id="leaveBadge" class="ml-auto bg-ci-orange text-white text-xs px-2 py-0.5 rounded-full">0</span>
+            </button>
+            <button onclick="showModule('payroll')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all" data-module="payroll">
+                <i data-lucide="banknote" class="w-4 h-4"></i>
+                <span>Paie</span>
+            </button>
+            <button onclick="showModule('attendance')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all" data-module="attendance">
+                <i data-lucide="clock" class="w-4 h-4"></i>
+                <span>Pointage & Présence</span>
+            </button>
+            <button onclick="showModule('recruitment')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all" data-module="recruitment">
+                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                <span>Recrutement</span>
+            </button>
+            <button onclick="showModule('evaluations')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all" data-module="evaluations">
+                <i data-lucide="star" class="w-4 h-4"></i>
+                <span>Évaluations</span>
+            </button>
+            <button onclick="showModule('trainings')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all" data-module="trainings">
+                <i data-lucide="graduation-cap" class="w-4 h-4"></i>
+                <span>Formations</span>
+            </button>
+            <button onclick="showModule('contracts')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all" data-module="contracts">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                <span>Contrats</span>
+            </button>
+            <button onclick="showModule('documents')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all" data-module="documents">
+                <i data-lucide="folder-kanban" class="w-4 h-4"></i>
+                <span>Documents</span>
+            </button>
+            <button onclick="showModule('reports')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all" data-module="reports">
+                <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+                <span>Rapports</span>
+            </button>
+            <button onclick="showModule('accounting')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all" data-module="accounting">
+                <i data-lucide="link" class="w-4 h-4"></i>
+                <span>API Comptabilité</span>
+            </button>
+            <button onclick="showModule('support')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all" data-module="support">
+                <i data-lucide="help-circle" class="w-4 h-4"></i>
+                <span>Support & Aide</span>
+            </button>
+            <button onclick="showModule('settings')" class="nav-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm text-white/70 hover:bg-white/10 hover:text-white transition-all" data-module="settings">
+                <i data-lucide="settings" class="w-4 h-4"></i>
+                <span>Paramètres</span>
+            </button>
+        </nav>
+
+        <div class="p-4 border-t border-white/10">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-ci-orange rounded-full flex items-center justify-center text-white font-bold text-sm">AD</div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-white text-sm font-medium truncate">Admin RH</p>
+                    <p class="text-white/40 text-xs">admin@sirh.ci</p>
+                </div>
+                <a href="login.html" class="text-white/40 hover:text-white"><i data-lucide="log-out" class="w-4 h-4"></i></a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="lg:ml-64 min-h-screen flex flex-col">
+        <!-- Top Bar -->
+        <header class="bg-white border-b border-ci-border sticky top-0 z-30">
+            <div class="flex items-center justify-between px-4 lg:px-6 py-3">
+                <div class="flex items-center gap-4">
+                    <button onclick="toggleSidebar()" class="lg:hidden text-ci-text p-1 hover:bg-ci-bg rounded-lg">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                    <div class="flex items-center gap-2 px-3 py-1 bg-ci-bg border border-ci-border rounded-lg no-print">
+                        <a href="employee_portal.html" class="text-xs font-medium text-ci-text hover:text-ci-green flex items-center gap-1">
+                            <i data-lucide="user" class="w-3.5 h-3.5"></i> Espace Employé
+                        </a>
+                        <div class="w-px h-3 bg-ci-border"></div>
+                        <a href="careers.html" class="text-xs font-medium text-ci-text hover:text-ci-orange flex items-center gap-1">
+                            <i data-lucide="briefcase" class="w-3.5 h-3.5"></i> Espace Carrières
+                        </a>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <div class="hidden sm:flex items-center bg-ci-bg rounded-lg px-3 py-2 gap-2 w-64 border border-transparent focus-within:border-ci-green/30 transition-all">
+                        <i data-lucide="search" class="w-4 h-4 text-ci-muted"></i>
+                        <input type="text" placeholder="Rechercher..." class="bg-transparent text-sm focus:outline-none w-full text-ci-text">
+                    </div>
+                    
+                    <button onclick="loadFromServer()" class="flex items-center gap-2 px-3 py-1.5 bg-ci-bg border border-ci-border rounded-lg text-[10px] font-black text-ci-muted hover:text-ci-green transition-all uppercase tracking-widest" title="Actualiser les données">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="syncIcon"></i>
+                        <span id="syncStatus">Sync</span>
+                    </button>
+
+                    <div class="relative no-print">
+                        <button class="relative p-2 hover:bg-ci-bg rounded-lg transition-colors">
+                            <i data-lucide="bell" class="w-5 h-5 text-ci-muted"></i>
+                            <span class="absolute top-1 right-1 w-2 h-2 bg-ci-danger rounded-full"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Module Container -->
+        <main id="moduleContainer" class="p-4 lg:p-6 flex-1">
+            <div class="flex items-center justify-center h-64">
+                <div class="animate-spin w-8 h-8 border-4 border-ci-green border-t-transparent rounded-full"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Connection Status Bar (Floating) -->
+    <div id="connectionStatus" class="fixed bottom-4 right-4 z-[100] px-4 py-2 bg-white border border-ci-border rounded-2xl shadow-2xl text-[10px] font-black flex items-center gap-3 no-print animate-fadeIn">
+        <div id="statusDot" class="w-2.5 h-2.5 rounded-full bg-ci-orange animate-pulse shadow-[0_0_8px_rgba(247,127,0,0.5)]"></div>
+        <span id="statusText" class="text-ci-text uppercase tracking-[0.1em]">Connexion au serveur...</span>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModal()"></div>
+        <div class="absolute inset-4 lg:inset-y-10 lg:inset-x-auto lg:left-1/2 lg:-translate-x-1/2 lg:w-full lg:max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-scaleIn">
+            <div id="modalHeader" class="px-8 py-5 border-b border-ci-border flex items-center justify-between bg-ci-bg">
+                <h3 id="modalTitle" class="font-bold text-ci-text text-lg"></h3>
+                <button onclick="closeModal()" class="p-2 hover:bg-white rounded-xl transition-all shadow-sm"><i data-lucide="x" class="w-5 h-5 text-ci-muted"></i></button>
+            </div>
+            <div id="modalBody" class="flex-1 overflow-y-auto p-8"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

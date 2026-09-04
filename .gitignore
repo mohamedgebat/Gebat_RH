@@ -1,0 +1,23 @@
+# Node dependencies
+node_modules/
+**/node_modules/
+
+# Production build output
+dist/
+**/dist/
+
+# Environment files & secret keys
+.env
+.env.local
+.env.*.local
+
+# Logs and scratch data
+*.log
+scratch/
+logs/
+
+# IDE and OS metadata
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

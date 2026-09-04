@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Espace - SIRH CI</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%23009E49%22/><path d=%22M30 40h40v30H30z%22 fill=%22white%22/><path d=%22M40 30h20v10H40z%22 fill=%22%23F77F00%22/></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .portal-gradient { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); }
+        .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="portal-gradient min-h-screen">
+    <header class="bg-white/70 backdrop-blur-md border-b border-ci-border sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gradient-ci rounded-xl flex items-center justify-center">
+                    <i data-lucide="user" class="w-5 h-5 text-white"></i>
+                </div>
+                <h1 class="font-black text-ci-text text-lg">ESPACE COLLABORATEUR</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <button class="p-2 text-ci-muted hover:text-ci-text relative">
+                    <i data-lucide="bell" class="w-5 h-5"></i>
+                    <span class="absolute top-2 right-2 w-2 h-2 bg-ci-orange rounded-full"></span>
+                </button>
+                <a href="login.html" class="flex items-center gap-2 px-4 py-2 bg-red-50 text-ci-danger text-xs font-black rounded-full hover:bg-red-100 transition-colors">
+                    DÉCONNEXION <i data-lucide="log-out" class="w-4 h-4"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            
+            <!-- Sidebar: User Info -->
+            <div class="lg:col-span-1 space-y-6">
+                <div class="bg-white rounded-[32px] p-8 shadow-xl border border-ci-border text-center overflow-hidden relative">
+                    <div class="absolute top-0 left-0 w-full h-24 bg-gradient-ci opacity-10"></div>
+                    <div id="empAvatar" class="w-24 h-24 bg-white rounded-3xl shadow-lg flex items-center justify-center mx-auto mb-6 text-3xl font-black text-ci-green border-4 border-ci-bg relative z-10">?</div>
+                    <h2 id="empName" class="text-xl font-black text-ci-text">Chargement...</h2>
+                    <p id="empPoste" class="text-xs font-bold text-ci-muted uppercase tracking-widest mt-1">---</p>
+                    <div class="mt-6 flex justify-center gap-2">
+                        <span class="px-3 py-1 bg-ci-greenLight text-ci-green text-[10px] font-black rounded-full">ACTIF</span>
+                        <span id="empMatricule" class="px-3 py-1 bg-ci-bg text-ci-muted text-[10px] font-black rounded-full">EMP-000</span>
+                    </div>
+                </div>
+
+                <nav class="bg-white rounded-[32px] p-4 shadow-lg border border-ci-border space-y-1">
+                    <button onclick="switchTab('overview')" class="nav-item w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-sm font-bold text-ci-green bg-ci-greenLight">
+                        <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Vue d'ensemble
+                    </button>
+                    <button onclick="switchTab('leaves')" class="nav-item w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-sm font-bold text-ci-muted hover:bg-ci-bg transition-colors">
+                        <i data-lucide="palmtree" class="w-5 h-5"></i> Mes Congés
+                    </button>
+                    <button onclick="switchTab('payroll')" class="nav-item w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-sm font-bold text-ci-muted hover:bg-ci-bg transition-colors">
+                        <i data-lucide="banknote" class="w-5 h-5"></i> Ma Paie
+                    </button>
+                    <button onclick="switchTab('profile')" class="nav-item w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-sm font-bold text-ci-muted hover:bg-ci-bg transition-colors">
+                        <i data-lucide="settings" class="w-5 h-5"></i> Mon Profil
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Main Content -->
+            <div class="lg:col-span-3 space-y-8">
+                
+                <!-- Tab: Overview -->
+                <div id="tab-overview" class="tab-content space-y-8">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-gradient-ci p-8 rounded-[40px] text-white shadow-xl relative overflow-hidden">
+                            <i data-lucide="calendar" class="absolute -right-4 -bottom-4 w-32 h-32 opacity-10"></i>
+                            <p class="text-xs font-black uppercase tracking-widest opacity-70">Solde Congés</p>
+                            <h3 class="text-5xl font-black mt-2">24</h3>
+                            <p class="text-sm font-bold mt-2">Jours disponibles</p>
+                        </div>
+                        <div class="bg-white p-8 rounded-[40px] shadow-lg border border-ci-border">
+                            <p class="text-xs font-black uppercase tracking-widest text-ci-muted">Dernier Salaire</p>
+                            <h3 id="lastSalary" class="text-3xl font-black text-ci-text mt-2">---</h3>
+                            <p class="text-sm font-bold text-ci-green mt-2">Payé le 05/06</p>
+                        </div>
+                        <div class="bg-white p-8 rounded-[40px] shadow-lg border border-ci-border">
+                            <p class="text-xs font-black uppercase tracking-widest text-ci-muted">Heures ce mois</p>
+                            <h3 class="text-3xl font-black text-ci-text mt-2">168h</h3>
+                            <p class="text-sm font-bold text-ci-orange mt-2">Objectif atteint</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="bg-white rounded-[32px] p-8 shadow-lg border border-ci-border">
+                            <div class="flex items-center justify-between mb-6">
+                                <h4 class="font-black text-ci-text uppercase tracking-widest text-sm">Actualités RH</h4>
+                                <i data-lucide="info" class="w-5 h-5 text-ci-info"></i>
+                            </div>
+                            <div class="space-y-4">
+                                <div class="p-4 bg-ci-bg rounded-2xl">
+                                    <p class="text-xs font-black text-ci-orange uppercase">URGENT</p>
+                                    <p class="text-sm font-bold text-ci-text mt-1">Mise à jour des dossiers CNPS avant le 15 Juin.</p>
+                                </div>
+                                <div class="p-4 bg-ci-bg rounded-2xl">
+                                    <p class="text-xs font-black text-ci-green uppercase">INFO</p>
+                                    <p class="text-sm font-bold text-ci-text mt-1">Nouvelle mutuelle santé disponible au bureau.</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-[32px] p-8 shadow-lg border border-ci-border">
+                            <div class="flex items-center justify-between mb-6">
+                                <h4 class="font-black text-ci-text uppercase tracking-widest text-sm">Demandes Récentes</h4>
+                                <button onclick="switchTab('leaves')" class="text-xs font-bold text-ci-green">VOIR TOUT</button>
+                            </div>
+                            <div id="recentRequests" class="space-y-4">
+                                <!-- Dynamic -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Leaves -->
+                <div id="tab-leaves" class="tab-content hidden space-y-8 animate-fadeIn">
+                    <div class="bg-white rounded-[40px] p-8 shadow-xl border border-ci-border">
+                        <h3 class="text-2xl font-black text-ci-text mb-6">Demander un congé</h3>
+                        <form onsubmit="submitLeave(event)" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="text-xs font-black text-ci-text uppercase tracking-wider ml-1">Type de congé</label>
+                                <select name="type" class="w-full px-4 py-3 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-ci-green/20">
+                                    <option>Congé annuel</option>
+                                    <option>Congé maladie</option>
+                                    <option>Permission exceptionnelle</option>
+                                </select>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-black text-ci-text uppercase tracking-wider ml-1">Nombre de jours</label>
+                                <input type="number" name="duree" required min="1" class="w-full px-4 py-3 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-ci-green/20">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-black text-ci-text uppercase tracking-wider ml-1">Date de début</label>
+                                <input type="date" name="debut" required class="w-full px-4 py-3 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-ci-green/20">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-black text-ci-text uppercase tracking-wider ml-1">Date de fin</label>
+                                <input type="date" name="fin" required class="w-full px-4 py-3 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-ci-green/20">
+                            </div>
+                            <div class="md:col-span-2 space-y-2">
+                                <label class="text-xs font-black text-ci-text uppercase tracking-wider ml-1">Justificatif / Motif</label>
+                                <textarea name="motif" rows="3" class="w-full px-4 py-3 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-2 focus:ring-ci-green/20"></textarea>
+                            </div>
+                            <div class="md:col-span-2 pt-4">
+                                <button type="submit" class="w-full py-4 bg-ci-orange text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg">SOUMETTRE LA DEMANDE</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-[40px] border border-ci-border overflow-hidden shadow-lg">
+                        <div class="px-8 py-6 border-b border-ci-border flex items-center justify-between">
+                            <h3 class="font-black text-ci-text uppercase tracking-widest text-sm">Historique des congés</h3>
+                        </div>
+                        <div id="leavesHistory" class="divide-y divide-ci-border">
+                            <!-- Dynamic -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Other tabs simplified for demo -->
+                <div id="tab-payroll" class="tab-content hidden animate-fadeIn">
+                    <div class="bg-white rounded-[40px] p-8 shadow-xl border border-ci-border text-center py-20">
+                        <i data-lucide="lock" class="w-12 h-12 text-ci-muted mx-auto mb-4"></i>
+                        <h3 class="text-xl font-black text-ci-text">Fiches de Paie</h3>
+                        <p class="text-ci-muted mt-2">Accès sécurisé. Veuillez confirmer votre identité.</p>
+                        <button class="mt-8 px-8 py-3 bg-ci-green text-white font-black text-xs rounded-full uppercase tracking-widest">DÉVERROUILLER</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+        let appData = null;
+        let CURRENT_EMP_ID = 1;
+
+        async function loadData() {
+            try {
+                const response = await fetch(`${API_URL}/sirh-data`);
+                appData = await response.json();
+                
+                // Get from session or default to 1
+                const userSession = JSON.parse(localStorage.getItem('sirh_user'));
+                if (userSession && userSession.role === 'employe') {
+                    const emp = appData.employees.find(e => e.email === userSession.email);
+                    if (emp) CURRENT_EMP_ID = emp.id;
+                }
+
+                const emp = appData.employees.find(e => e.id === CURRENT_EMP_ID);
+                if (emp) {
+                    document.getElementById('empName').innerText = `${emp.nom} ${emp.prenoms}`;
+                    document.getElementById('empPoste').innerText = emp.poste;
+                    document.getElementById('empAvatar').innerText = emp.nom[0] + emp.prenoms[0];
+                    document.getElementById('empMatricule').innerText = emp.matricule;
+                    document.getElementById('lastSalary').innerText = new Intl.NumberFormat('fr-FR').format(emp.salaireBase) + ' F';
+                    renderHistory();
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-item').forEach(n => {
+                n.classList.remove('bg-ci-greenLight', 'text-ci-green');
+                n.classList.add('text-ci-muted');
+            });
+            event.currentTarget.classList.add('bg-ci-greenLight', 'text-ci-green');
+            event.currentTarget.classList.remove('text-ci-muted');
+        }
+
+        function renderHistory() {
+            const myLeaves = appData.leaves.filter(l => l.empId === CURRENT_EMP_ID);
+            const container = document.getElementById('leavesHistory');
+            const recent = document.getElementById('recentRequests');
+            
+            const html = myLeaves.reverse().map(l => `
+                <div class="px-8 py-6 flex items-center justify-between hover:bg-ci-bg transition-colors">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-white rounded-2xl shadow-sm border border-ci-border flex items-center justify-center">
+                            <i data-lucide="palmtree" class="w-6 h-6 text-ci-orange"></i>
+                        </div>
+                        <div>
+                            <p class="font-black text-ci-text">${l.type}</p>
+                            <p class="text-xs font-bold text-ci-muted">${new Date(l.debut).toLocaleDateString()} au ${new Date(l.fin).toLocaleDateString()} (${l.duree} j)</p>
+                        </div>
+                    </div>
+                    <span class="px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                        l.statut === 'Approuvé' ? 'bg-ci-greenLight text-ci-green' : 
+                        l.statut === 'Refusé' ? 'bg-red-50 text-ci-danger' : 'bg-ci-orangeLight text-ci-orange'
+                    }">${l.statut}</span>
+                </div>
+            `).join('');
+
+            container.innerHTML = html || '<p class="p-12 text-center text-ci-muted font-bold">Aucune demande enregistrée.</p>';
+            recent.innerHTML = myLeaves.slice(0, 3).map(l => `
+                <div class="flex items-center justify-between p-3 bg-ci-bg rounded-2xl">
+                    <span class="text-xs font-bold text-ci-text">${l.type}</span>
+                    <span class="text-[10px] font-black uppercase text-ci-orange">${l.statut}</span>
+                </div>
+            `).join('') || '<p class="text-center text-ci-muted text-xs">Aucune activité.</p>';
+            
+            lucide.createIcons();
+        }
+
+        async function submitLeave(e) {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const newLeave = {
+                id: Date.now(),
+                empId: CURRENT_EMP_ID,
+                type: formData.get('type'),
+                debut: formData.get('debut'),
+                fin: formData.get('fin'),
+                duree: parseInt(formData.get('duree')),
+                statut: 'En attente',
+                motif: formData.get('motif')
+            };
+
+            try {
+                appData.leaves.push(newLeave);
+                await fetch(`${API_URL}/sirh-data`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(appData)
+                });
+                alert('Demande envoyée !');
+                e.target.reset();
+                renderHistory();
+            } catch (error) {
+                alert('Erreur technique.');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadData);
+    </script>
+</body>
+</html>
