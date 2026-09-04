@@ -633,25 +633,32 @@ function ensureDemoUsers() {
 
     db.get("SELECT count(*) as count FROM users WHERE role = 'admin'", (err, row) => {
         if (row && row.count === 0) {
-            console.log("Creating default admin account...");
+            console.log("Creating default GEBAT SA admin account...");
             db.run(`INSERT INTO users (name, email, password, role, dateCreated) 
-                    VALUES ('Super Admin', 'admin@sirh.ci', 'admin123', 'admin', ?)`, 
+                    VALUES ('Administrateur GEBAT RH', 'admin@gebat-sa.com', 'admin123', 'admin', ?)`, 
                     [new Date().toISOString()]);
+        } else {
+            db.run("UPDATE users SET email = 'admin@gebat-sa.com' WHERE email = 'admin@sirh.ci'");
         }
     });
 
-    db.get("SELECT count(*) as count FROM users WHERE email = 'employe@sirh.ci'", (err, row) => {
+    db.get("SELECT count(*) as count FROM users WHERE email = 'employe@gebat-sa.com'", (err, row) => {
         if (row && row.count === 0) {
             db.get("SELECT id FROM employees WHERE matricule = 'EMP-001'", (err, emp) => {
-                if (emp) {
-                    console.log("Creating default employee account...");
-                    db.run(`INSERT INTO users (name, email, password, role, empId, dateCreated) 
-                            VALUES ('Jean-Baptiste Kouamé', 'employe@sirh.ci', 'employe', 'employee', ?, ?)`,
-                            [emp.id, new Date().toISOString()]);
-                }
+                const empId = emp ? emp.id : null;
+                console.log("Creating default GEBAT SA employee account...");
+                db.run(`INSERT INTO users (name, email, password, role, empId, dateCreated) 
+                        VALUES ('Jean-Baptiste Kouamé', 'employe@gebat-sa.com', 'employe', 'employee', ?, ?)`,
+                        [empId, new Date().toISOString()]);
             });
+        } else {
+            db.run("UPDATE users SET email = 'employe@gebat-sa.com' WHERE email = 'employe@sirh.ci'");
         }
     });
+    
+    // Assurer la correspondance username/password dans la table employees
+    db.run("UPDATE employees SET email = 'admin@gebat-sa.com', username = 'admin@gebat-sa.com' WHERE email = 'admin@sirh.ci' OR username = 'admin@sirh.ci'");
+    db.run("UPDATE employees SET email = 'employe@gebat-sa.com', username = 'employe@gebat-sa.com' WHERE email = 'employe@sirh.ci' OR username = 'employe@sirh.ci'");
 }
 
 function seedTrainingsAndDocuments() {

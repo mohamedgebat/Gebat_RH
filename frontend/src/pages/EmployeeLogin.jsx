@@ -172,22 +172,7 @@ const EmployeeLogin = () => {
             </button>
           </form>
 
-          {/* Quick Fill Demo Button */}
-          <div>
-            <button 
-              type="button" 
-              onClick={handleFillDemo}
-              className="w-full p-2.5 bg-amber-50/80 hover:bg-amber-100/80 border border-amber-200 rounded-xl text-slate-900 text-left transition-all flex items-center justify-between"
-            >
-              <div>
-                <div className="text-[10px] font-black uppercase text-amber-700">Compte Salarié Démo</div>
-                <div className="text-[9px] text-slate-500 font-semibold">employe@sirh.ci / employe</div>
-              </div>
-              <span className="text-[9px] font-black text-amber-700 uppercase bg-white px-2.5 py-1 rounded-md border border-amber-200 flex items-center gap-1">
-                <Sparkles size={10} /> Remplir
-              </span>
-            </button>
-          </div>
+
 
           {/* Bottom Footer Row */}
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-slate-500">

@@ -230,33 +230,7 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Quick Fill Demo Badges */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Accès rapide Démo GEBAT</span>
-              <span className="text-[9px] font-bold text-[#2563EB] flex items-center gap-1">
-                <Sparkles size={10} /> 1-Clic
-              </span>
-            </div>
-            <div className="grid grid-cols-2 gap-2 text-xs font-bold">
-              <button 
-                type="button" 
-                onClick={() => handleFillDemo('admin')}
-                className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl text-slate-800 text-left transition-all"
-              >
-                <div className="text-[10px] font-black uppercase text-[#2563EB]">Compte RH</div>
-                <div className="text-[9px] text-slate-500 font-semibold">admin@gebat-sa.com</div>
-              </button>
-              <button 
-                type="button" 
-                onClick={() => handleFillDemo('employee')}
-                className="p-2 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl text-slate-800 text-left transition-all"
-              >
-                <div className="text-[10px] font-black uppercase text-amber-600">Employé</div>
-                <div className="text-[9px] text-slate-500 font-semibold">employe@gebat-sa.com</div>
-              </button>
-            </div>
-          </div>
+
 
           {/* Bottom Footer Row */}
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-slate-500">
