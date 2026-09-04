@@ -513,7 +513,7 @@ const Dashboard = () => {
 
             <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
               <h3 className="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                <FileText size={18} className="text-indigo-600" /> Demandes d'Attestations RH
+                <FileText size={18} className="text-[#2563EB]" /> Demandes d'Attestations RH
               </h3>
               {pendingCertificates.length === 0 ? (
                 <div className="p-8 bg-slate-50 rounded-2xl text-center border border-slate-100">
@@ -523,14 +523,14 @@ const Dashboard = () => {
               ) : (
                 <div className="space-y-3">
                   {pendingCertificates.slice(0, 4).map(emp => (
-                    <div key={emp.id} className="p-3.5 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex items-center justify-between">
+                    <div key={emp.id} className="p-3.5 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center justify-between">
                       <div>
                         <p className="text-xs font-black text-slate-800">{emp.nom} {emp.prenoms}</p>
-                        <span className="text-[10px] font-bold text-indigo-600">
+                        <span className="text-[10px] font-bold text-[#2563EB]">
                           {emp.attestationTravail ? 'Attestation de Travail' : emp.attestationSalaire ? 'Attestation de Salaire' : 'Attestation de Stage'}
                         </span>
                       </div>
-                      <button onClick={() => navigate('/documents')} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase">
+                      <button onClick={() => navigate('/documents')} className="px-3 py-1.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl text-[10px] font-black uppercase shadow-sm">
                         Générer PDF
                       </button>
                     </div>
@@ -602,12 +602,12 @@ const Dashboard = () => {
             </div>
 
             <div className="bg-slate-950 text-white p-6 rounded-[2rem] shadow-xl flex items-center gap-5 border border-slate-800">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center font-black">
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-black">
                 <PieChart size={24} />
               </div>
               <div>
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Diversité F/M</p>
-                <h3 className="text-2xl font-black text-white mt-0.5">{femalePercentage}% <span className="text-xs text-indigo-300 font-bold">Femmes</span></h3>
+                <h3 className="text-2xl font-black text-white mt-0.5">{femalePercentage}% <span className="text-xs text-blue-300 font-bold">Femmes</span></h3>
                 <span className="text-[10px] font-bold text-slate-400">{femaleCount} F / {maleCount} H</span>
               </div>
             </div>
@@ -720,7 +720,7 @@ const Dashboard = () => {
 
             <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
               <h3 className="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                <Clock size={18} className="text-indigo-600" />
+                <Clock size={18} className="text-[#2563EB]" />
                 Pyramide des Tranches d'Ancienneté
               </h3>
               <div className="space-y-4">
@@ -741,7 +741,7 @@ const Dashboard = () => {
                           </div>
                         </div>
                         <div className="w-full h-2 bg-slate-200/60 rounded-full overflow-hidden">
-                          <div className="h-full bg-indigo-500 rounded-full transition-all duration-500" style={{ width: `${percent}%` }}></div>
+                          <div className="h-full bg-[#2563EB] rounded-full transition-all duration-500" style={{ width: `${percent}%` }}></div>
                         </div>
                       </div>
                     );

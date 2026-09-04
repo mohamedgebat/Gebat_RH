@@ -503,7 +503,7 @@ const Settings = () => {
 
             <div className="lg:col-span-6 bg-white p-8 rounded-[2.5rem] border border-ci-border shadow-sm space-y-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-black">
                   <Layers size={20} />
                 </div>
                 <div>
@@ -723,7 +723,7 @@ const Settings = () => {
                   required
                   value={formData.itsPatronalIvoirien} 
                   onChange={e => setFormData({...formData, itsPatronalIvoirien: Number(e.target.value)})}
-                  className="w-full px-6 py-4 bg-white border border-ci-border rounded-2xl text-lg font-black text-indigo-700 outline-none"
+                  className="w-full px-6 py-4 bg-white border border-ci-border rounded-2xl text-lg font-black text-[#2563EB] outline-none"
                 />
               </div>
 
@@ -747,7 +747,7 @@ const Settings = () => {
                   required
                   value={formData.taFdfpRate} 
                   onChange={e => setFormData({...formData, taFdfpRate: Number(e.target.value)})}
-                  className="w-full px-6 py-4 bg-white border border-ci-border rounded-2xl text-lg font-black text-indigo-700 outline-none"
+                  className="w-full px-6 py-4 bg-white border border-ci-border rounded-2xl text-lg font-black text-[#2563EB] outline-none"
                 />
               </div>
             </div>

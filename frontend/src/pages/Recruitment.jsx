@@ -471,7 +471,7 @@ const Recruitment = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         {[
           { label: 'Offres Ouvertes', value: stats.activeOffers, sub: `/ ${data.recruitment?.length || 0}`, icon: <Briefcase size={22} />, color: 'from-emerald-400 to-teal-500', bg: 'bg-emerald-50', text: 'text-emerald-600' },
-          { label: 'Candidatures Reçues', value: stats.totalApps, icon: <Users size={22} />, color: 'from-blue-400 to-indigo-500', bg: 'bg-blue-50', text: 'text-blue-600' },
+          { label: 'Candidatures Reçues', value: stats.totalApps, icon: <Users size={22} />, color: 'from-blue-400 to-blue-600', bg: 'bg-blue-50', text: 'text-blue-600' },
           { label: 'Score ATS Moyen', value: `${stats.avgAts}%`, icon: <BrainCircuit size={22} />, color: 'from-violet-400 to-fuchsia-500', bg: 'bg-violet-50', text: 'text-violet-600' },
           { label: 'Recrutés / Retenus', value: stats.retainedApps, icon: <UserCheck size={22} />, color: 'from-amber-400 to-orange-500', bg: 'bg-amber-50', text: 'text-amber-600' }
         ].map((stat, i) => (
