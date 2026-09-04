@@ -94,10 +94,10 @@ const Login = () => {
               </div>
               <div>
                 <h1 className="text-xl font-black tracking-tight text-slate-900 flex items-center gap-1.5">
-                  GEBAT <span className="text-[#2563EB]">360°</span>
+                  GEBAT <span className="text-[#2563EB]">RH</span>
                 </h1>
                 <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest">
-                  {activeTab === 'admin' ? 'CONSTRUCTION OPERATING SYSTEM — RH' : 'PORTAIL ESPACE SALARIÉ GEBAT'}
+                  {activeTab === 'admin' ? 'SYSTÈME D\'INFORMATION RESSOURCES HUMAINES — BTP' : 'PORTAIL ESPACE SALARIÉ GEBAT'}
                 </p>
               </div>
             </div>
@@ -106,11 +106,11 @@ const Login = () => {
           {/* Center Hero Headline */}
           <div className="space-y-2 my-1">
             <h2 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight tracking-tight">
-              Pilotez vos équipes.<br />
-              <span className="text-[#E5A110]">Maîtrisez chaque détail.</span>
+              Du chantier à la paie,<br />
+              <span className="text-[#E5A110]">Pilotez votre Capital Humain.</span>
             </h2>
             <p className="text-xs text-slate-600 font-semibold leading-relaxed">
-              La plateforme intégrée pour gérer vos collaborateurs BTP de la planification à la performance.
+              La solution RH tout-en-un dédiée au BTP : gestion du personnel, pointage terrain, congés et paie automatisée.
             </p>
             <div className="w-12 h-1 bg-[#E5A110] rounded-full mt-2"></div>
           </div>
@@ -245,7 +245,7 @@ const Login = () => {
                 className="p-2 bg-slate-50 hover:bg-blue-50 border border-slate-200 hover:border-blue-300 rounded-xl text-slate-800 text-left transition-all"
               >
                 <div className="text-[10px] font-black uppercase text-[#2563EB]">Compte RH</div>
-                <div className="text-[9px] text-slate-500 font-semibold">admin@sirh.ci</div>
+                <div className="text-[9px] text-slate-500 font-semibold">admin@gebat-sa.com</div>
               </button>
               <button 
                 type="button" 
@@ -253,7 +253,7 @@ const Login = () => {
                 className="p-2 bg-slate-50 hover:bg-amber-50 border border-slate-200 hover:border-amber-300 rounded-xl text-slate-800 text-left transition-all"
               >
                 <div className="text-[10px] font-black uppercase text-amber-600">Employé</div>
-                <div className="text-[9px] text-slate-500 font-semibold">employe@sirh.ci</div>
+                <div className="text-[9px] text-slate-500 font-semibold">employe@gebat-sa.com</div>
               </button>
             </div>
           </div>
