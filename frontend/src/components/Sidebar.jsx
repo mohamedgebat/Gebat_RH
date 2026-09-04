@@ -40,14 +40,14 @@ const Sidebar = () => {
 
   return (
     <aside className="fixed left-0 top-0 h-full w-64 bg-slate-900 text-slate-300 flex flex-col z-50 border-r border-slate-800 shadow-xl">
-      {/* GEBAT Header Branding */}
-      <div className="p-5 border-b border-slate-800 flex items-center gap-3.5 bg-slate-950/60">
-        <div className="w-12 h-10 rounded-xl overflow-hidden bg-white p-0.5 shadow-md flex items-center justify-center shrink-0 border border-amber-400">
-          <img src="/gebat_logo.png" alt="GEBAT Logo" className="w-full h-full object-contain" />
-        </div>
-        <div>
-          <h1 className="text-white font-black tracking-tight text-lg leading-none">GEBAT <span className="text-[#E5A110]">RH</span></h1>
-          <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mt-1">Gestion Talents</p>
+      {/* GEBAT Header Branding - Prominent White Card for Maximum Visibility */}
+      <div className="p-3.5 border-b border-slate-800 bg-slate-950/80">
+        <div className="p-3 bg-white rounded-2xl shadow-lg border border-amber-400 flex items-center gap-3">
+          <img src="/gebat_logo.png" alt="GEBAT Logo Officiel" className="h-10 max-w-[85px] object-contain shrink-0" />
+          <div className="border-l border-slate-200 pl-2.5">
+            <h1 className="text-slate-900 font-black tracking-tight text-base leading-none">GEBAT <span className="text-[#2563EB]">RH</span></h1>
+            <p className="text-[9px] font-black text-[#E5A110] uppercase tracking-wider mt-1">CAPITAL HUMAIN</p>
+          </div>
         </div>
       </div>
 
