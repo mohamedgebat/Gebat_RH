@@ -80,23 +80,23 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-blue-50/40 to-slate-200 flex items-center justify-center p-4 lg:p-8 font-sans selection:bg-[#E5A110] selection:text-slate-950">
       
-      {/* Main GEBAT Card Container (Bright, Luminous Design) */}
+      {/* Main GEBAT Card Container */}
       <div className="max-w-7xl w-full rounded-[2.5rem] bg-white shadow-2xl border border-slate-200 overflow-hidden grid grid-cols-1 lg:grid-cols-12 min-h-[680px]">
         
-        {/* Left Side: Clean White Form Container (6 cols) */}
-        <div className="lg:col-span-6 p-8 lg:p-14 bg-white text-slate-900 flex flex-col justify-between relative z-10 space-y-6">
+        {/* Left Side: Clean Form Container (5 cols on large screens for maximum photo space) */}
+        <div className="lg:col-span-5 p-8 lg:p-12 bg-white text-slate-900 flex flex-col justify-between relative z-10 space-y-6">
           
           {/* Top Logo Header */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3.5">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
               <div className="bg-amber-400/10 p-1.5 rounded-2xl shadow-sm border border-amber-400/40 flex items-center justify-center shrink-0">
-                <img src="/gebat_logo.png" alt="GEBAT Logo Officiel" className="h-10 object-contain" />
+                <img src="/gebat_logo.png" alt="GEBAT Logo Officiel" className="h-9 object-contain" />
               </div>
               <div>
-                <h1 className="text-2xl font-black tracking-tight text-slate-900 flex items-center gap-1.5">
+                <h1 className="text-xl font-black tracking-tight text-slate-900 flex items-center gap-1.5">
                   GEBAT <span className="text-[#2563EB]">360°</span>
                 </h1>
-                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">
+                <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest">
                   {activeTab === 'admin' ? 'CONSTRUCTION OPERATING SYSTEM — RH' : 'PORTAIL ESPACE SALARIÉ GEBAT'}
                 </p>
               </div>
@@ -104,15 +104,15 @@ const Login = () => {
           </div>
 
           {/* Center Hero Headline */}
-          <div className="space-y-3 my-2">
-            <h2 className="text-3xl lg:text-4xl font-black text-slate-900 leading-tight tracking-tight">
+          <div className="space-y-2.5 my-1">
+            <h2 className="text-2xl lg:text-3xl font-black text-slate-900 leading-tight tracking-tight">
               Pilotez vos équipes.<br />
               <span className="text-[#E5A110]">Maîtrisez chaque détail.</span>
             </h2>
-            <p className="text-xs text-slate-600 max-w-md font-semibold leading-relaxed">
+            <p className="text-xs text-slate-600 font-semibold leading-relaxed">
               La plateforme intégrée pour gérer vos collaborateurs BTP de la planification à la performance.
             </p>
-            <div className="w-14 h-1.5 bg-[#E5A110] rounded-full mt-2"></div>
+            <div className="w-12 h-1.5 bg-[#E5A110] rounded-full mt-2"></div>
           </div>
 
           {/* Segmented Tab Switcher (RH vs Salarié) */}
@@ -120,25 +120,25 @@ const Login = () => {
             <button
               type="button"
               onClick={() => { setActiveTab('admin'); setErr(null); }}
-              className={`py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+              className={`py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
                 activeTab === 'admin' 
                   ? 'bg-[#2563EB] text-white shadow-md font-black' 
                   : 'text-slate-600 hover:text-slate-900 font-bold'
               }`}
             >
-              <UserCog size={16} />
+              <UserCog size={15} />
               Accès RH / Admin
             </button>
             <button
               type="button"
               onClick={() => { setActiveTab('employee'); setErr(null); }}
-              className={`py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
+              className={`py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center justify-center gap-2 ${
                 activeTab === 'employee' 
                   ? 'bg-[#2563EB] text-white shadow-md font-black' 
                   : 'text-slate-600 hover:text-slate-900 font-bold'
               }`}
             >
-              <User size={16} />
+              <User size={15} />
               Espace Salarié
             </button>
           </div>
@@ -231,11 +231,11 @@ const Login = () => {
           </form>
 
           {/* Quick Fill Demo Badges */}
-          <div className="pt-2">
-            <div className="flex items-center justify-between mb-2">
+          <div className="pt-1">
+            <div className="flex items-center justify-between mb-1.5">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Accès rapide Démo GEBAT</span>
               <span className="text-[9px] font-bold text-[#2563EB] flex items-center gap-1">
-                <Sparkles size={10} /> 1-Clic Remplissage
+                <Sparkles size={10} /> 1-Clic
               </span>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs font-bold">
@@ -259,7 +259,7 @@ const Login = () => {
           </div>
 
           {/* Bottom Footer Row */}
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-slate-500">
+          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] font-semibold text-slate-500">
             <span className="flex items-center gap-1.5 text-slate-600">
               <ShieldCheck className="w-3.5 h-3.5 text-[#059669]" /> Connexion sécurisée | GEBAT RH
             </span>
@@ -270,26 +270,25 @@ const Login = () => {
 
         </div>
 
-        {/* Right Side: Bright Sunlit Hero Construction Image with Real GEBAT Logo (6 cols) */}
-        <div className="lg:col-span-6 relative min-h-[400px] lg:min-h-full overflow-hidden bg-slate-100 flex items-end p-8">
+        {/* Right Side: Crisp, Fully Visible Hero Construction Image (7 cols) */}
+        <div className="lg:col-span-7 relative min-h-[420px] lg:min-h-full overflow-hidden bg-slate-100 flex items-end p-8 border-l border-slate-200">
           
-          {/* Hero Background Image */}
+          {/* Crisp, Perfectly Framed Hero Photo */}
           <img 
             src="/gebat_hero_bg.jpg" 
             alt="Chantier GEBAT avec le vrai logo et professionnelle souriante" 
-            className="absolute inset-0 w-full h-full object-cover object-center"
+            className="absolute inset-0 w-full h-full object-cover object-[72%_center]"
           />
 
-          {/* Smooth Left Fade Gradient to White */}
-          <div className="absolute inset-0 bg-gradient-to-r from-white via-white/30 to-transparent"></div>
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent"></div>
+          {/* Subtle Bottom Gradient for Text Badge Readability (No washing out on left!) */}
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent"></div>
 
           {/* Overlay Badge at Bottom Right */}
-          <div className="relative z-10 bg-white/90 backdrop-blur-md border border-slate-200 p-4 rounded-2xl max-w-sm space-y-1 shadow-2xl">
-            <div className="flex items-center gap-2 text-xs font-black text-slate-900">
+          <div className="relative z-10 bg-slate-900/85 backdrop-blur-md border border-amber-400/40 p-4 rounded-2xl max-w-md space-y-1 shadow-2xl text-white">
+            <div className="flex items-center gap-2 text-xs font-black text-[#E5A110]">
               <span className="w-2.5 h-2.5 rounded-full bg-[#E5A110] animate-pulse"></span> GEBAT RH & Capital Humain
             </div>
-            <p className="text-[11px] font-semibold text-slate-600">
+            <p className="text-[11px] font-medium text-slate-200">
               Valorisez le capital humain de vos chantiers et infrastructures avec la suite intégrée GEBAT.
             </p>
           </div>
