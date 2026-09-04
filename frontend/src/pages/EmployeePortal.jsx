@@ -275,18 +275,23 @@ const EmployeePortal = () => {
           <div class="payslip-card">
             <table class="header-table">
               <tr>
-                <td style="width: 50%;">
-                  <h3 style="margin: 0 0 5px 0; text-transform: uppercase; font-weight: 900; color: #009E49;">${company.companyName || 'ENTREPRISE IVOIRIENNE SAS'}</h3>
+                <td style="width: 25%; vertical-align: top; padding-right: 15px;">
+                  <div style="background: #ffffff; padding: 5px 8px; border-radius: 10px; border: 1px solid #e2e8f0; display: inline-block;">
+                    <img src="${company.logo || '/gebat_logo.png'}" alt="GEBAT Logo" style="max-height: 55px; max-width: 110px; object-fit: contain; display: block;" />
+                  </div>
+                </td>
+                <td style="width: 40%; vertical-align: top;">
+                  <h3 style="margin: 0 0 5px 0; text-transform: uppercase; font-weight: 900; color: #2563EB;">${company.companyName || 'GEBAT SA'}</h3>
                   <p style="margin: 0; font-size: 11px; line-height: 1.4; color: #636e72;">
                     ${company.address || 'Abidjan, Côte d\'Ivoire'}<br>
                     Téléphone: ${company.phone || '+225 27 20 00 00 00'}<br>
-                    Email: ${company.email || 'contact@entreprise.ci'}<br>
+                    Email: ${company.email || 'rh@gebat-sa.com'}<br>
                     <strong>N° CC:</strong> ${company.cc || '2401234 A'}<br>
                     <strong>N° RC:</strong> ${company.rc || 'CI-ABJ-03-2024-B12-12345'}<br>
                     <strong>N° CNPS Emp:</strong> ${company.cnps_employer || '12345678'}
                   </p>
                 </td>
-                <td style="width: 50%;">
+                <td style="width: 35%; vertical-align: top;">
                   <h4 style="margin: 0 0 5px 0; text-transform: uppercase; font-weight: bold; color: #F77F00;">Salarié</h4>
                   <p style="margin: 0; font-size: 11px; line-height: 1.4;">
                     <strong>Matricule:</strong> ${emp.matricule}<br>
@@ -623,12 +628,17 @@ const EmployeePortal = () => {
             <button onclick="window.print();" style="background-color: #009E49; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: bold; cursor: pointer; text-transform: uppercase; font-size: 12px; letter-spacing: 0.05em;">Imprimer / Télécharger en PDF</button>
           </div>
           <div class="document">
-            <div class="header">
-              <div class="company-name">${company.companyName || 'ENTREPRISE IVOIRIENNE SAS'}</div>
-              <div class="company-details">
-                ${company.address || 'Abidjan, Côte d\'Ivoire'}<br>
-                Téléphone: ${company.phone || '+225 27 20 00 00 00'}<br>
-                Email: ${company.email || 'contact@entreprise.ci'}
+            <div class="header" style="display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; margin-bottom: 20px;">
+              <div style="display: flex; align-items: center; gap: 15px;">
+                <div style="background: #ffffff; padding: 4px 8px; border-radius: 10px; border: 1px solid #e2e8f0; display: inline-block;">
+                  <img src="${company.logo || '/gebat_logo.png'}" alt="GEBAT Logo" style="max-height: 50px; max-width: 100px; object-fit: contain;" />
+                </div>
+                <div>
+                  <div class="company-name" style="color: #2563EB; font-weight: 900; font-size: 16px;">${company.companyName || 'GEBAT SA'}</div>
+                  <div class="company-details" style="font-size: 11px; color: #64748b;">
+                    ${company.address || 'Abidjan, Côte d\'Ivoire'} | Tél: ${company.phone || '+225 27 20 00 00 00'}
+                  </div>
+                </div>
               </div>
             </div>
 

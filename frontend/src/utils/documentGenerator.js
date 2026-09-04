@@ -304,19 +304,37 @@ const openPrintWindow = (htmlContent) => {
 };
 
 const getSecurityQR = (type, emp, company) => {
-  const text = `SIRH-CIV VALIDATED | Doc: ${type} | Emp: ${emp.nom} ${emp.prenoms} (${emp.matricule}) | Ste: ${company.companyName || 'SIRH'}`;
+  const text = `GEBAT RH VALIDATED | Doc: ${type} | Emp: ${emp.nom} ${emp.prenoms} (${emp.matricule}) | Ste: ${company.companyName || 'GEBAT SA'}`;
   return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(text)}`;
+};
+
+const getDocLogoUrl = (company) => {
+  if (company && company.logo && company.logo.trim() !== '') {
+    return company.logo;
+  }
+  return '/gebat_logo.png';
+};
+
+const renderDocLogoCell = (company) => {
+  const logoUrl = getDocLogoUrl(company);
+  return `
+    <td class="logo-cell" style="vertical-align: middle; padding-right: 15px; width: 125px;">
+      <div style="background: #ffffff; padding: 4px 8px; border-radius: 10px; border: 1px solid #e2e8f0; display: inline-block; box-shadow: 0 2px 6px rgba(0,0,0,0.06);">
+        <img src="${logoUrl}" class="logo-img" alt="GEBAT Logo Officiel" style="max-height: 55px; max-width: 110px; object-fit: contain; display: block;" />
+      </div>
+    </td>
+  `;
 };
 
 /**
  * 1. ATTESTATION DE TRAVAIL (EN POSTE)
  */
-export const generateAttestationTravail = (emp, company) => {
+export const generateAttestationTravail = (emp, company = {}) => {
   const dateStr = new Date().toLocaleDateString('fr-CI', { day: 'numeric', month: 'long', year: 'numeric' });
   const refCode = `REF: AT-${new Date().getFullYear()}-${emp.id || '00'}`;
-  const primaryColor = company.primaryColor || '#009E49';
-  const secondaryColor = company.secondaryColor || '#F77F00';
-  const logoUrl = company.logo || '';
+  const primaryColor = company.primaryColor || '#2563EB';
+  const secondaryColor = company.secondaryColor || '#E5A110';
+  const compName = company.companyName || 'GEBAT SA';
 
   const html = `<!DOCTYPE html>
     <html>
@@ -327,7 +345,7 @@ export const generateAttestationTravail = (emp, company) => {
       </head>
       <body>
         <div class="no-print-bar">
-          <span style="font-size: 11px; font-weight: 800; color: #64748b;">DOCUMENT RH OFFICIEL</span>
+          <span style="font-size: 11px; font-weight: 800; color: #64748b;">DOCUMENT GEBAT RH OFFICIEL</span>
           <button class="print-btn" onclick="window.print()">Imprimer / Enregistrer PDF</button>
         </div>
         <div class="doc-container">
@@ -335,15 +353,13 @@ export const generateAttestationTravail = (emp, company) => {
           <div>
             <table class="header-table">
               <tr>
-                <td class="logo-cell" style="vertical-align: middle; padding-right: 15px;">
-                  ${logoUrl ? `<img src="${logoUrl}" class="logo-img" alt="Logo" />` : `<div style="width:55px; height:55px; background:${primaryColor}; color:white; border-radius:12px; font-weight:900; font-size:24px; display:flex; align-items:center; justify-content:center;">${(company.companyName || 'E').charAt(0)}</div>`}
-                </td>
+                ${renderDocLogoCell(company)}
                 <td class="company-info" style="vertical-align: middle;">
-                  <h1>${company.companyName || 'ENTREPRISE IVOIRIENNE SAS'}</h1>
+                  <h1>${compName}</h1>
                   <p>RC : ${company.rc || 'CI-ABJ-03-2024-B12'} | CC : ${company.cc || '2401234 A'}</p>
                   <p>N° CNPS Employeur : ${company.cnps_employer || '12345678'}</p>
                   <p>Siège : ${company.address || 'Abidjan, Côte d\'Ivoire'}</p>
-                  <p>Tél : ${company.phone || '+225 27 20 00 00 00'} | E-mail : ${company.email || 'rh@entreprise.ci'}</p>
+                  <p>Tél : ${company.phone || '+225 27 20 00 00 00'} | E-mail : ${company.email || 'rh@gebat-sa.com'}</p>
                 </td>
                 <td class="security-cell" style="vertical-align: middle;">
                   <div class="security-ref">${refCode}</div>
@@ -396,11 +412,12 @@ export const generateAttestationTravail = (emp, company) => {
 /**
  * 2. CERTIFICAT DE TRAVAIL (OBLIGATION ART. 16.8 FIN DE CONTRAT)
  */
-export const generateCertificatTravail = (emp, company) => {
+export const generateCertificatTravail = (emp, company = {}) => {
   const dateStr = new Date().toLocaleDateString('fr-CI', { day: 'numeric', month: 'long', year: 'numeric' });
   const refCode = `CERT: CT-${new Date().getFullYear()}-${emp.id || '00'}`;
-  const primaryColor = company.primaryColor || '#009E49';
-  const secondaryColor = company.secondaryColor || '#F77F00';
+  const primaryColor = company.primaryColor || '#2563EB';
+  const secondaryColor = company.secondaryColor || '#E5A110';
+  const compName = company.companyName || 'GEBAT SA';
   const qrUrl = getSecurityQR('Certificat de Travail', emp, company);
 
   const html = `<!DOCTYPE html>
@@ -412,7 +429,7 @@ export const generateCertificatTravail = (emp, company) => {
       </head>
       <body>
         <div class="no-print-bar">
-          <span style="font-size: 11px; font-weight: 800; color: #64748b;">CERTIFICAT DE FIN DE CONTRAT (ART 16.8 CODE DU TRAVAIL)</span>
+          <span style="font-size: 11px; font-weight: 800; color: #64748b;">CERTIFICAT GEBAT DE FIN DE CONTRAT (ART 16.8 CODE DU TRAVAIL)</span>
           <button class="print-btn" onclick="window.print()">Imprimer / Enregistrer PDF</button>
         </div>
         <div class="doc-container">
@@ -420,11 +437,11 @@ export const generateCertificatTravail = (emp, company) => {
           <div>
             <table class="header-table">
               <tr>
-                ${company.logo ? `<td class="logo-cell"><img src="${company.logo}" class="logo-img" alt="Logo" /></td>` : ''}
+                ${renderDocLogoCell(company)}
                 <td class="company-info">
-                  <h1>${company.companyName || 'ENTREPRISE IVOIRIENNE SAS'}</h1>
-                  <p>RC : ${company.rc || '—'} | CC : ${company.cc || '—'}</p>
-                  <p>N° CNPS Employeur : ${company.cnps_employer || '—'}</p>
+                  <h1>${compName}</h1>
+                  <p>RC : ${company.rc || 'CI-ABJ-03-2024-B12'} | CC : ${company.cc || '2401234 A'}</p>
+                  <p>N° CNPS Employeur : ${company.cnps_employer || '12345678'}</p>
                   <p>Siège : ${company.address || 'Abidjan, Côte d\'Ivoire'}</p>
                 </td>
                 <td class="security-cell">
@@ -479,11 +496,12 @@ export const generateCertificatTravail = (emp, company) => {
 /**
  * 3. ATTESTATION DE SALAIRE (DEMANDE DE PRÊT / BANQUE)
  */
-export const generateAttestationSalaire = (emp, company, payslipDetails) => {
+export const generateAttestationSalaire = (emp, company = {}, payslipDetails) => {
   const dateStr = new Date().toLocaleDateString('fr-CI', { day: 'numeric', month: 'long', year: 'numeric' });
   const refCode = `SAL: AS-${new Date().getFullYear()}-${emp.id || '00'}`;
-  const primaryColor = company.primaryColor || '#009E49';
-  const secondaryColor = company.secondaryColor || '#F77F00';
+  const primaryColor = company.primaryColor || '#2563EB';
+  const secondaryColor = company.secondaryColor || '#E5A110';
+  const compName = company.companyName || 'GEBAT SA';
   const qrUrl = getSecurityQR('Attestation de Salaire', emp, company);
 
   const baseVal = payslipDetails?.base || emp.salaireBase || 0;
@@ -502,7 +520,7 @@ export const generateAttestationSalaire = (emp, company, payslipDetails) => {
       </head>
       <body>
         <div class="no-print-bar">
-          <span style="font-size: 11px; font-weight: 800; color: #64748b;">ATTESTATION DE SALAIRE POUR ORGANISME BANCAIRE</span>
+          <span style="font-size: 11px; font-weight: 800; color: #64748b;">ATTESTATION DE SALAIRE GEBAT POUR ORGANISME BANCAIRE</span>
           <button class="print-btn" onclick="window.print()">Imprimer / Enregistrer PDF</button>
         </div>
         <div class="doc-container">
@@ -510,11 +528,11 @@ export const generateAttestationSalaire = (emp, company, payslipDetails) => {
           <div>
             <table class="header-table">
               <tr>
-                ${company.logo ? `<td class="logo-cell"><img src="${company.logo}" class="logo-img" alt="Logo" /></td>` : ''}
+                ${renderDocLogoCell(company)}
                 <td class="company-info">
-                  <h1>${company.companyName || 'ENTREPRISE IVOIRIENNE SAS'}</h1>
-                  <p>RC : ${company.rc || '—'} | CC : ${company.cc || '—'}</p>
-                  <p>N° CNPS Employeur : ${company.cnps_employer || '—'}</p>
+                  <h1>${compName}</h1>
+                  <p>RC : ${company.rc || 'CI-ABJ-03-2024-B12'} | CC : ${company.cc || '2401234 A'}</p>
+                  <p>N° CNPS Employeur : ${company.cnps_employer || '12345678'}</p>
                   <p>Siège : ${company.address || 'Abidjan, Côte d\'Ivoire'}</p>
                 </td>
                 <td class="security-cell">
