@@ -21,3 +21,8 @@ logs/
 .idea/
 .DS_Store
 Thumbs.db
+
+# SQLite WAL and shared memory temp files
+*.db-shm
+*.db-wal
+

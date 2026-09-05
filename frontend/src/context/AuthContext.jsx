@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
+// Configuration globale de l'URL API (utile si le backend est hébergé séparément, ex: Railway)
+if (import.meta.env.VITE_API_URL) {
+  axios.defaults.baseURL = import.meta.env.VITE_API_URL;
+}
+
 // Intercepteur Axios global enregistré immédiatement au chargement du module
 axios.interceptors.request.use((config) => {
   try {

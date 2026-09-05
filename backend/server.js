@@ -1788,7 +1788,17 @@ app.delete('/api/notifications/:id', authenticateToken, validateIdParam('id'), (
     });
 });
 
+// --- HEALTH CHECK ENDPOINT (POUR RAILWAY / CLOUD MONITORING) ---
+app.get(['/health', '/api/health'], (req, res) => {
+    res.json({
+        status: 'OK',
+        service: 'SIRH GEBAT API',
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString()
+    });
+});
+
 // --- DEMARRAGE DU SERVEUR ---
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🔒 Serveur SIRH-CIV Sécurisé en cours d'exécution sur le port ${PORT}`);
 });

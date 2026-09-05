@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, CheckCircle, AlertTriangle, ArrowRight, User, Sparkles, Briefcase, Award } from 'lucide-react';
 
@@ -29,17 +30,13 @@ const CandidateTest = () => {
     // Fetch test details (without correct answers)
     const fetchTest = async () => {
       try {
-        const res = await fetch(`/api/assessments/${id}`);
-        const data = await res.json();
+        const res = await axios.get(`/api/assessments/${id}`);
+        const data = res.data;
         
-        if (!res.ok) {
-          setError(data.error || 'Test d\'évaluation introuvable');
-        } else {
-          setTestData(data);
-          setTimeLeft(data.duree_minutes * 60);
-        }
+        setTestData(data);
+        setTimeLeft(data.duree_minutes * 60);
       } catch (err) {
-        setError('Impossible de se connecter au serveur.');
+        setError(err.response?.data?.error || 'Test d\'évaluation introuvable ou erreur de connexion.');
       } finally {
         setLoading(false);
       }
@@ -90,17 +87,12 @@ const CandidateTest = () => {
     const timeSpent = (testData.duree_minutes * 60) - timeLeft;
     
     try {
-      const res = await fetch(`/api/assessments/${id}/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...candidate,
-          reponses: responses,
-          temps_ecoule: timeSpent
-        })
+      const res = await axios.post(`/api/assessments/${id}/submit`, {
+        ...candidate,
+        reponses: responses,
+        temps_ecoule: timeSpent
       });
-      const data = await res.json();
-      setResult(data);
+      setResult(res.data);
       setStep('result');
     } catch (err) {
       alert('Erreur lors de la soumission de votre test. Vérifiez votre connexion.');
