@@ -15,9 +15,10 @@ const NotificationCenter = () => {
     try {
       setLoading(true);
       const res = await axios.get('/api/notifications');
-      setNotifications(res.data || []);
+      setNotifications(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.error("Erreur chargement notifications:", err);
+      setNotifications([]);
     } finally {
       setLoading(false);
     }
@@ -218,8 +219,8 @@ const NotificationCenter = () => {
                     </div>
                   </div>
 
-                  <h4 className="text-xs font-black text-slate-900 leading-snug">{notif.title}</h4>
-                  <p className="text-[11px] text-slate-600 font-medium leading-relaxed mt-0.5">{notif.message}</p>
+                  <h4 className="text-xs font-black text-slate-900 leading-snug">{typeof notif.title === 'object' ? JSON.stringify(notif.title) : String(notif.title || '')}</h4>
+                  <p className="text-[11px] text-slate-600 font-medium leading-relaxed mt-0.5">{typeof notif.message === 'object' ? JSON.stringify(notif.message) : String(notif.message || '')}</p>
 
                   <div className="mt-2.5 flex items-center justify-between pt-2 border-t border-slate-100">
                     <button

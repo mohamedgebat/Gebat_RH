@@ -35,9 +35,18 @@ const EmployeeLogin = () => {
       localStorage.setItem('sirh_auth_user', JSON.stringify(authPayload));
       localStorage.setItem('employee', JSON.stringify(response.data.employee));
       
-      navigate('/portal');
     } catch (err) {
-      setError(err.response?.data?.error || 'Identifiants d\'employé GEBAT incorrects.');
+      const serverErr = err.response?.data?.error;
+      const serverMsg = err.response?.data?.message;
+      let errorText = "Identifiants d'employé GEBAT incorrects.";
+      if (typeof serverErr === 'string') {
+        errorText = serverErr;
+      } else if (typeof serverMsg === 'string') {
+        errorText = serverMsg;
+      } else if (err.message && typeof err.message === 'string') {
+        errorText = err.message;
+      }
+      setError(errorText);
     } finally {
       setLoading(false);
     }
@@ -151,7 +160,7 @@ const EmployeeLogin = () => {
             {error && (
               <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-xs font-bold border border-rose-200 flex items-center gap-2 animate-fadeIn">
                 <ShieldCheck size={16} className="shrink-0 text-rose-600" />
-                <span>{error}</span>
+                <span>{typeof error === 'object' ? (error?.error || error?.message || JSON.stringify(error)) : String(error)}</span>
               </div>
             )}
 

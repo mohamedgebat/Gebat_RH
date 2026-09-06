@@ -65,7 +65,17 @@ const ForcePasswordChange = () => {
       }, 2500);
 
     } catch (err) {
-      setError(err.response?.data?.error || 'Échec de la modification du mot de passe. Vérifiez vos identifiants.');
+      const serverErr = err.response?.data?.error;
+      const serverMsg = err.response?.data?.message;
+      let errorText = "Échec de la modification du mot de passe. Vérifiez vos identifiants.";
+      if (typeof serverErr === 'string') {
+        errorText = serverErr;
+      } else if (typeof serverMsg === 'string') {
+        errorText = serverMsg;
+      } else if (err.message && typeof err.message === 'string') {
+        errorText = err.message;
+      }
+      setError(errorText);
     } finally {
       setLoading(false);
     }
@@ -112,7 +122,7 @@ const ForcePasswordChange = () => {
         {error && (
           <div className="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl text-xs font-bold flex items-center gap-2 animate-shake">
             <AlertCircle size={18} className="shrink-0" />
-            <span>{error}</span>
+            <span>{typeof error === 'object' ? (error?.error || error?.message || JSON.stringify(error)) : String(error)}</span>
           </div>
         )}
 

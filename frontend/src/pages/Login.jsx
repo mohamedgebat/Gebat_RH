@@ -59,7 +59,17 @@ const Login = () => {
         navigate('/portal');
       }
     } catch (error) {
-      setErr(error.response?.data?.error || "Identifiants incorrects ou accès non autorisé.");
+      const serverErr = error.response?.data?.error;
+      const serverMsg = error.response?.data?.message;
+      let errorText = "Identifiants incorrects ou accès non autorisé.";
+      if (typeof serverErr === 'string') {
+        errorText = serverErr;
+      } else if (typeof serverMsg === 'string') {
+        errorText = serverMsg;
+      } else if (error.message && typeof error.message === 'string') {
+        errorText = error.message;
+      }
+      setErr(errorText);
       setLoading(false);
     }
   };
@@ -209,7 +219,7 @@ const Login = () => {
             {err && (
               <div className="bg-rose-50 text-rose-700 p-3 rounded-xl text-xs font-bold border border-rose-200 flex items-center gap-2 animate-fadeIn">
                 <ShieldCheck size={16} className="shrink-0 text-rose-600" />
-                <span>{err}</span>
+                <span>{typeof err === 'object' ? (err?.error || err?.message || JSON.stringify(err)) : String(err)}</span>
               </div>
             )}
 
