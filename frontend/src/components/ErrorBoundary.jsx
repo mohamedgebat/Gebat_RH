@@ -30,7 +30,13 @@ class ErrorBoundary extends React.Component {
                 {this.state.error?.toString()}
             </div>
             <button 
-                onClick={() => window.location.reload()}
+                onClick={() => {
+                  try {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                  } catch (e) {}
+                  window.location.href = '/login';
+                }}
                 className="w-full py-4 bg-ci-text text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all shadow-xl"
             >
                 Redémarrer l'interface

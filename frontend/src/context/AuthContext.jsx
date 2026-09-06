@@ -30,24 +30,34 @@ export const AuthProvider = ({ children }) => {
     try {
       const savedUser = localStorage.getItem('sirh_auth_user');
       if (savedUser && savedUser !== 'undefined') {
-        setUser(JSON.parse(savedUser));
+        const parsed = JSON.parse(savedUser);
+        if (parsed && typeof parsed === 'object' && parsed.token && typeof parsed.token === 'string') {
+          setUser(parsed);
+        } else {
+          localStorage.removeItem('sirh_auth_user');
+          setUser(null);
+        }
       }
     } catch (error) {
       console.error('Error parsing saved user session:', error);
       localStorage.removeItem('sirh_auth_user');
+      setUser(null);
     } finally {
       setLoading(false);
     }
   }, []);
 
   const login = (userData) => {
-    setUser(userData);
-    localStorage.setItem('sirh_auth_user', JSON.stringify(userData));
+    if (userData && userData.token) {
+      setUser(userData);
+      localStorage.setItem('sirh_auth_user', JSON.stringify(userData));
+    }
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem('sirh_auth_user');
+    localStorage.removeItem('employee');
   };
 
   return (
