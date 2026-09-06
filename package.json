@@ -3,11 +3,23 @@
   "version": "1.0.0",
   "description": "SIRH Côte d'Ivoire - Système d'Information des Ressources Humaines",
   "scripts": {
-    "build": "cd frontend && npm install && npm run build",
+    "postinstall": "cd backend && npm install",
+    "build": "cd backend && npm install",
     "start": "cd backend && node server.js",
     "backend": "cd backend && node server.js",
     "frontend": "cd frontend && npm run dev",
     "install-all": "cd backend && npm install && cd ../frontend && npm install"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.6.1",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mysql2": "^3.24.3",
+    "sqlite3": "^6.0.1"
   },
   "keywords": ["sirh", "hris", "cote-divoire", "payroll"],
   "author": "",
