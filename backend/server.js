@@ -18,7 +18,7 @@ app.use(helmet({
 }));
 
 // Restriction CORS flexible & sécurisée
-const configuredOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:3000,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:3000')
+const configuredOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:3000,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:3000,https://gebat-rh.vercel.app')
     .split(',')
     .map(o => o.trim());
 
