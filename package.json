@@ -5,6 +5,7 @@
   "scripts": {
     "postinstall": "cd backend && npm install",
     "build": "cd backend && npm install",
+    "build:vercel": "cd frontend && npm install && npm run build && node -e \"require('fs').cpSync('frontend/dist', 'dist', {recursive: true, force: true})\"",
     "start": "cd backend && node server.js",
     "backend": "cd backend && node server.js",
     "frontend": "cd frontend && npm run dev",
