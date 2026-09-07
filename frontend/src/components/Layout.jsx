@@ -90,8 +90,10 @@ const Layout = () => {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-full overflow-x-hidden">
-          <Outlet />
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-auto min-w-0">
+          <div className="min-w-[320px]">
+            <Outlet />
+          </div>
         </main>
       </div>
 
