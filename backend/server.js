@@ -58,9 +58,10 @@ const authLimiter = rateLimit({
 });
 
 app.use(express.json({ limit: '50mb' }));
-app.use(express.static(path.join(__dirname, '../frontend/public')));
+app.use(express.static(path.join(__dirname, '../dist')));
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
-app.use(express.static(path.join(__dirname, '../frontend')));
+app.use(express.static(path.join(__dirname, '../frontend/public')));
+
 
 // --- UTILS & REPONSES NORMALISÉES ---
 function sendError(res, statusCode, message, code = "BAD_REQUEST") {
@@ -3522,6 +3523,23 @@ app.get(['/health', '/api/health'], (req, res) => {
         uptime: process.uptime(),
         timestamp: new Date().toISOString()
     });
+});
+
+// --- ROUTAGE SPA REACT (FALLBACK POUR TOUTES LES PAGES CLIENT) ---
+app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ error: 'Endpoint introuvable', code: 'NOT_FOUND' });
+    }
+    const fs = require('fs');
+    const distIndex = path.join(__dirname, '../dist/index.html');
+    const frontendDistIndex = path.join(__dirname, '../frontend/dist/index.html');
+    if (fs.existsSync(distIndex)) {
+        res.sendFile(distIndex);
+    } else if (fs.existsSync(frontendDistIndex)) {
+        res.sendFile(frontendDistIndex);
+    } else {
+        res.sendFile(path.join(__dirname, '../frontend/index.html'));
+    }
 });
 
 // --- DEMARRAGE DU SERVEUR ---
