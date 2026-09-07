@@ -299,6 +299,265 @@ function initSQLiteSchema(sDb) {
             FOREIGN KEY(company_id) REFERENCES companies(id),
             FOREIGN KEY(empId) REFERENCES employees(id)
         )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS leaves (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            empId INTEGER,
+            type TEXT,
+            debut TEXT,
+            fin TEXT,
+            duree INTEGER,
+            statut TEXT DEFAULT 'En attente',
+            motif TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(empId) REFERENCES employees(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS leave_balances (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            empId INTEGER NOT NULL,
+            annee INTEGER NOT NULL,
+            acquis REAL DEFAULT 26.40,
+            pris REAL DEFAULT 0.00,
+            solde REAL DEFAULT 26.40,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(empId) REFERENCES employees(id),
+            UNIQUE(company_id, empId, annee)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS recruitment (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            poste TEXT,
+            departement TEXT,
+            site TEXT,
+            type TEXT,
+            statut TEXT DEFAULT 'Ouvert',
+            competences TEXT,
+            experience TEXT,
+            criteres TEXT,
+            mots_cles TEXT,
+            candidats INTEGER DEFAULT 0,
+            dateCreation TEXT,
+            dateFin TEXT,
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS applications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            offerId INTEGER,
+            nom TEXT,
+            prenoms TEXT,
+            email TEXT,
+            telephone TEXT,
+            cv TEXT,
+            lm TEXT,
+            date TEXT,
+            statut TEXT DEFAULT 'Nouveau',
+            motivation TEXT,
+            score_ats INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(offerId) REFERENCES recruitment(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS attendance (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            empId INTEGER,
+            matricule TEXT,
+            nom TEXT,
+            type TEXT,
+            timestamp TEXT,
+            site TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(empId) REFERENCES employees(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS attendance_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1 UNIQUE,
+            heure_arrivee_officielle TEXT DEFAULT '08:00',
+            heure_depart_officiel TEXT DEFAULT '17:00',
+            marge_tolerance_minutes INTEGER DEFAULT 15,
+            taux_horaire_base REAL DEFAULT 2500,
+            taux_journalier_base REAL DEFAULT 20000,
+            taux_majoration_heures_sup REAL DEFAULT 25,
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS evaluations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            empId INTEGER,
+            periode TEXT,
+            competence INTEGER DEFAULT 3,
+            rendement INTEGER DEFAULT 3,
+            assiduite INTEGER DEFAULT 3,
+            comportement INTEGER DEFAULT 3,
+            note REAL DEFAULT 3.0,
+            statut TEXT DEFAULT 'En cours',
+            commentaire TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(empId) REFERENCES employees(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS contracts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            empId INTEGER,
+            type TEXT,
+            debut TEXT,
+            fin TEXT,
+            statut TEXT DEFAULT 'Actif',
+            salaireAnnuel REAL DEFAULT 0,
+            is_deleted INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(empId) REFERENCES employees(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS trainings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            titre TEXT,
+            departement TEXT,
+            date TEXT,
+            participants INTEGER DEFAULT 0,
+            statut TEXT DEFAULT 'Planifiée',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS documents (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            nom TEXT,
+            type TEXT DEFAULT 'PDF',
+            taille TEXT DEFAULT '0 KB',
+            dossier TEXT DEFAULT 'Ressources Humaines',
+            date TEXT,
+            is_deleted INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS payroll_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            periode TEXT,
+            dateCloture TEXT,
+            masseNette REAL DEFAULT 0,
+            masseBrute REAL DEFAULT 0,
+            nbEmployes INTEGER DEFAULT 0,
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS advances (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            empId INTEGER,
+            montant REAL DEFAULT 0,
+            dateDemande TEXT,
+            moisRemboursement TEXT,
+            statut TEXT DEFAULT 'En attente',
+            motif TEXT,
+            resteAPayer REAL DEFAULT 0,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(empId) REFERENCES employees(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS disciplinary_actions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            empId INTEGER,
+            type TEXT,
+            dateEmission TEXT,
+            motif TEXT,
+            reponseSalarie TEXT,
+            dateReponse TEXT,
+            statut TEXT DEFAULT 'En attente de réponse',
+            dateCloture TEXT,
+            sanction TEXT,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(empId) REFERENCES employees(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS assessments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            titre TEXT NOT NULL,
+            description TEXT,
+            duree_minutes INTEGER DEFAULT 30,
+            statut TEXT DEFAULT 'Actif',
+            date_creation TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS assessment_questions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            assessment_id INTEGER NOT NULL,
+            texte_question TEXT NOT NULL,
+            options TEXT,
+            reponse_correcte TEXT,
+            points INTEGER DEFAULT 1,
+            image_url TEXT,
+            type_question TEXT DEFAULT 'single',
+            FOREIGN KEY(assessment_id) REFERENCES assessments(id) ON DELETE CASCADE
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS assessment_sessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            assessment_id INTEGER NOT NULL,
+            nom TEXT NOT NULL,
+            prenoms TEXT,
+            email TEXT NOT NULL,
+            telephone TEXT,
+            score INTEGER DEFAULT 0,
+            total_points INTEGER DEFAULT 0,
+            date_passage TEXT DEFAULT CURRENT_TIMESTAMP,
+            temps_ecoule INTEGER DEFAULT 0,
+            FOREIGN KEY(assessment_id) REFERENCES assessments(id) ON DELETE CASCADE
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            user_id INTEGER,
+            empId INTEGER,
+            title TEXT,
+            message TEXT,
+            type TEXT DEFAULT 'info',
+            is_read INTEGER DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            user_id INTEGER,
+            user_email TEXT,
+            user_name TEXT,
+            user_role TEXT,
+            action TEXT NOT NULL,
+            details TEXT,
+            module TEXT DEFAULT 'Général',
+            ip_address TEXT,
+            user_agent TEXT,
+            old_value TEXT,
+            new_value TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        )`);
     });
 }
 

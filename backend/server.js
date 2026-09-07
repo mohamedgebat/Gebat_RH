@@ -75,6 +75,24 @@ function queryAll(sql, params = []) {
     });
 }
 
+function queryGet(sql, params = []) {
+    return new Promise((resolve, reject) => {
+        db.get(sql, params, (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+}
+
+function queryRun(sql, params = []) {
+    return new Promise((resolve, reject) => {
+        db.run(sql, params, function(err) {
+            if (err) reject(err);
+            else resolve({ lastID: this.lastID, changes: this.changes });
+        });
+    });
+}
+
 async function verifyPassword(plainPassword, storedPassword) {
     if (!storedPassword) return false;
     if (storedPassword.startsWith('$2a$') || storedPassword.startsWith('$2b$')) {
@@ -1461,6 +1479,14 @@ app.post('/api/evaluations', authenticateToken, (req, res) => {
         });
 });
 
+app.delete('/api/evaluations/:id', authenticateToken, validateIdParam('id'), authorizeRoles('admin', 'assistant'), (req, res) => {
+    db.run("DELETE FROM evaluations WHERE id = ?", [req.params.id], function(err) {
+        if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+        logAuditAction(req, 'SUPPRESSION_EVALUATION', `Suppression de l'évaluation #${req.params.id}`, 'Évaluations');
+        res.json({ message: 'Évaluation supprimée avec succès' });
+    });
+});
+
 // --- AVANCES SUR SALAIRE ---
 app.post('/api/advances', authenticateToken, (req, res) => {
     const { empId, montant, dateDemande, moisRemboursement, motif, statut } = req.body;
@@ -1580,6 +1606,26 @@ app.post('/api/contracts', authenticateToken, (req, res) => {
             logAuditAction(req, 'CREATION_CONTRAT', `Génération du contrat ${type} pour l'employé ID #${empId}`, 'Contrats', null, req.body);
             res.json({ id: this.lastID, message: 'Contrat généré avec succès' });
         });
+});
+
+app.patch('/api/contracts/:id', authenticateToken, validateIdParam('id'), (req, res) => {
+    const { statut, fin, type, salaireAnnuel } = req.body;
+    db.run("UPDATE contracts SET statut = COALESCE(?, statut), fin = COALESCE(?, fin), type = COALESCE(?, type), salaireAnnuel = COALESCE(?, salaireAnnuel) WHERE id = ?",
+        [statut, fin, type, salaireAnnuel, req.params.id],
+        function(err) {
+            if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+            logAuditAction(req, 'MODIFICATION_CONTRAT', `Mise à jour du contrat #${req.params.id}`, 'Contrats');
+            res.json({ message: 'Contrat mis à jour avec succès' });
+        }
+    );
+});
+
+app.delete('/api/contracts/:id', authenticateToken, validateIdParam('id'), authorizeRoles('admin'), (req, res) => {
+    db.run("DELETE FROM contracts WHERE id = ?", [req.params.id], function(err) {
+        if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+        logAuditAction(req, 'SUPPRESSION_CONTRAT', `Suppression du contrat #${req.params.id}`, 'Contrats');
+        res.json({ message: 'Contrat supprimé avec succès' });
+    });
 });
 
 // --- FORMATIONS ---
@@ -1777,14 +1823,14 @@ async function generateSmartNotifications() {
         // 4. Détection des Procédures Disciplinaires Actives
         const activeDisc = await queryAll(`
             SELECT d.*, e.nom, e.prenoms 
-            FROM disciplinary d 
+            FROM disciplinary_actions d 
             JOIN employees e ON d.empId = e.id 
-            WHERE d.statut = 'En cours'
+            WHERE d.statut = 'En attente de réponse' OR d.statut = 'En cours'
         `);
 
         for (const disc of activeDisc) {
-            const title = `⚖️ Procédure Disciplinaire Ouverte`;
-            const message = `Dossier disciplinaire (${disc.faute}) concernant ${disc.nom} ${disc.prenoms}. Convocation ou sanction en attente.`;
+            const title = `⚖️ Procédure Disciplinaire Active`;
+            const message = `Dossier disciplinaire (${disc.motif || disc.type || 'Manquement'}) concernant ${disc.nom} ${disc.prenoms}. Suivi RH requis.`;
             const existing = await queryAll(`SELECT id FROM notifications WHERE title = ? AND message = ?`, [title, message]);
             if (existing.length === 0) {
                 await queryRun(`INSERT INTO notifications (company_id, title, message, type, is_read, created_at) VALUES (1, ?, ?, 'urgente', 0, CURRENT_TIMESTAMP)`,

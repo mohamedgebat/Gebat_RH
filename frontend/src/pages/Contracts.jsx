@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import PageHeader from '../components/PageHeader';
-import { FileText, Download, Printer, Plus, X, CheckCircle, AlertCircle, Eye } from 'lucide-react';
+import { FileText, Download, Printer, Plus, X, CheckCircle, AlertCircle, Eye, Trash2 } from 'lucide-react';
 import axios from 'axios';
 
 /* ─────────────────────────────────────────────────────────────
@@ -637,6 +637,16 @@ const Contracts = () => {
     }
   };
 
+  const handleDeleteContract = async (id) => {
+    if (!window.confirm('Voulez-vous vraiment supprimer ce contrat ?')) return;
+    try {
+      await axios.delete(`/api/contracts/${id}`);
+      refreshData();
+    } catch (err) {
+      alert('Erreur lors de la suppression du contrat');
+    }
+  };
+
   const handleGenerateContract = (contract) => {
     setGenerating(true);
     const employee = getEmployee(contract.empId);
@@ -778,6 +788,13 @@ const Contracts = () => {
                         className="p-2 hover:bg-ci-bg rounded-lg text-ci-text transition-colors"
                       >
                         <Printer size={16} />
+                      </button>
+                      <button
+                        title="Supprimer ce contrat"
+                        onClick={() => handleDeleteContract(c.id)}
+                        className="p-2 hover:bg-red-50 text-ci-muted hover:text-red-500 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   </td>
