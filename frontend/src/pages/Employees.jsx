@@ -599,9 +599,10 @@ const Employees = () => {
   const handleAdd = async (e) => {
     e.preventDefault();
     
-    // Validation du salaire minimum (SMIC Côte d'Ivoire: 75 000 FCFA)
-    if (newEmp.salaireBase && parseFloat(newEmp.salaireBase) < 75000) {
-        alert('Le salaire ne peut pas être inférieur au SMIC (75 000 FCFA)');
+    // Validation du salaire minimum (SMIC Côte d'Ivoire: 75 000 FCFA, sauf pour les stagiaires)
+    const isStageNew = (newEmp.type || '').toLowerCase().includes('stage');
+    if (!isStageNew && newEmp.salaireBase && parseFloat(newEmp.salaireBase) < 75000) {
+        alert('Le salaire de base ne peut pas être inférieur au SMIC (75 000 FCFA), sauf pour les contrats de type Stage.');
         return;
     }
     
@@ -682,9 +683,10 @@ const Employees = () => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     
-    // Validation du salaire minimum
-    if (editEmp.salaireBase && parseFloat(editEmp.salaireBase) < 75000) {
-        alert('Le salaire ne peut pas être inférieur au SMIC (75 000 FCFA)');
+    // Validation du salaire minimum (SMIC Côte d'Ivoire: 75 000 FCFA, sauf pour les stagiaires)
+    const isStageEdit = (editEmp.type || '').toLowerCase().includes('stage');
+    if (!isStageEdit && editEmp.salaireBase && parseFloat(editEmp.salaireBase) < 75000) {
+        alert('Le salaire de base ne peut pas être inférieur au SMIC (75 000 FCFA), sauf pour les contrats de type Stage.');
         return;
     }
     
