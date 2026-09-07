@@ -1,14 +1,16 @@
 {
-  "buildCommand": "npm run build --prefix frontend",
-  "outputDirectory": "frontend/dist",
   "rewrites": [
     {
       "source": "/api/:path*",
       "destination": "https://gebatrh-production.up.railway.app/api/:path*"
     },
     {
+      "source": "/assets/:path*",
+      "destination": "https://gebatrh-production.up.railway.app/assets/:path*"
+    },
+    {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "https://gebatrh-production.up.railway.app/$1"
     }
   ]
 }
