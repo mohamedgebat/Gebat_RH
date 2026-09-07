@@ -1379,6 +1379,75 @@ app.delete('/api/applications/:id', authenticateToken, validateIdParam('id'), au
     });
 });
 
+// --- RECRUTEMENT (OFFRES & SCORING ATS) ---
+app.post('/api/recruitment', authenticateToken, (req, res) => {
+    const { poste, departement, site, type, competences, experience, criteres, mots_cles, dateFin } = req.body;
+    const companyId = req.company_id || 1;
+
+    if (!poste || !poste.trim()) {
+        return sendError(res, 400, 'Intitulé du poste obligatoire', 'MISSING_FIELDS');
+    }
+
+    db.run(`INSERT INTO recruitment (company_id, poste, departement, site, type, statut, competences, experience, criteres, mots_cles, candidats, dateCreation, dateFin) 
+            VALUES (?, ?, ?, ?, ?, 'Ouvert', ?, ?, ?, ?, 0, ?, ?)`,
+        [
+            companyId,
+            poste.trim(),
+            departement || 'Direction',
+            site || 'Abidjan',
+            type || 'CDI',
+            competences || '',
+            experience || '',
+            criteres || '',
+            mots_cles || '',
+            new Date().toISOString().split('T')[0],
+            dateFin || null
+        ],
+        function(err) {
+            if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+            logAuditAction(req, 'PUBLICATION_OFFRE', `Nouvelle offre publiée : ${poste} (${departement})`, 'Recrutement');
+            res.json({ id: this.lastID, message: 'Offre publiée avec succès' });
+        }
+    );
+});
+
+app.patch('/api/recruitment/:id', authenticateToken, validateIdParam('id'), (req, res) => {
+    const { statut, poste, departement, site, type, competences, experience, criteres, mots_cles, dateFin } = req.body;
+    const offerId = req.params.id;
+    const companyId = req.company_id || 1;
+
+    db.run(`UPDATE recruitment SET 
+            statut = COALESCE(?, statut),
+            poste = COALESCE(?, poste),
+            departement = COALESCE(?, departement),
+            site = COALESCE(?, site),
+            type = COALESCE(?, type),
+            competences = COALESCE(?, competences),
+            experience = COALESCE(?, experience),
+            criteres = COALESCE(?, criteres),
+            mots_cles = COALESCE(?, mots_cles),
+            dateFin = COALESCE(?, dateFin)
+            WHERE id = ? AND (company_id = ? OR company_id = 1)`,
+        [statut, poste, departement, site, type, competences, experience, criteres, mots_cles, dateFin, offerId, companyId],
+        function(err) {
+            if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+            logAuditAction(req, 'MODIFICATION_OFFRE', `Offre #${offerId} mise à jour`, 'Recrutement');
+            res.json({ message: 'Offre mise à jour avec succès' });
+        }
+    );
+});
+
+app.delete('/api/recruitment/:id', authenticateToken, validateIdParam('id'), authorizeRoles('admin'), (req, res) => {
+    const offerId = req.params.id;
+    const companyId = req.company_id || 1;
+
+    db.run("DELETE FROM recruitment WHERE id = ? AND (company_id = ? OR company_id = 1)", [offerId, companyId], function(err) {
+        if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+        logAuditAction(req, 'SUPPRESSION_OFFRE', `Offre #${offerId} supprimée`, 'Recrutement');
+        res.json({ message: 'Offre supprimée avec succès' });
+    });
+});
+
 // --- EVALUATIONS ---
 app.post('/api/evaluations', authenticateToken, (req, res) => {
     const { empId, periode, competence, rendement, assiduite, comportement, note, statut, commentaire } = req.body;

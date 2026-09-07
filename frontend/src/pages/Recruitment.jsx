@@ -71,87 +71,121 @@ const extractYears = (value = '') => {
 const getOfferForApp = (app, offers) => offers.find((offer) => Number(offer.id) === Number(app.offerId));
 
 const buildAtsProfile = (app, offer) => {
-  const targetText = normalizeText(`${offer?.poste || ''} ${offer?.departement || ''} ${offer?.competences || ''} ${offer?.experience || ''} ${offer?.criteres || ''}`);
-  const candidateText = normalizeText(`${app.motivation || ''} ${app.nom || ''} ${app.prenoms || ''}`);
+  const targetText = normalizeText(`${offer?.poste || ''} ${offer?.departement || ''} ${offer?.competences || ''} ${offer?.experience || ''} ${offer?.criteres || ''} ${offer?.mots_cles || ''}`);
+  const candidateText = normalizeText(`${app.motivation || ''} ${app.nom || ''} ${app.prenoms || ''} ${app.email || ''}`);
   
   const posteKeywords = unique((targetText.match(/[a-z0-9]{4,}/g) || []).slice(0, 8));
   const sectorKeywords = PROFILE_KEYWORDS[offer?.departement] || PROFILE_KEYWORDS.default;
   const skillKeywords = tokenizeCriteria(offer?.competences || '');
   const criteriaKeywords = tokenizeCriteria(offer?.criteres || '');
-  
   const requiredAtsKeywords = tokenizeCriteria(offer?.mots_cles || '');
   
   const requiredYears = extractYears(offer?.experience || '');
   const candidateYears = extractYears(app.motivation || '');
 
-  // Regex boundaries to avoid partial matches (e.g., 'dev' in 'devoir')
   const matchKeyword = (kw) => {
+    if (!kw || kw.trim().length === 0) return false;
+    const cleanKw = normalizeText(kw.trim());
     try {
-      return new RegExp(`\\b${kw}\\b`, 'i').test(candidateText);
+      return new RegExp(`(?:^|[\\s,;./|()\\[\\]\\-_:!?'"])${cleanKw}(?:$|[\\s,;./|()\\[\\]\\-_:!?'"])`, 'i').test(candidateText) || candidateText.includes(cleanKw);
     } catch {
-      return candidateText.includes(kw);
+      return candidateText.includes(cleanKw);
     }
   };
   
   const matchedPoste = posteKeywords.filter(matchKeyword);
   const matchedSector = sectorKeywords.filter(matchKeyword);
   const matchedSkills = skillKeywords.filter(matchKeyword);
+  const missingSkills = skillKeywords.filter(k => !matchedSkills.includes(k));
   const matchedCriteria = criteriaKeywords.filter(matchKeyword);
   const matchedAtsKeywords = requiredAtsKeywords.filter(matchKeyword);
+  const missingAtsKeywords = requiredAtsKeywords.filter(k => !matchedAtsKeywords.includes(k));
   
   const motivationLength = normalizeText(app.motivation || '').length;
   const hasCv = Boolean(app.cv);
   const hasLm = Boolean(app.lm);
   const hasContact = Boolean(app.email && app.telephone);
   
-  let score = 0;
-  let experienceScore = 0;
+  // 1. Mots-clés requis (40 pts max)
+  let atsScore = 0;
+  if (requiredAtsKeywords.length > 0) {
+    atsScore = (matchedAtsKeywords.length / requiredAtsKeywords.length) * 40;
+  } else if (matchedPoste.length > 0) {
+    atsScore = Math.min(25, matchedPoste.length * 8);
+  } else {
+    atsScore = 15;
+  }
 
+  // 2. Compétences clés (25 pts max)
+  let skillsScore = 0;
+  if (skillKeywords.length > 0) {
+    skillsScore = (matchedSkills.length / skillKeywords.length) * 25;
+  } else {
+    skillsScore = matchedSector.length > 0 ? 15 : 10;
+  }
+
+  // 3. Expérience (20 pts max)
+  let experienceScore = 0;
   if (requiredYears > 0) {
     if (candidateYears >= requiredYears) experienceScore = 20;
-    else if (candidateYears > 0) experienceScore = 5;
+    else if (candidateYears > 0) experienceScore = Math.round((candidateYears / requiredYears) * 15);
+    else experienceScore = 0;
   } else {
-    experienceScore = candidateYears > 0 ? 10 : 0;
+    experienceScore = candidateYears > 0 ? 15 : 10;
   }
   
-  let bonusScore = 0;
-
-  if (requiredAtsKeywords.length > 0) {
-    // Nouveau système de scoring ATS (basé sur mots_cles)
-    const atsScore = (matchedAtsKeywords.length / requiredAtsKeywords.length) * 50;
-    bonusScore = (hasContact ? 5 : 0) + (hasCv ? 10 : 0) + (hasLm ? 5 : 0) + (motivationLength > 200 ? 10 : motivationLength > 50 ? 5 : 0);
-    score = atsScore + experienceScore + bonusScore;
+  // 4. Critères bonus (10 pts max)
+  let criteriaScore = 0;
+  if (criteriaKeywords.length > 0) {
+    criteriaScore = (matchedCriteria.length / criteriaKeywords.length) * 10;
   } else {
-    // Ancien système
-    const skillsScore = skillKeywords.length > 0 ? Math.min(40, (matchedSkills.length / skillKeywords.length) * 40) : 20;
-    const criteriaScore = Math.min(10, matchedCriteria.length * 5) + Math.min(10, matchedPoste.length * 3);
-    bonusScore = (hasContact ? 5 : 0) + (hasCv ? 5 : 0) + (hasLm ? 2 : 0) + (motivationLength > 200 ? 8 : motivationLength > 50 ? 4 : 0);
-    score = skillsScore + experienceScore + criteriaScore + bonusScore;
+    criteriaScore = 5;
   }
 
-  const cappedScore = Math.min(100, Math.round(score));
+  // 5. Complétude du dossier (15 pts max)
+  const dossierScore = (hasContact ? 5 : 0) + (hasCv ? 5 : 0) + (hasLm ? 2 : 0) + (motivationLength > 50 ? 3 : 0);
+  
+  const rawScore = atsScore + skillsScore + experienceScore + criteriaScore + dossierScore;
+  const cappedScore = Math.min(100, Math.max(5, Math.round(rawScore)));
   const level = cappedScore >= 75 ? 'best' : cappedScore >= 50 ? 'medium' : 'low';
   const label = cappedScore >= 75 ? 'Top Profil' : cappedScore >= 50 ? 'Profil Moyen' : 'À Compléter';
   const color = cappedScore >= 75 ? 'text-emerald-700 bg-emerald-50 border-emerald-200' : cappedScore >= 50 ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-rose-600 bg-rose-50 border-rose-200';
 
   const strengths = [
-    hasCv && 'CV',
-    hasContact && 'Contact',
-    requiredAtsKeywords.length > 0 && matchedAtsKeywords.length > 0 && `Mots-clés (${matchedAtsKeywords.length}/${requiredAtsKeywords.length})`,
-    requiredAtsKeywords.length === 0 && matchedSkills.length > 0 && `Compétences: ${matchedSkills.slice(0, 2).join(', ')}`,
-    experienceScore >= 20 && `${candidateYears} ans exp. validée`,
-    matchedPoste.length > 0 && `Poste adéquat`
+    hasCv && 'CV transmis',
+    hasContact && 'Coordonnées complètes',
+    requiredAtsKeywords.length > 0 && matchedAtsKeywords.length > 0 && `Mots-clés: ${matchedAtsKeywords.length}/${requiredAtsKeywords.length} (${matchedAtsKeywords.slice(0, 3).join(', ')})`,
+    matchedSkills.length > 0 && `Compétences: ${matchedSkills.slice(0, 3).join(', ')}`,
+    candidateYears > 0 && (requiredYears > 0 && candidateYears >= requiredYears ? `${candidateYears} ans exp. requise validée` : `${candidateYears} an(s) d'expérience`),
+    matchedCriteria.length > 0 && `Bonus: ${matchedCriteria.slice(0, 2).join(', ')}`,
+    matchedPoste.length > 0 && `Adéquation poste`
   ].filter(Boolean);
 
   const gaps = [
-    !hasCv && 'CV manquant',
-    !hasContact && 'Contact incomplet',
-    requiredAtsKeywords.length > 0 && matchedAtsKeywords.length < requiredAtsKeywords.length && `${requiredAtsKeywords.length - matchedAtsKeywords.length} mots-clés manquants`,
-    requiredAtsKeywords.length === 0 && skillKeywords.length > 0 && matchedSkills.length === 0 && 'Manque compétences',
-    requiredYears > 0 && candidateYears < requiredYears && `Exp: <${requiredYears}ans`
+    !hasCv && 'CV non fourni',
+    !hasContact && 'Téléphone ou email manquant',
+    requiredAtsKeywords.length > 0 && missingAtsKeywords.length > 0 && `Mots-clés manquants (${missingAtsKeywords.slice(0, 3).join(', ')})`,
+    skillKeywords.length > 0 && missingSkills.length > 0 && `Compétences manquantes: ${missingSkills.slice(0, 3).join(', ')}`,
+    requiredYears > 0 && candidateYears < requiredYears && `Expérience: ${candidateYears || 0}/${requiredYears} ans exigés`
   ].filter(Boolean);
 
-  return { score: cappedScore, level, label, color, strengths, gaps, matchedPoste, matchedSector, matchedSkills, matchedCriteria, matchedAtsKeywords, requiredYears, candidateYears };
+  return { 
+    score: cappedScore, 
+    level, 
+    label, 
+    color, 
+    strengths, 
+    gaps, 
+    matchedPoste, 
+    matchedSector, 
+    matchedSkills, 
+    missingSkills,
+    matchedCriteria, 
+    matchedAtsKeywords, 
+    missingAtsKeywords,
+    requiredYears, 
+    candidateYears 
+  };
 };
 
 const STAGE_COLORS = {
@@ -538,13 +572,16 @@ const Recruitment = () => {
                                 <span>{r.site}</span>
                                 <span className="text-emerald-500 font-black">{r.type}</span>
                               </p>
-                              {(r.competences || r.experience) && (
+                              {(r.mots_cles || r.competences || r.experience || r.criteres) && (
                                 <div className="mt-2.5 flex flex-wrap gap-1.5 max-w-xl">
-                                  {r.experience && <span className="text-[9px] font-black uppercase bg-amber-50 text-amber-700 px-2 py-0.5 rounded-lg border border-amber-200/60 shadow-sm shadow-amber-100/50">{r.experience}</span>}
+                                  {r.experience && <span className="text-[9px] font-black uppercase bg-amber-50 text-amber-700 px-2 py-0.5 rounded-lg border border-amber-200/60 shadow-sm shadow-amber-100/50">Exp: {r.experience}</span>}
+                                  {r.mots_cles && tokenizeCriteria(r.mots_cles).slice(0, 3).map((kw) => (
+                                    <span key={kw} className="text-[9px] font-black uppercase bg-purple-50 text-purple-700 px-2 py-0.5 rounded-lg border border-purple-200/60 shadow-sm">⚡ {kw}</span>
+                                  ))}
                                   {tokenizeCriteria(r.competences).slice(0, 3).map((skill) => (
                                     <span key={skill} className="text-[9px] font-black uppercase bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-lg border border-emerald-200/60 shadow-sm shadow-emerald-100/50">{skill}</span>
                                   ))}
-                                  {tokenizeCriteria(r.competences).length > 3 && <span className="text-[9px] font-black text-slate-400 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200/60">+{tokenizeCriteria(r.competences).length - 3}</span>}
+                                  {r.criteres && <span className="text-[9px] font-black uppercase bg-blue-50 text-blue-700 px-2 py-0.5 rounded-lg border border-blue-200/60 shadow-sm">★ {r.criteres}</span>}
                                 </div>
                               )}
                             </div>
