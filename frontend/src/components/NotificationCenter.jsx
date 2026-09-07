@@ -13,6 +13,7 @@ import {
   sendBrowserNotification, 
   testBrowserNotification 
 } from '../utils/browserNotifications';
+import { useAuth } from '../context/AuthContext';
 
 const NotificationCenter = () => {
   const [notifications, setNotifications] = useState([]);
@@ -23,6 +24,7 @@ const NotificationCenter = () => {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [testingPush, setTestingPush] = useState(false);
   
+  const { user } = useAuth();
   const dropdownRef = useRef(null);
   const prevCountRef = useRef(0);
   const isFirstLoadRef = useRef(true);
@@ -135,13 +137,32 @@ const NotificationCenter = () => {
     markAsRead(notif.id);
     setIsOpen(false);
     
-    // Routage intelligent selon le type de notification
-    const t = String(notif.title || '').toLowerCase();
-    if (t.includes('contrat')) navigate('/contracts');
-    else if (t.includes('congé') || t.includes('conge')) navigate('/leaves');
-    else if (t.includes('attestation') || t.includes('document')) navigate('/documents');
-    else if (t.includes('disciplinaire') || t.includes('discipline')) navigate('/disciplinary');
-    else if (t.includes('avance') || t.includes('bulletin') || t.includes('paie')) navigate('/payroll');
+    const isEmployee = user?.role === 'employee';
+    const textContext = (String(notif.title || '') + ' ' + String(notif.message || '')).toLowerCase();
+
+    if (isEmployee) {
+      if (textContext.includes('congé') || textContext.includes('conge') || textContext.includes('absence') || textContext.includes('permission')) {
+        navigate('/portal?tab=leaves');
+      } else if (textContext.includes('avance') || textContext.includes('prêt') || textContext.includes('pret')) {
+        navigate('/portal?tab=advances');
+      } else if (textContext.includes('bulletin') || textContext.includes('paie') || textContext.includes('salaire')) {
+        navigate('/portal?tab=payroll');
+      } else if (textContext.includes('attestation') || textContext.includes('certificat') || textContext.includes('document')) {
+        navigate('/portal?tab=certificates');
+      } else if (textContext.includes('profil') || textContext.includes('coordonnée') || textContext.includes('mot de passe')) {
+        navigate('/portal?tab=settings');
+      } else {
+        navigate('/portal');
+      }
+      return;
+    }
+    
+    // Routage intelligent selon le type de notification pour les administrateurs / RH
+    if (textContext.includes('contrat')) navigate('/contracts');
+    else if (textContext.includes('congé') || textContext.includes('conge')) navigate('/leaves');
+    else if (textContext.includes('attestation') || textContext.includes('document')) navigate('/documents');
+    else if (textContext.includes('disciplinaire') || textContext.includes('discipline')) navigate('/disciplinary');
+    else if (textContext.includes('avance') || textContext.includes('bulletin') || textContext.includes('paie')) navigate('/payroll');
     else navigate('/employees');
   };
 

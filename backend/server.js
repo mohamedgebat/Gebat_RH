@@ -1010,14 +1010,85 @@ app.get('/api/dashboard/recruitment', authenticateToken, async (req, res) => {
     }
 });
 
+// Fonction centrale pour dispatcher une notification In-App + Email au Salarié concerné
+async function dispatchNotification({ companyId = 1, empId = null, user_id = null, title, message, type = 'info', actionUrl = null, details = [] }) {
+    return new Promise((resolve) => {
+        db.run(
+            `INSERT INTO notifications (company_id, user_id, empId, title, message, type, is_read, created_at) VALUES (?, ?, ?, ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
+            [companyId, user_id, empId, title, message, type],
+            async function(err) {
+                if (err) {
+                    console.error('[NOTIFICATION DISPATCH ERREUR]', err);
+                    return resolve({ success: false, error: err.message });
+                }
+                const notifId = this.lastID;
+
+                // Chercher l'employé concerné pour lui envoyer la notification par email
+                if (empId) {
+                    db.get("SELECT * FROM employees WHERE id = ?", [empId], (errEmp, emp) => {
+                        if (!errEmp && emp) {
+                            emailService.sendEmployeeNotificationEmail({
+                                employee: emp,
+                                title,
+                                message,
+                                type,
+                                actionUrl,
+                                details
+                            }).catch(e => console.error('[EMAIL DISPATCH ERROR]', e.message));
+                        }
+                    });
+                } else if (user_id) {
+                    db.get("SELECT u.*, e.telephone, e.matricule, e.poste, e.departement FROM users u LEFT JOIN employees e ON u.empId = e.id WHERE u.id = ?", [user_id], (errU, u) => {
+                        if (!errU && u) {
+                            emailService.sendEmployeeNotificationEmail({
+                                employee: u,
+                                title,
+                                message,
+                                type,
+                                actionUrl,
+                                details
+                            }).catch(e => console.error('[EMAIL DISPATCH ERROR]', e.message));
+                        }
+                    });
+                }
+
+                resolve({ success: true, id: notifId });
+            }
+        );
+    });
+}
+
 // REST API Notifications
 app.get('/api/notifications', authenticateToken, async (req, res) => {
     try {
         const userId = req.user.id;
         const empId = req.user.empId;
-        const rows = await queryAll("SELECT * FROM notifications WHERE (user_id = ? OR empId = ? OR company_id = ?) ORDER BY created_at DESC LIMIT 50", [userId, empId, req.company_id || 1]);
+        const role = req.user.role;
+        const companyId = req.company_id || 1;
+
+        let rows = [];
+        if (role === 'employee') {
+            // Collaborateur : reçoit ses notifications ciblées ou les annonces générales
+            rows = await queryAll(
+                `SELECT * FROM notifications 
+                 WHERE (empId = ? OR user_id = ? OR (empId IS NULL AND user_id IS NULL AND (company_id = ? OR company_id = 1))) 
+                 ORDER BY created_at DESC LIMIT 50`,
+                [empId || 0, userId, companyId]
+            );
+        } else {
+            // Admin / Assistant : voit l'ensemble des notifications de l'organisation
+            rows = await queryAll(
+                `SELECT * FROM notifications 
+                 WHERE (company_id = ? OR company_id = 1) 
+                 ORDER BY created_at DESC LIMIT 50`,
+                [companyId]
+            );
+        }
+
         res.json(rows);
-    } catch (err) { sendError(res, 500, err.message, 'DATABASE_ERROR'); }
+    } catch (err) { 
+        sendError(res, 500, err.message, 'DATABASE_ERROR'); 
+    }
 });
 
 app.patch('/api/notifications/:id/read', authenticateToken, validateIdParam('id'), (req, res) => {
@@ -1025,6 +1096,73 @@ app.patch('/api/notifications/:id/read', authenticateToken, validateIdParam('id'
         if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
         res.json({ message: 'Notification marquée comme lue' });
     });
+});
+
+app.put('/api/notifications/:id/read', authenticateToken, validateIdParam('id'), (req, res) => {
+    db.run("UPDATE notifications SET is_read = 1 WHERE id = ?", [req.params.id], function(err) {
+        if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+        res.json({ message: 'Notification marquée comme lue' });
+    });
+});
+
+app.post('/api/notifications/read-all', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    const empId = req.user.empId;
+    const role = req.user.role;
+
+    if (role === 'employee') {
+        db.run("UPDATE notifications SET is_read = 1 WHERE empId = ? OR user_id = ?", [empId || 0, userId], function(err) {
+            if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+            res.json({ message: 'Toutes vos notifications ont été marquées comme lues' });
+        });
+    } else {
+        db.run("UPDATE notifications SET is_read = 1 WHERE company_id = ? OR company_id = 1", [req.company_id || 1], function(err) {
+            if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+            res.json({ message: 'Toutes les notifications ont été marquées comme lues' });
+        });
+    }
+});
+
+app.put('/api/notifications/read-all', authenticateToken, (req, res) => {
+    const userId = req.user.id;
+    const empId = req.user.empId;
+    const role = req.user.role;
+
+    if (role === 'employee') {
+        db.run("UPDATE notifications SET is_read = 1 WHERE empId = ? OR user_id = ?", [empId || 0, userId], function(err) {
+            if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+            res.json({ message: 'Toutes vos notifications ont été marquées comme lues' });
+        });
+    } else {
+        db.run("UPDATE notifications SET is_read = 1 WHERE company_id = ? OR company_id = 1", [req.company_id || 1], function(err) {
+            if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+            res.json({ message: 'Toutes les notifications ont été marquées comme lues' });
+        });
+    }
+});
+
+app.post('/api/notifications', authenticateToken, async (req, res) => {
+    const { empId, user_id, title, message, type, actionUrl, details } = req.body;
+    if (!title || !message) {
+        return sendError(res, 400, 'Titre et message obligatoires', 'MISSING_FIELDS');
+    }
+
+    const result = await dispatchNotification({
+        companyId: req.company_id || 1,
+        empId,
+        user_id,
+        title,
+        message,
+        type: type || 'info',
+        actionUrl,
+        details
+    });
+
+    if (!result.success) {
+        return sendError(res, 500, result.error || 'Erreur création notification', 'DATABASE_ERROR');
+    }
+
+    res.json({ success: true, message: 'Notification envoyée avec succès (In-App & Email)', id: result.id });
 });
 
 // Sync globale SIRH Data

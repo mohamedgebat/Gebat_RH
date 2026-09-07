@@ -567,6 +567,41 @@ async function sendTestEmail({ to, smtpConfig, senderEmail, senderName }) {
     });
 }
 
+/**
+ * 9. Notification Générale / Métier Directe pour Salarié (In-App & Email)
+ */
+async function sendEmployeeNotificationEmail({ employee, title, message, type = 'info', actionUrl, actionText, details = [] }) {
+    try {
+        const empEmail = employee?.email || employee?.emailPerso;
+        if (!empEmail) return { success: false, reason: 'NO_EMAIL' };
+
+        const empName = `${employee?.nom || ''} ${employee?.prenoms || 'Collaborateur'}`.trim();
+        const badgeColor = type === 'urgente' ? '#e11d48' : type === 'warning' ? '#f59e0b' : type === 'success' ? '#009E49' : '#2563EB';
+        const badgeText = type === 'urgente' ? 'Alerte Urgente' : type === 'warning' ? 'Information Importante' : type === 'success' ? 'Validation RH' : 'Notification RH';
+
+        const subject = `🔔 ${title} - GEBAT SA`;
+        const html = buildHtmlTemplate({
+            badgeText,
+            badgeColor,
+            title: title || 'Nouvelle notification RH',
+            subtitle: `Bonjour <strong>${empName}</strong>, une nouvelle mise à jour vous concerne :`,
+            details: details.length > 0 ? details : [
+                { label: 'Destinataire', value: `${empName} (${employee?.matricule || 'N/A'})` },
+                { label: 'Message', value: message },
+                { label: 'Date', value: new Date().toLocaleDateString('fr-FR') }
+            ],
+            actionUrl: actionUrl || `${APP_URL}/portal`,
+            actionText: actionText || 'Ouvrir mon Espace Collaborateur',
+            footerNote: 'Ce message est généré automatiquement par le SIRH GEBAT SA.'
+        });
+
+        return await sendMail({ to: empEmail, subject, html, text: message });
+    } catch (err) {
+        console.error('[EMAIL SERVICE] Erreur sendEmployeeNotificationEmail:', err);
+        return { success: false, error: err.message };
+    }
+}
+
 module.exports = {
     getSmtpConfig,
     createTransporter,
@@ -578,5 +613,6 @@ module.exports = {
     sendAdvanceDecisionEmail,
     sendPayslipEmail,
     sendContractExpiryAlertEmail,
-    sendDisciplinaryEmail
+    sendDisciplinaryEmail,
+    sendEmployeeNotificationEmail
 };

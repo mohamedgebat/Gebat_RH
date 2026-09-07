@@ -7,13 +7,15 @@ import { compressImage } from '../utils/imageCompressor';
 import { LogOut, Palmtree, FileText, Settings, LayoutGrid, Calendar, Bell, ChevronRight, CheckCircle2, Printer, Download, Info, User, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon, Shield, Lock, Eye, EyeOff, Save, GraduationCap, AlertTriangle, DollarSign, Plus, Camera, UploadCloud, Trash2 } from 'lucide-react';
 import { calculateDetailedPaie } from '../utils/payrollCalc';
 import { generateAttestationTravail, generateCertificatTravail, generateAttestationSalaire } from '../utils/documentGenerator';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { calculateRealLeaveDays } from '../utils/holidays';
+import NotificationCenter from '../components/NotificationCenter';
 
 const EmployeePortal = () => {
   const { user, logout, updateUser } = useAuth();
   const { data, loading, refreshData } = useData();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [selectedEmpForPayslip, setSelectedEmpForPayslip] = useState(null);
   const [selectedMonth, setSelectedMonth] = useState('Juin 2026');
@@ -62,6 +64,14 @@ const EmployeePortal = () => {
       });
     }
   }, [employee]);
+
+  // Handle URL tab parameter
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['dashboard', 'leaves', 'payroll', 'advances', 'certificates', 'settings'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   const handleProfilePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
@@ -1262,12 +1272,9 @@ const EmployeePortal = () => {
                     <p className="text-[9px] font-bold text-ci-green uppercase tracking-widest mt-0.5">SIRH CI Self-Service</p>
                 </div>
             </div>
-            <div className="flex items-center gap-6">
-                <button className="relative p-2 text-ci-muted hover:text-ci-text transition-colors">
-                    <Bell size={20} />
-                    {pendingRequests > 0 && <span className="absolute top-2 right-2 w-5 h-5 bg-ci-orange rounded-full text-white text-[9px] font-black flex items-center justify-center">{pendingRequests}</span>}
-                </button>
-                <button onClick={logout} className="flex items-center gap-2 px-5 py-2 bg-red-50 text-ci-danger text-[10px] font-black rounded-full hover:bg-red-100 transition-all uppercase tracking-widest">
+            <div className="flex items-center gap-4">
+                <NotificationCenter />
+                <button onClick={logout} className="flex items-center gap-2 px-5 py-2.5 bg-red-50 text-ci-danger hover:bg-red-100 text-[10px] font-black rounded-2xl transition-all uppercase tracking-widest border border-red-100 shadow-sm active:scale-95">
                     Déconnexion <LogOut size={14} />
                 </button>
             </div>
