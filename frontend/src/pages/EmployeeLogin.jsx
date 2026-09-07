@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Lock, Eye, EyeOff, ShieldCheck, ArrowRight, HelpCircle, ArrowLeft, Sparkles } from 'lucide-react';
 import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
 
 const EmployeeLogin = () => {
   const [username, setUsername] = useState('');
@@ -10,6 +11,7 @@ const EmployeeLogin = () => {
   const [rememberMe, setRememberMe] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -32,9 +34,10 @@ const EmployeeLogin = () => {
         token: response.data.token
       };
 
-      localStorage.setItem('sirh_auth_user', JSON.stringify(authPayload));
+      login(authPayload);
       localStorage.setItem('employee', JSON.stringify(response.data.employee));
-      
+      setLoading(false);
+      navigate('/portal');
     } catch (err) {
       const serverErr = err.response?.data?.error;
       const serverMsg = err.response?.data?.message;

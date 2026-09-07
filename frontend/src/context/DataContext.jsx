@@ -32,6 +32,12 @@ export const DataProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
+    const savedUser = localStorage.getItem('sirh_auth_user');
+    if (!user && (!savedUser || savedUser === 'undefined')) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await axios.get('/api/sirh-data');

@@ -59,8 +59,6 @@ const UserProfileModal = ({ isOpen, onClose }) => {
     }
   }, [isOpen, user]);
 
-  if (!isOpen) return null;
-
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -204,6 +202,8 @@ const UserProfileModal = ({ isOpen, onClose }) => {
   };
 
   const pwdStrength = getPasswordStrength(passwordForm.newPassword);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fadeIn">

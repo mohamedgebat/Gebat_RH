@@ -34,14 +34,17 @@ export const AuthProvider = ({ children }) => {
         const parsed = JSON.parse(savedUser);
         if (parsed && typeof parsed === 'object' && parsed.token && typeof parsed.token === 'string') {
           setUser(parsed);
+          axios.defaults.headers.common['Authorization'] = `Bearer ${parsed.token}`;
         } else {
           localStorage.removeItem('sirh_auth_user');
+          delete axios.defaults.headers.common['Authorization'];
           setUser(null);
         }
       }
     } catch (error) {
       console.error('Error parsing saved user session:', error);
       localStorage.removeItem('sirh_auth_user');
+      delete axios.defaults.headers.common['Authorization'];
       setUser(null);
     } finally {
       setLoading(false);
@@ -52,11 +55,13 @@ export const AuthProvider = ({ children }) => {
     if (userData && userData.token) {
       setUser(userData);
       localStorage.setItem('sirh_auth_user', JSON.stringify(userData));
+      axios.defaults.headers.common['Authorization'] = `Bearer ${userData.token}`;
     }
   };
 
   const logout = () => {
     localStorage.removeItem('sirh_auth_user');
+    delete axios.defaults.headers.common['Authorization'];
     setUser(null);
   };
 

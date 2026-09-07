@@ -53,7 +53,7 @@ const Login = () => {
           token: res.data.token
         };
 
-        localStorage.setItem('sirh_auth_user', JSON.stringify(authPayload));
+        login(authPayload);
         localStorage.setItem('employee', JSON.stringify(res.data.employee));
         setLoading(false);
         navigate('/portal');
