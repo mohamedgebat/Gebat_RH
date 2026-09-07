@@ -55,14 +55,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('sirh_auth_user');
-    localStorage.removeItem('employee');
+  const updateUser = (newUserData) => {
+    setUser((prev) => {
+      const updated = { ...(prev || {}), ...newUserData };
+      localStorage.setItem('sirh_auth_user', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser, loading }}>
       {children}
     </AuthContext.Provider>
   );

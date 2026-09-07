@@ -4,12 +4,14 @@ import Sidebar from './Sidebar';
 import NotificationCenter from './NotificationCenter';
 import AiRhAssistant from './AiRhAssistant';
 import EmployeeAvatar from './EmployeeAvatar';
+import UserProfileModal from './UserProfileModal';
 import { useAuth } from '../context/AuthContext';
-import { ShieldCheck, Search, Building2, Menu } from 'lucide-react';
+import { ShieldCheck, Search, Building2, Menu, Settings2 } from 'lucide-react';
 
 const Layout = () => {
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const todayFormatted = new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
@@ -55,24 +57,34 @@ const Layout = () => {
 
             <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
 
-            {/* Profile Badge */}
-            <div className="flex items-center gap-2 sm:gap-3 bg-slate-50 p-1 sm:p-1.5 sm:pr-4 rounded-2xl border border-slate-200">
-              <EmployeeAvatar
-                src={user?.photo}
-                nom={user?.name || 'RH'}
-                size="sm"
-                className="rounded-xl shadow-md shrink-0"
-              />
+            {/* Profile Badge (Clickable to Edit Profile) */}
+            <button
+              onClick={() => setProfileModalOpen(true)}
+              className="group flex items-center gap-2 sm:gap-3 bg-slate-50 hover:bg-slate-100/80 p-1 sm:p-1.5 sm:pr-4 rounded-2xl border border-slate-200 hover:border-[#2563EB]/40 transition-all text-left"
+              title="Mon profil & paramètres de compte (Cliquer pour modifier)"
+            >
+              <div className="relative">
+                <EmployeeAvatar
+                  src={user?.photo}
+                  nom={user?.name || 'RH'}
+                  size="sm"
+                  className="rounded-xl shadow-md shrink-0 group-hover:ring-2 group-hover:ring-[#2563EB]/40 transition-all"
+                />
+                <span className="absolute -bottom-1 -right-1 p-0.5 bg-[#2563EB] text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Settings2 size={10} />
+                </span>
+              </div>
               <div className="text-left leading-tight hidden sm:block">
                 <div className="text-xs font-black text-slate-900 flex items-center gap-1 truncate max-w-[120px] md:max-w-[180px]">
-                  <span>{user?.name || 'Administrateur GEBAT'}</span>
+                  <span className="group-hover:text-[#2563EB] transition-colors">{user?.name || 'Administrateur GEBAT'}</span>
                   <ShieldCheck size={12} className="text-emerald-600 shrink-0" />
                 </div>
-                <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">
-                  {user?.role === 'admin' ? 'Responsable RH' : 'Gestionnaire'}
+                <div className="text-[10px] font-bold text-amber-600 uppercase tracking-wider flex items-center gap-1">
+                  <span>{user?.role === 'admin' ? 'Responsable RH' : 'Gestionnaire'}</span>
+                  <span className="text-slate-400 group-hover:text-[#2563EB] text-[9px] font-semibold lowercase opacity-0 group-hover:opacity-100 transition-opacity">(éditer)</span>
                 </div>
               </div>
-            </div>
+            </button>
           </div>
 
         </header>
@@ -82,6 +94,12 @@ const Layout = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Profile Edition Modal */}
+      <UserProfileModal
+        isOpen={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+      />
 
       {/* Floating AI RH Assistant */}
       <AiRhAssistant />

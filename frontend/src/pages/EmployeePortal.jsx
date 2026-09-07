@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom';
 import { calculateRealLeaveDays } from '../utils/holidays';
 
 const EmployeePortal = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const { data, loading, refreshData } = useData();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -26,13 +26,51 @@ const EmployeePortal = () => {
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
+  // Profile Edit State
+  const [employeeProfileForm, setEmployeeProfileForm] = useState({
+    telephone: '',
+    email: '',
+    emailPerso: '',
+    situationMatrimoniale: 'Célibataire',
+    nbEnfants: 0,
+    adresse: '',
+    contactUrgenceNom: '',
+    contactUrgenceTelephone: '',
+    contactUrgenceLien: '',
+    rib: ''
+  });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileSuccessMsg, setProfileSuccessMsg] = useState('');
+  const [profileErrorMsg, setProfileErrorMsg] = useState('');
+
+  const employee = (data?.employees || []).find(e => e.id === (user?.empId || user?.id || 1));
+
+  // Sync profile form when employee data is loaded
+  useEffect(() => {
+    if (employee) {
+      setEmployeeProfileForm({
+        telephone: employee.telephone || '',
+        email: employee.email || '',
+        emailPerso: employee.emailPerso || '',
+        situationMatrimoniale: employee.situationMatrimoniale || 'Célibataire',
+        nbEnfants: employee.nbEnfants || 0,
+        adresse: employee.adresse || '',
+        contactUrgenceNom: employee.contactUrgenceNom || '',
+        contactUrgenceTelephone: employee.contactUrgenceTelephone || '',
+        contactUrgenceLien: employee.contactUrgenceLien || '',
+        rib: employee.rib || ''
+      });
+    }
+  }, [employee]);
+
   const handleProfilePhotoUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !employee?.id) return;
     setUploadingPhoto(true);
     try {
       const compressed = await compressImage(file, { maxWidth: 400, maxHeight: 400, quality: 0.85 });
-      await axios.patch(`/api/employees/${employee.id}/photo`, { photo: compressed });
+      await axios.patch('/api/profile/photo', { photo: compressed });
+      if (updateUser) updateUser({ photo: compressed });
       await refreshData();
       alert('Photo de profil mise à jour avec succès !');
     } catch (err) {
@@ -47,7 +85,8 @@ const EmployeePortal = () => {
     if (!employee?.id || !window.confirm('Voulez-vous vraiment supprimer votre photo de profil ?')) return;
     setUploadingPhoto(true);
     try {
-      await axios.patch(`/api/employees/${employee.id}/photo`, { photo: null });
+      await axios.patch('/api/profile/photo', { photo: null });
+      if (updateUser) updateUser({ photo: null });
       await refreshData();
       alert('Photo de profil supprimée.');
     } catch (err) {
@@ -55,6 +94,32 @@ const EmployeePortal = () => {
       alert('Erreur lors de la suppression de la photo.');
     } finally {
       setUploadingPhoto(false);
+    }
+  };
+
+  const handleEmployeeProfileSubmit = async (e) => {
+    e.preventDefault();
+    setProfileSaving(true);
+    setProfileSuccessMsg('');
+    setProfileErrorMsg('');
+    try {
+      const res = await axios.put('/api/profile', {
+        ...employeeProfileForm,
+        name: `${employee.nom} ${employee.prenoms}`,
+        email: employeeProfileForm.email || employee.email,
+        telephone: employeeProfileForm.telephone
+      });
+      if (res.data?.user && updateUser) {
+        updateUser(res.data.user);
+      }
+      await refreshData();
+      setProfileSuccessMsg('Vos coordonnées et votre profil ont été mis à jour avec succès !');
+      setTimeout(() => setProfileSuccessMsg(''), 4000);
+    } catch (err) {
+      console.error('Erreur mise à jour profil employé:', err);
+      setProfileErrorMsg(err.response?.data?.error || 'Erreur lors de la mise à jour du profil.');
+    } finally {
+      setProfileSaving(false);
     }
   };
 
@@ -73,7 +138,6 @@ const EmployeePortal = () => {
 
   if (loading) return <div className="p-10 text-center uppercase font-black tracking-widest text-ci-muted animate-pulse">Initialisation de votre espace...</div>;
 
-  const employee = (data?.employees || []).find(e => e.id === (user?.empId || user?.id || 1));
   const myLeaves = (data?.leaves || []).filter(l => l.empId === employee?.id);
   const myAttendance = (data?.attendance || []).filter(a => a.empId === employee?.id);
 
@@ -1878,10 +1942,25 @@ const EmployeePortal = () => {
 
                 {activeTab === 'settings' && (
                     <div className="space-y-8 animate-fadeIn">
-                        {/* Photo & Identity Section */}
-                        <div className="bg-white rounded-[3rem] p-8 sm:p-10 shadow-xl border border-ci-border">
-                            <h3 className="text-2xl font-black text-ci-text uppercase tracking-tight mb-8 flex items-center gap-3">
-                                <User className="text-ci-green" size={24} /> Mon Profil & Identité
+                        
+                        {/* Status Messages */}
+                        {profileSuccessMsg && (
+                            <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-bold flex items-center gap-3 animate-fadeIn">
+                                <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
+                                <span>{profileSuccessMsg}</span>
+                            </div>
+                        )}
+                        {profileErrorMsg && (
+                            <div className="p-4 bg-red-50 border border-red-200 text-red-800 rounded-2xl text-xs font-bold flex items-center gap-3 animate-fadeIn">
+                                <AlertTriangle size={18} className="text-red-600 shrink-0" />
+                                <span>{profileErrorMsg}</span>
+                            </div>
+                        )}
+
+                        {/* Photo & Identity Banner */}
+                        <div className="bg-white rounded-[2.5rem] sm:rounded-[3rem] p-6 sm:p-10 shadow-xl border border-ci-border">
+                            <h3 className="text-xl sm:text-2xl font-black text-ci-text uppercase tracking-tight mb-8 flex items-center gap-3">
+                                <User className="text-ci-green" size={24} /> Mon Profil & Identité Professionnelle
                             </h3>
 
                             <div className="flex flex-col sm:flex-row items-center gap-8 pb-8 border-b border-ci-border">
@@ -1896,7 +1975,7 @@ const EmployeePortal = () => {
                                     />
                                     <label 
                                         className="absolute bottom-0 right-0 p-2.5 bg-ci-green text-white rounded-2xl shadow-lg cursor-pointer hover:bg-ci-greenDark transition-all"
-                                        title="Changer la photo de profil"
+                                        title="Changer ma photo de profil"
                                     >
                                         <Camera size={16} />
                                         <input type="file" accept="image/*" onChange={handleProfilePhotoUpload} className="hidden" disabled={uploadingPhoto} />
@@ -1930,41 +2009,163 @@ const EmployeePortal = () => {
                                 </div>
                             </div>
 
-                            {/* Informations Détaillées */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 pt-8">
-                                <div className="p-4 bg-ci-bg/50 rounded-2xl border border-ci-border">
-                                    <p className="text-[9px] font-black uppercase text-ci-muted">Téléphone</p>
-                                    <p className="text-sm font-bold text-ci-text mt-1">{employee?.telephone || 'Non renseigné'}</p>
+                            {/* Section Édition Coordonnées & Données Personnelles */}
+                            <form onSubmit={handleEmployeeProfileSubmit} className="pt-8 space-y-6">
+                                <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                                    <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                                        <Phone size={16} className="text-ci-green" /> Mes Coordonnées & Informations Personnelles
+                                    </h4>
+                                    <span className="text-[10px] font-bold text-slate-400">Directement modifiables par le collaborateur</span>
                                 </div>
-                                <div className="p-4 bg-ci-bg/50 rounded-2xl border border-ci-border">
-                                    <p className="text-[9px] font-black uppercase text-ci-muted">Email Professionnel</p>
-                                    <p className="text-sm font-bold text-ci-text mt-1">{employee?.email || 'Non renseigné'}</p>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                                    {/* Téléphone */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Téléphone Principal</label>
+                                        <input
+                                            type="tel"
+                                            value={employeeProfileForm.telephone}
+                                            onChange={(e) => setEmployeeProfileForm({ ...employeeProfileForm, telephone: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-ci-green outline-none transition-all"
+                                            placeholder="+225 07 00 00 00 00"
+                                        />
+                                    </div>
+
+                                    {/* Email Professionnel */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Email Professionnel (Identifiant)</label>
+                                        <input
+                                            type="email"
+                                            value={employeeProfileForm.email}
+                                            onChange={(e) => setEmployeeProfileForm({ ...employeeProfileForm, email: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-ci-green outline-none transition-all"
+                                            placeholder="prenom.nom@gebat-sa.ci"
+                                        />
+                                    </div>
+
+                                    {/* Email Personnel */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Email Personnel de Secours</label>
+                                        <input
+                                            type="email"
+                                            value={employeeProfileForm.emailPerso}
+                                            onChange={(e) => setEmployeeProfileForm({ ...employeeProfileForm, emailPerso: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-ci-green outline-none transition-all"
+                                            placeholder="personnel@email.com"
+                                        />
+                                    </div>
+
+                                    {/* Situation Matrimoniale */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Situation Matrimoniale</label>
+                                        <select
+                                            value={employeeProfileForm.situationMatrimoniale}
+                                            onChange={(e) => setEmployeeProfileForm({ ...employeeProfileForm, situationMatrimoniale: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-ci-green outline-none transition-all cursor-pointer"
+                                        >
+                                            <option value="Célibataire">Célibataire</option>
+                                            <option value="Marié(e)">Marié(e)</option>
+                                            <option value="Divorcé(e)">Divorcé(e)</option>
+                                            <option value="Veuf(ve)">Veuf(ve)</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Nombre d'enfants */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Nombre d'enfants à charge</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="15"
+                                            value={employeeProfileForm.nbEnfants}
+                                            onChange={(e) => setEmployeeProfileForm({ ...employeeProfileForm, nbEnfants: parseInt(e.target.value, 10) || 0 })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-ci-green outline-none transition-all"
+                                        />
+                                    </div>
+
+                                    {/* RIB / Numéro de compte */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">RIB / N° de Compte Bancaire</label>
+                                        <input
+                                            type="text"
+                                            value={employeeProfileForm.rib}
+                                            onChange={(e) => setEmployeeProfileForm({ ...employeeProfileForm, rib: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-ci-green outline-none transition-all"
+                                            placeholder="CI000 00000 00000000000 00"
+                                        />
+                                    </div>
+
+                                    {/* Adresse de résidence */}
+                                    <div className="space-y-1.5 sm:col-span-2 md:col-span-3">
+                                        <label className="text-[10px] font-black uppercase tracking-wider text-slate-500">Adresse de Résidence (Quartier, Commune, Ville)</label>
+                                        <input
+                                            type="text"
+                                            value={employeeProfileForm.adresse}
+                                            onChange={(e) => setEmployeeProfileForm({ ...employeeProfileForm, adresse: e.target.value })}
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-ci-green outline-none transition-all"
+                                            placeholder="Ex: Cocody Angré 8ème Tranche, Abidjan"
+                                        />
+                                    </div>
                                 </div>
-                                <div className="p-4 bg-ci-bg/50 rounded-2xl border border-ci-border">
-                                    <p className="text-[9px] font-black uppercase text-ci-muted">N° CNPS</p>
-                                    <p className="text-sm font-bold text-ci-text mt-1">{employee?.cnps || '-'}</p>
+
+                                {/* Contact d'urgence */}
+                                <div className="pt-4 border-t border-slate-100">
+                                    <h5 className="text-xs font-black text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                        <Shield size={14} className="text-amber-500" /> Personne à Contacter en Cas d'Urgence
+                                    </h5>
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-black uppercase text-slate-400">Nom & Prénoms</label>
+                                            <input
+                                                type="text"
+                                                value={employeeProfileForm.contactUrgenceNom}
+                                                onChange={(e) => setEmployeeProfileForm({ ...employeeProfileForm, contactUrgenceNom: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white outline-none"
+                                                placeholder="Ex: Kouamé Aya Marie"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-black uppercase text-slate-400">Numéro de Téléphone</label>
+                                            <input
+                                                type="tel"
+                                                value={employeeProfileForm.contactUrgenceTelephone}
+                                                onChange={(e) => setEmployeeProfileForm({ ...employeeProfileForm, contactUrgenceTelephone: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white outline-none"
+                                                placeholder="+225 05 00 00 00 00"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[9px] font-black uppercase text-slate-400">Lien de Parenté</label>
+                                            <input
+                                                type="text"
+                                                value={employeeProfileForm.contactUrgenceLien}
+                                                onChange={(e) => setEmployeeProfileForm({ ...employeeProfileForm, contactUrgenceLien: e.target.value })}
+                                                className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white outline-none"
+                                                placeholder="Ex: Époux / Épouse, Frère, Mère"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="p-4 bg-ci-bg/50 rounded-2xl border border-ci-border">
-                                    <p className="text-[9px] font-black uppercase text-ci-muted">Date d'embauche</p>
-                                    <p className="text-sm font-bold text-ci-text mt-1">{employee?.dateEmbauche || '-'}</p>
+
+                                <div className="flex justify-end pt-4 border-t border-slate-100">
+                                    <button
+                                        type="submit"
+                                        disabled={profileSaving}
+                                        className="px-6 py-3.5 bg-ci-green hover:bg-ci-greenDark text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-ci-green/20 disabled:opacity-50"
+                                    >
+                                        <Save size={16} />
+                                        <span>{profileSaving ? 'Enregistrement...' : 'Enregistrer mes coordonnées'}</span>
+                                    </button>
                                 </div>
-                                <div className="p-4 bg-ci-bg/50 rounded-2xl border border-ci-border">
-                                    <p className="text-[9px] font-black uppercase text-ci-muted">Site d'affectation</p>
-                                    <p className="text-sm font-bold text-ci-text mt-1">{employee?.site || 'Siège'}</p>
-                                </div>
-                                <div className="p-4 bg-ci-bg/50 rounded-2xl border border-ci-border">
-                                    <p className="text-[9px] font-black uppercase text-ci-muted">Mode de Paiement</p>
-                                    <p className="text-sm font-bold text-ci-text mt-1">{employee?.modePaiement || 'Virement Bancaire'}</p>
-                                </div>
-                            </div>
+                            </form>
                         </div>
 
                         {/* Password Update Form */}
-                        <div className="bg-white rounded-[3rem] p-8 sm:p-10 shadow-xl border border-ci-border">
-                            <h3 className="text-2xl font-black text-ci-text uppercase tracking-tight mb-6 flex items-center gap-3">
-                                <Lock className="text-amber-500" size={24} /> Sécurité & Mot de Passe
+                        <div className="bg-white rounded-[2.5rem] sm:rounded-[3rem] p-6 sm:p-10 shadow-xl border border-ci-border">
+                            <h3 className="text-xl sm:text-2xl font-black text-ci-text uppercase tracking-tight mb-6 flex items-center gap-3">
+                                <Lock className="text-amber-500" size={24} /> Sécurité & Mot de Passe Personnel
                             </h3>
-                            <form onSubmit={handlePasswordSubmit} className="max-w-xl space-y-4">
+                            <form onSubmit={handlePasswordChange} className="max-w-xl space-y-4">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black uppercase text-ci-muted">Mot de passe actuel</label>
                                     <div className="relative">
@@ -1973,7 +2174,7 @@ const EmployeePortal = () => {
                                             required
                                             value={passwordForm.currentPassword}
                                             onChange={e => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
-                                            className="w-full px-6 py-4 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-ci-green/10 outline-none pr-12"
+                                            className="w-full px-6 py-4 bg-ci-bg border border-ci-border rounded-2xl text-sm font-bold focus:ring-4 focus:ring-ci-green/10 outline-none pr-12"
                                             placeholder="••••••••"
                                         />
                                         <button type="button" onClick={() => setShowPasswords({...showPasswords, current: !showPasswords.current})} className="absolute right-4 top-1/2 -translate-y-1/2 text-ci-muted hover:text-ci-text">
@@ -1989,7 +2190,7 @@ const EmployeePortal = () => {
                                             required minLength={6}
                                             value={passwordForm.newPassword}
                                             onChange={e => setPasswordForm({...passwordForm, newPassword: e.target.value})}
-                                            className="w-full px-6 py-4 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-ci-green/10 outline-none pr-12"
+                                            className="w-full px-6 py-4 bg-ci-bg border border-ci-border rounded-2xl text-sm font-bold focus:ring-4 focus:ring-ci-green/10 outline-none pr-12"
                                             placeholder="Au moins 6 caractères"
                                         />
                                         <button type="button" onClick={() => setShowPasswords({...showPasswords, new: !showPasswords.new})} className="absolute right-4 top-1/2 -translate-y-1/2 text-ci-muted hover:text-ci-text">
@@ -2005,7 +2206,7 @@ const EmployeePortal = () => {
                                             required minLength={6}
                                             value={passwordForm.confirmPassword}
                                             onChange={e => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
-                                            className="w-full px-6 py-4 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-ci-green/10 outline-none pr-12"
+                                            className="w-full px-6 py-4 bg-ci-bg border border-ci-border rounded-2xl text-sm font-bold focus:ring-4 focus:ring-ci-green/10 outline-none pr-12"
                                             placeholder="Confirmez à l'identique"
                                         />
                                         <button type="button" onClick={() => setShowPasswords({...showPasswords, confirm: !showPasswords.confirm})} className="absolute right-4 top-1/2 -translate-y-1/2 text-ci-muted hover:text-ci-text">
@@ -2016,7 +2217,7 @@ const EmployeePortal = () => {
                                 <button 
                                     type="submit" 
                                     disabled={passwordSubmitting}
-                                    className="py-4 px-8 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all flex items-center gap-2"
+                                    className="py-4 px-8 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all flex items-center gap-2 disabled:opacity-50"
                                 >
                                     <Save size={16} /> {passwordSubmitting ? 'Mise à jour...' : 'Enregistrer le nouveau mot de passe'}
                                 </button>

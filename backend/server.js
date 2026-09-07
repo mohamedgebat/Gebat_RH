@@ -600,7 +600,7 @@ app.get('/api/sirh-data', authenticateToken, async (req, res) => {
             queryAll("SELECT * FROM attendance WHERE (company_id = ? OR company_id = 1)", [companyId]),
             queryAll("SELECT * FROM evaluations WHERE (company_id = ? OR company_id = 1)", [companyId]),
             queryAll("SELECT * FROM contracts WHERE is_deleted = 0 AND (company_id = ? OR company_id = 1)", [companyId]),
-            queryAll("SELECT id, name, email, role, empId, status, dateCreated FROM users WHERE is_deleted = 0 AND (company_id = ? OR company_id = 1)", [companyId]),
+            queryAll("SELECT id, name, email, role, empId, status, dateCreated, photo, telephone FROM users WHERE is_deleted = 0 AND (company_id = ? OR company_id = 1)", [companyId]),
             queryAll("SELECT * FROM trainings WHERE (company_id = ? OR company_id = 1) ORDER BY date DESC", [companyId]),
             queryAll("SELECT * FROM documents WHERE is_deleted = 0 AND (company_id = ? OR company_id = 1) ORDER BY date DESC", [companyId]),
             queryAll("SELECT * FROM payroll_history WHERE (company_id = ? OR company_id = 1) ORDER BY dateCloture DESC", [companyId]),
@@ -1316,6 +1316,189 @@ app.patch('/api/users/:id/password', authenticateToken, validateIdParam('id'), (
         db.run("UPDATE users SET password = ? WHERE id = ?", [hashedPassword, req.params.id], function(err) {
             if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
             res.json({ message: 'Mot de passe mis à jour avec succès' });
+        });
+    });
+});
+
+// --- GESTION DU PROFIL UTILISATEUR & COMPTE PERSONNEL ---
+app.get('/api/profile', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    db.get("SELECT id, company_id, name, email, role, empId, status, dateCreated, photo, telephone FROM users WHERE id = ?", [userId], (err, user) => {
+        if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+        if (!user) return sendError(res, 404, 'Utilisateur non trouvé', 'NOT_FOUND');
+
+        if (user.empId) {
+            db.get("SELECT * FROM employees WHERE id = ?", [user.empId], (err, employee) => {
+                if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+                return res.json({ user, employee });
+            });
+        } else {
+            return res.json({ user, employee: null });
+        }
+    });
+});
+
+app.put('/api/profile', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const { 
+        name, email, photo, telephone, 
+        adresse, emailPerso, situationMatrimoniale, nbEnfants, rib, 
+        contactUrgenceNom, contactUrgenceTelephone, contactUrgenceLien, bio 
+    } = req.body;
+
+    db.get("SELECT * FROM users WHERE id = ?", [userId], async (err, currentUser) => {
+        if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+        if (!currentUser) return sendError(res, 404, 'Utilisateur non trouvé', 'NOT_FOUND');
+
+        // Validation format email si renseigné
+        if (email && !validateEmailFormat(email)) {
+            return sendError(res, 400, 'Format d\'adresse email invalide', 'INVALID_EMAIL');
+        }
+
+        // Vérification unicité email si modifié
+        if (email && email.toLowerCase() !== currentUser.email.toLowerCase()) {
+            const existing = await queryGet("SELECT id FROM users WHERE LOWER(email) = LOWER(?) AND id != ?", [email.trim(), userId]);
+            if (existing) {
+                return sendError(res, 400, 'Cette adresse email est déjà utilisée par un autre compte', 'EMAIL_ALREADY_EXISTS');
+            }
+        }
+
+        const newName = name !== undefined ? name.trim() : currentUser.name;
+        const newEmail = email !== undefined ? email.trim() : currentUser.email;
+        const newPhoto = photo !== undefined ? photo : currentUser.photo;
+        const newTelephone = telephone !== undefined ? telephone.trim() : currentUser.telephone;
+
+        db.run("UPDATE users SET name = ?, email = ?, photo = ?, telephone = ? WHERE id = ?",
+            [newName, newEmail, newPhoto, newTelephone, userId],
+            function(err) {
+                if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+
+                // Si l'utilisateur est lié à un employé, synchroniser la fiche employé
+                if (currentUser.empId) {
+                    db.get("SELECT * FROM employees WHERE id = ?", [currentUser.empId], (err, emp) => {
+                        if (!err && emp) {
+                            let updatedNom = emp.nom;
+                            let updatedPrenoms = emp.prenoms;
+                            if (newName && newName !== `${emp.nom} ${emp.prenoms}`.trim()) {
+                                const parts = newName.split(' ');
+                                updatedNom = parts[0] || emp.nom;
+                                updatedPrenoms = parts.slice(1).join(' ') || emp.prenoms;
+                            }
+
+                            db.run(`UPDATE employees SET 
+                                nom = COALESCE(?, nom), 
+                                prenoms = COALESCE(?, prenoms), 
+                                email = COALESCE(?, email), 
+                                telephone = COALESCE(?, telephone), 
+                                photo = COALESCE(?, photo),
+                                adresse = COALESCE(?, adresse),
+                                emailPerso = COALESCE(?, emailPerso),
+                                situationMatrimoniale = COALESCE(?, situationMatrimoniale),
+                                nbEnfants = COALESCE(?, nbEnfants),
+                                rib = COALESCE(?, rib),
+                                contactUrgenceNom = COALESCE(?, contactUrgenceNom),
+                                contactUrgenceTelephone = COALESCE(?, contactUrgenceTelephone),
+                                contactUrgenceLien = COALESCE(?, contactUrgenceLien),
+                                bio = COALESCE(?, bio)
+                            WHERE id = ?`,
+                            [
+                                updatedNom, updatedPrenoms, newEmail, newTelephone, newPhoto,
+                                adresse !== undefined ? adresse : null,
+                                emailPerso !== undefined ? emailPerso : null,
+                                situationMatrimoniale !== undefined ? situationMatrimoniale : null,
+                                nbEnfants !== undefined ? parseInt(nbEnfants, 10) : null,
+                                rib !== undefined ? rib : null,
+                                contactUrgenceNom !== undefined ? contactUrgenceNom : null,
+                                contactUrgenceTelephone !== undefined ? contactUrgenceTelephone : null,
+                                contactUrgenceLien !== undefined ? contactUrgenceLien : null,
+                                bio !== undefined ? bio : null,
+                                currentUser.empId
+                            ]);
+                        }
+                    });
+                }
+
+                // Générer le nouveau token JWT avec les données à jour
+                const updatedUserPayload = {
+                    id: currentUser.id,
+                    name: newName,
+                    email: newEmail,
+                    role: currentUser.role,
+                    empId: currentUser.empId,
+                    status: currentUser.status,
+                    company_id: currentUser.company_id || 1,
+                    photo: newPhoto,
+                    telephone: newTelephone
+                };
+
+                const token = jwt.sign(
+                    updatedUserPayload,
+                    process.env.JWT_SECRET || 'sirh_civ_super_secret_key_2026_change_in_production',
+                    { expiresIn: '24h' }
+                );
+
+                logAuditAction(req, 'PROFIL_MODIFIE', `Mise à jour du profil utilisateur #${userId} (${newName})`, 'Sécurité / Profil');
+
+                res.json({
+                    message: 'Profil mis à jour avec succès',
+                    user: { ...updatedUserPayload, token }
+                });
+            }
+        );
+    });
+});
+
+app.patch('/api/profile/password', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+        return sendError(res, 400, 'Le mot de passe actuel et le nouveau mot de passe sont obligatoires', 'MISSING_FIELDS');
+    }
+    if (newPassword.length < 6) {
+        return sendError(res, 400, 'Le nouveau mot de passe doit contenir au moins 6 caractères', 'WEAK_PASSWORD');
+    }
+
+    db.get("SELECT id, password, empId FROM users WHERE id = ?", [userId], async (err, user) => {
+        if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+        if (!user) return sendError(res, 404, 'Utilisateur non trouvé', 'NOT_FOUND');
+
+        const isMatch = await verifyPassword(currentPassword, user.password);
+        if (!isMatch) {
+            return sendError(res, 401, 'Le mot de passe actuel est incorrect', 'INVALID_CREDENTIALS');
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        db.run("UPDATE users SET password = ?, must_change_password = 0 WHERE id = ?", [hashedPassword, userId], function(err) {
+            if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+
+            if (user.empId) {
+                db.run("UPDATE employees SET password = ?, must_change_password = 0 WHERE id = ?", [hashedPassword, user.empId]);
+            }
+
+            logAuditAction(req, 'MOT_DE_PASSE_MODIFIE', `Changement de mot de passe utilisateur #${userId}`, 'Sécurité / Profil');
+            res.json({ success: true, message: 'Mot de passe modifié avec succès' });
+        });
+    });
+});
+
+app.patch('/api/profile/photo', authenticateToken, async (req, res) => {
+    const userId = req.user.id;
+    const { photo } = req.body;
+
+    db.get("SELECT id, empId FROM users WHERE id = ?", [userId], (err, user) => {
+        if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+        if (!user) return sendError(res, 404, 'Utilisateur non trouvé', 'NOT_FOUND');
+
+        db.run("UPDATE users SET photo = ? WHERE id = ?", [photo || null, userId], (err) => {
+            if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+
+            if (user.empId) {
+                db.run("UPDATE employees SET photo = ? WHERE id = ?", [photo || null, user.empId]);
+            }
+
+            logAuditAction(req, 'PHOTO_PROFIL_MODIFIEE', `Changement de photo de profil utilisateur #${userId}`, 'Sécurité / Profil');
+            res.json({ success: true, message: 'Photo de profil mise à jour avec succès', photo: photo || null });
         });
     });
 });

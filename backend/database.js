@@ -256,8 +256,29 @@ function initSQLiteSchema(sDb) {
             'email_notif_disciplinary INTEGER DEFAULT 1'
         ];
         smtpCols.forEach(colDef => {
-            const colName = colDef.split(' ')[0];
             sDb.run(`ALTER TABLE settings ADD COLUMN ${colDef}`, () => {});
+        });
+
+        // Migration sécurisée des colonnes de Profil & Coordonnées Employés
+        const empProfileCols = [
+            'adresse TEXT DEFAULT ""',
+            'emailPerso TEXT DEFAULT ""',
+            'contactUrgenceNom TEXT DEFAULT ""',
+            'contactUrgenceTelephone TEXT DEFAULT ""',
+            'contactUrgenceLien TEXT DEFAULT ""',
+            'bio TEXT DEFAULT ""'
+        ];
+        empProfileCols.forEach(colDef => {
+            sDb.run(`ALTER TABLE employees ADD COLUMN ${colDef}`, () => {});
+        });
+
+        // Migration sécurisée des colonnes Utilisateurs
+        const userProfileCols = [
+            'photo TEXT DEFAULT ""',
+            'telephone TEXT DEFAULT ""'
+        ];
+        userProfileCols.forEach(colDef => {
+            sDb.run(`ALTER TABLE users ADD COLUMN ${colDef}`, () => {});
         });
 
         sDb.run(`CREATE TABLE IF NOT EXISTS departments (

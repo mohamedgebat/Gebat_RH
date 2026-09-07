@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
 import PageHeader from '../components/PageHeader';
+import EmployeeAvatar from '../components/EmployeeAvatar';
+import { compressImage } from '../utils/imageCompressor';
 import { 
   Building, MapPin, Globe, Shield, Save, RefreshCw, 
   Palette, Image as ImageIcon, Upload, DollarSign, 
   Check, Phone, Mail, FileText, AlertTriangle, Percent, Sliders,
   Layers, Key, CheckSquare, Zap, Cpu, Users, Lock, Server,
-  Send, Eye, EyeOff, Laptop, CheckCircle2, Volume2, VolumeX, Sparkles
+  Send, Eye, EyeOff, Laptop, CheckCircle2, Volume2, VolumeX, Sparkles,
+  User, Camera, Trash2, ShieldCheck, KeyRound
 } from 'lucide-react';
 import axios from 'axios';
 import { 
@@ -91,6 +95,7 @@ const Settings = () => {
     email_notif_disciplinary: true
   });
 
+  const { user, updateUser } = useAuth();
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('saas_identity');
   
@@ -101,6 +106,140 @@ const Settings = () => {
   const [showSmtpPass, setShowSmtpPass] = useState(false);
   const [browserPermStatus, setBrowserPermStatus] = useState('default');
   const [testingBrowserNotif, setTestingBrowserNotif] = useState(false);
+
+  // États dédiés à l'onglet Mon Profil Administrateur
+  const [adminProfileForm, setAdminProfileForm] = useState({
+    name: '',
+    email: '',
+    telephone: '',
+    photo: ''
+  });
+  const [adminPasswordForm, setAdminPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showAdminPasswords, setShowAdminPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+  const [savingAdminProfile, setSavingAdminProfile] = useState(false);
+  const [savingAdminPassword, setSavingAdminPassword] = useState(false);
+  const [uploadingAdminPhoto, setUploadingAdminPhoto] = useState(false);
+  const [adminProfileStatus, setAdminProfileStatus] = useState({ type: '', text: '' });
+  const [adminPasswordStatus, setAdminPasswordStatus] = useState({ type: '', text: '' });
+
+  useEffect(() => {
+    if (user) {
+      setAdminProfileForm({
+        name: user.name || '',
+        email: user.email || '',
+        telephone: user.telephone || '',
+        photo: user.photo || ''
+      });
+    }
+  }, [user]);
+
+  const handleAdminPhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAdminPhoto(true);
+    setAdminProfileStatus({ type: '', text: '' });
+    try {
+      const compressed = await compressImage(file, { maxWidth: 400, maxHeight: 400, quality: 0.85 });
+      setAdminProfileForm(prev => ({ ...prev, photo: compressed }));
+      const res = await axios.patch('/api/profile/photo', { photo: compressed });
+      if (res.data?.success) {
+        if (updateUser) updateUser({ photo: compressed });
+        if (refreshData) await refreshData();
+        setAdminProfileStatus({ type: 'success', text: 'Photo de profil mise à jour avec succès !' });
+      }
+    } catch (err) {
+      console.error(err);
+      setAdminProfileStatus({ type: 'error', text: 'Erreur lors du traitement de l\'image.' });
+    } finally {
+      setUploadingAdminPhoto(false);
+    }
+  };
+
+  const handleRemoveAdminPhoto = async () => {
+    if (!window.confirm('Voulez-vous retirer votre photo de profil ?')) return;
+    setUploadingAdminPhoto(true);
+    try {
+      await axios.patch('/api/profile/photo', { photo: null });
+      setAdminProfileForm(prev => ({ ...prev, photo: '' }));
+      if (updateUser) updateUser({ photo: null });
+      if (refreshData) await refreshData();
+      setAdminProfileStatus({ type: 'success', text: 'Photo de profil retirée.' });
+    } catch (err) {
+      console.error(err);
+      setAdminProfileStatus({ type: 'error', text: 'Erreur lors de la suppression.' });
+    } finally {
+      setUploadingAdminPhoto(false);
+    }
+  };
+
+  const handleSaveAdminProfile = async (e) => {
+    e.preventDefault();
+    if (!adminProfileForm.name.trim() || !adminProfileForm.email.trim()) {
+      setAdminProfileStatus({ type: 'error', text: 'Le nom et l\'adresse email sont obligatoires.' });
+      return;
+    }
+    setSavingAdminProfile(true);
+    setAdminProfileStatus({ type: '', text: '' });
+    try {
+      const res = await axios.put('/api/profile', {
+        name: adminProfileForm.name.trim(),
+        email: adminProfileForm.email.trim(),
+        telephone: adminProfileForm.telephone.trim(),
+        photo: adminProfileForm.photo
+      });
+      if (res.data?.user && updateUser) {
+        updateUser(res.data.user);
+      }
+      if (refreshData) await refreshData();
+      setAdminProfileStatus({ type: 'success', text: 'Profil administrateur mis à jour avec succès !' });
+      setTimeout(() => setAdminProfileStatus({ type: '', text: '' }), 4000);
+    } catch (err) {
+      setAdminProfileStatus({ type: 'error', text: err.response?.data?.error || 'Erreur lors de la mise à jour.' });
+    } finally {
+      setSavingAdminProfile(false);
+    }
+  };
+
+  const handleSaveAdminPassword = async (e) => {
+    e.preventDefault();
+    setAdminPasswordStatus({ type: '', text: '' });
+    if (!adminPasswordForm.currentPassword || !adminPasswordForm.newPassword || !adminPasswordForm.confirmPassword) {
+      setAdminPasswordStatus({ type: 'error', text: 'Veuillez remplir tous les champs de mot de passe.' });
+      return;
+    }
+    if (adminPasswordForm.newPassword !== adminPasswordForm.confirmPassword) {
+      setAdminPasswordStatus({ type: 'error', text: 'Les deux nouveaux mots de passe ne correspondent pas.' });
+      return;
+    }
+    if (adminPasswordForm.newPassword.length < 6) {
+      setAdminPasswordStatus({ type: 'error', text: 'Le mot de passe doit contenir au moins 6 caractères.' });
+      return;
+    }
+    setSavingAdminPassword(true);
+    try {
+      const res = await axios.patch('/api/profile/password', {
+        currentPassword: adminPasswordForm.currentPassword,
+        newPassword: adminPasswordForm.newPassword
+      });
+      if (res.data?.success) {
+        setAdminPasswordStatus({ type: 'success', text: 'Mot de passe administrateur modifié avec succès !' });
+        setAdminPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+        setTimeout(() => setAdminPasswordStatus({ type: '', text: '' }), 4000);
+      }
+    } catch (err) {
+      setAdminPasswordStatus({ type: 'error', text: err.response?.data?.error || 'Erreur lors du changement de mot de passe.' });
+    } finally {
+      setSavingAdminPassword(false);
+    }
+  };
 
   useEffect(() => {
     setBrowserPermStatus(getNotificationPermission());
@@ -330,6 +469,17 @@ const Settings = () => {
           }`}
         >
           <Key size={16} /> Clé API SaaS & Sécurité
+        </button>
+
+        <button
+          onClick={() => setActiveTab('my_profile')}
+          className={`px-6 py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'my_profile' 
+              ? 'bg-[#2563EB] text-white shadow-lg shadow-blue-600/20' 
+              : 'bg-white text-ci-muted hover:bg-ci-bg border border-ci-border'
+          }`}
+        >
+          <User size={16} /> Mon Profil & Compte Administrateur
         </button>
       </div>
 
@@ -1230,16 +1380,246 @@ const Settings = () => {
           </div>
         )}
 
-        <div className="pt-6 flex justify-end">
-          <button 
-            type="submit" 
-            disabled={saving} 
-            className="px-10 py-5 bg-ci-green text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-ci-green/20 hover:bg-ci-greenDark transition-all flex items-center gap-3 disabled:opacity-50"
-          >
-            {saving ? <RefreshCw size={18} className="animate-spin" /> : <Save size={18} />}
-            Enregistrer Toutes les Configurations SaaS
-          </button>
-        </div>
+        {activeTab === 'my_profile' && (
+          <div className="space-y-8 animate-fadeIn">
+            {/* Admin Profile Details */}
+            <div className="bg-white p-8 sm:p-10 rounded-[2.5rem] border border-ci-border shadow-sm space-y-8">
+              <div className="flex items-center gap-3 pb-6 border-b border-slate-100">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#2563EB] flex items-center justify-center font-black">
+                  <User size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black uppercase tracking-wider text-slate-900">Mon Compte & Profil Administrateur</h3>
+                  <p className="text-xs text-slate-500 font-bold">Modifiez vos identifiants, votre nom affiché, vos coordonnées et votre photo de profil.</p>
+                </div>
+              </div>
+
+              {adminProfileStatus.text && (
+                <div className={`p-4 rounded-2xl text-xs font-bold flex items-center gap-2 ${
+                  adminProfileStatus.type === 'success' 
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                    : 'bg-red-50 text-red-800 border border-red-200'
+                }`}>
+                  {adminProfileStatus.type === 'success' ? <CheckCircle2 size={16} className="text-emerald-600 shrink-0" /> : <AlertTriangle size={16} className="text-red-600 shrink-0" />}
+                  <span>{adminProfileStatus.text}</span>
+                </div>
+              )}
+
+              {/* Photo & Identity */}
+              <div className="flex flex-col sm:flex-row items-center gap-8 pb-8 border-b border-slate-100">
+                <div className="relative group">
+                  <EmployeeAvatar
+                    src={adminProfileForm.photo || user?.photo}
+                    nom={adminProfileForm.name || user?.name || 'Administrateur'}
+                    size="2xl"
+                    className="shadow-xl ring-4 ring-blue-500/20"
+                  />
+                  <label 
+                    className="absolute -bottom-1 -right-1 p-2 bg-[#2563EB] text-white rounded-full shadow-lg cursor-pointer hover:bg-blue-700 transition-all"
+                    title="Changer ma photo de profil"
+                  >
+                    <Camera size={14} />
+                    <input type="file" accept="image/*" onChange={handleAdminPhotoUpload} className="hidden" disabled={uploadingAdminPhoto} />
+                  </label>
+                </div>
+
+                <div className="text-center sm:text-left flex-1 space-y-2">
+                  <div className="flex items-center gap-2 justify-center sm:justify-start">
+                    <h4 className="text-2xl font-black text-slate-900">{adminProfileForm.name || user?.name}</h4>
+                    <ShieldCheck size={20} className="text-emerald-600" />
+                  </div>
+                  <p className="text-xs font-bold text-[#2563EB] uppercase tracking-widest">{user?.role === 'admin' ? 'Administrateur RH & SaaS' : 'Gestionnaire'}</p>
+                  
+                  <div className="pt-3 flex flex-wrap gap-3 justify-center sm:justify-start">
+                    <label className="px-4 py-2.5 bg-[#2563EB] text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer hover:bg-blue-700 transition-all flex items-center gap-2 shadow-sm">
+                      <Camera size={14} /> {uploadingAdminPhoto ? 'Optimisation...' : 'Changer ma photo'}
+                      <input type="file" accept="image/*" onChange={handleAdminPhotoUpload} className="hidden" disabled={uploadingAdminPhoto} />
+                    </label>
+                    {adminProfileForm.photo && (
+                      <button 
+                        type="button"
+                        onClick={handleRemoveAdminPhoto}
+                        disabled={uploadingAdminPhoto}
+                        className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-red-100 transition-all flex items-center gap-2"
+                      >
+                        <Trash2 size={14} /> Supprimer la photo
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Formulaire Coordonnées Admin */}
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                      <User size={13} className="text-[#2563EB]" /> Nom Complet & Titre <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={adminProfileForm.name}
+                      onChange={(e) => setAdminProfileForm({ ...adminProfileForm, name: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-[#2563EB] outline-none transition-all"
+                      placeholder="Ex: Administrateur GEBAT"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                      <Mail size={13} className="text-[#2563EB]" /> Adresse Email de Connexion <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={adminProfileForm.email}
+                      onChange={(e) => setAdminProfileForm({ ...adminProfileForm, email: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-[#2563EB] outline-none transition-all"
+                      placeholder="admin@gebat-sa.com"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+                      <Phone size={13} className="text-[#2563EB]" /> Téléphone Professionnel
+                    </label>
+                    <input
+                      type="tel"
+                      value={adminProfileForm.telephone}
+                      onChange={(e) => setAdminProfileForm({ ...adminProfileForm, telephone: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-[#2563EB] outline-none transition-all"
+                      placeholder="+225 27 00 00 00 00"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-4 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={handleSaveAdminProfile}
+                    disabled={savingAdminProfile}
+                    className="px-6 py-3.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                  >
+                    {savingAdminProfile ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
+                    <span>{savingAdminProfile ? 'Enregistrement...' : 'Enregistrer mon profil'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Admin Password Change Form */}
+            <div className="bg-white p-8 sm:p-10 rounded-[2.5rem] border border-ci-border shadow-sm space-y-6">
+              <div className="flex items-center gap-3 pb-6 border-b border-slate-100">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-black">
+                  <Lock size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black uppercase tracking-wider text-slate-900">Sécurité & Mot de Passe Administrateur</h3>
+                  <p className="text-xs text-slate-500 font-bold">Modifiez le mot de passe de votre compte administrateur en toute sécurité.</p>
+                </div>
+              </div>
+
+              {adminPasswordStatus.text && (
+                <div className={`p-4 rounded-2xl text-xs font-bold flex items-center gap-2 ${
+                  adminPasswordStatus.type === 'success' 
+                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                    : 'bg-red-50 text-red-800 border border-red-200'
+                }`}>
+                  {adminPasswordStatus.type === 'success' ? <CheckCircle2 size={16} className="text-emerald-600 shrink-0" /> : <AlertTriangle size={16} className="text-red-600 shrink-0" />}
+                  <span>{adminPasswordStatus.text}</span>
+                </div>
+              )}
+
+              <div className="max-w-xl space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase tracking-wider text-slate-600">Mot de passe actuel</label>
+                  <div className="relative">
+                    <input
+                      type={showAdminPasswords.current ? 'text' : 'password'}
+                      value={adminPasswordForm.currentPassword}
+                      onChange={(e) => setAdminPasswordForm({ ...adminPasswordForm, currentPassword: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-[#2563EB] outline-none pr-12 transition-all"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminPasswords({ ...showAdminPasswords, current: !showAdminPasswords.current })}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
+                    >
+                      {showAdminPasswords.current ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase tracking-wider text-slate-600">Nouveau mot de passe</label>
+                  <div className="relative">
+                    <input
+                      type={showAdminPasswords.new ? 'text' : 'password'}
+                      value={adminPasswordForm.newPassword}
+                      onChange={(e) => setAdminPasswordForm({ ...adminPasswordForm, newPassword: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-[#2563EB] outline-none pr-12 transition-all"
+                      placeholder="Min. 6 caractères"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminPasswords({ ...showAdminPasswords, new: !showAdminPasswords.new })}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
+                    >
+                      {showAdminPasswords.new ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase tracking-wider text-slate-600">Confirmer le nouveau mot de passe</label>
+                  <div className="relative">
+                    <input
+                      type={showAdminPasswords.confirm ? 'text' : 'password'}
+                      value={adminPasswordForm.confirmPassword}
+                      onChange={(e) => setAdminPasswordForm({ ...adminPasswordForm, confirmPassword: e.target.value })}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-900 focus:bg-white focus:ring-4 focus:ring-blue-500/10 focus:border-[#2563EB] outline-none pr-12 transition-all"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAdminPasswords({ ...showAdminPasswords, confirm: !showAdminPasswords.confirm })}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
+                    >
+                      {showAdminPasswords.confirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-start pt-4">
+                  <button
+                    type="button"
+                    onClick={handleSaveAdminPassword}
+                    disabled={savingAdminPassword}
+                    className="px-6 py-3.5 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 shadow-lg shadow-amber-600/20 disabled:opacity-50"
+                  >
+                    {savingAdminPassword ? <RefreshCw size={16} className="animate-spin" /> : <Lock size={16} />}
+                    <span>{savingAdminPassword ? 'Modification...' : 'Changer mon mot de passe'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab !== 'my_profile' && (
+          <div className="pt-6 flex justify-end">
+            <button 
+              type="submit" 
+              disabled={saving} 
+              className="px-10 py-5 bg-ci-green text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-ci-green/20 hover:bg-ci-greenDark transition-all flex items-center gap-3 disabled:opacity-50"
+            >
+              {saving ? <RefreshCw size={18} className="animate-spin" /> : <Save size={18} />}
+              Enregistrer Toutes les Configurations SaaS
+            </button>
+          </div>
+        )}
       </form>
     </div>
   );
