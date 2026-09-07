@@ -3,7 +3,7 @@ import { useData } from '../context/DataContext';
 import PageHeader from '../components/PageHeader';
 import EmployeeAvatar from '../components/EmployeeAvatar';
 import { compressImage } from '../utils/imageCompressor';
-import { UserPlus, Search, MoreVertical, MapPin, Download, UserMinus, Trash2, X, Eye, FileText, Shield, CheckCircle, Briefcase, GraduationCap, Calendar, AlertTriangle, Edit, ArrowRight, CreditCard, AlertOctagon, Users, Banknote, HardHat, Camera, UploadCloud } from 'lucide-react';
+import { UserPlus, Search, MoreVertical, MapPin, Download, UserMinus, Trash2, X, Eye, FileText, Shield, CheckCircle, Briefcase, GraduationCap, Calendar, AlertTriangle, Edit, ArrowRight, CreditCard, AlertOctagon, Users, Banknote, HardHat, Camera, UploadCloud, LayoutGrid, List, Filter, Phone, Mail, CheckSquare, Square, ArrowUpDown, ChevronDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { generateAttestationTravail, generateAttestationStage, generateAttestationSalaire } from '../utils/documentGenerator';
@@ -15,6 +15,12 @@ const Employees = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('Tous');
+  const [selectedDept, setSelectedDept] = useState('Tous');
+  const [selectedContract, setSelectedContract] = useState('Tous');
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'grid'
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [sortBy, setSortBy] = useState('nom');
+  const [sortOrder, setSortOrder] = useState('asc');
   const [showModal, setShowModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedEmp, setSelectedEmp] = useState(null);
@@ -1272,12 +1278,67 @@ const Employees = () => {
     document.body.removeChild(link);
   };
 
+  const departmentsList = ['Tous', ...Array.from(new Set((data?.employees || []).map(e => e.departement).filter(Boolean)))];
+  const contractTypesList = ['Tous', 'CDI', 'CDD', 'Stage', 'Consultant'];
+
   const filteredEmployees = (data?.employees || []).filter(emp => {
-    const matchesSearch = emp.nom.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          emp.matricule.toLowerCase().includes(searchTerm.toLowerCase());
+    const s = searchTerm.toLowerCase();
+    const matchesSearch = !s || 
+      emp.nom.toLowerCase().includes(s) || 
+      emp.prenoms.toLowerCase().includes(s) || 
+      emp.matricule.toLowerCase().includes(s) ||
+      (emp.poste && emp.poste.toLowerCase().includes(s)) ||
+      (emp.departement && emp.departement.toLowerCase().includes(s)) ||
+      (emp.site && emp.site.toLowerCase().includes(s));
+    
     const matchesStatus = filterStatus === 'Tous' || emp.statut === filterStatus;
-    return matchesSearch && matchesStatus;
+    const matchesDept = selectedDept === 'Tous' || emp.departement === selectedDept;
+    const matchesContract = selectedContract === 'Tous' || emp.type === selectedContract;
+
+    return matchesSearch && matchesStatus && matchesDept && matchesContract;
+  }).sort((a, b) => {
+    let valA = a[sortBy] || '';
+    let valB = b[sortBy] || '';
+    if (typeof valA === 'string') valA = valA.toLowerCase();
+    if (typeof valB === 'string') valB = valB.toLowerCase();
+    if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+    if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+    return 0;
   });
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === filteredEmployees.length && filteredEmployees.length > 0) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(filteredEmployees.map(e => e.id));
+    }
+  };
+
+  const toggleSelectOne = (id, e) => {
+    if (e) e.stopPropagation();
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const handleBulkExportCSV = () => {
+    const targets = selectedIds.length > 0 
+      ? (data?.employees || []).filter(e => selectedIds.includes(e.id))
+      : filteredEmployees;
+    if (!targets.length) return;
+    
+    const headers = ['Matricule', 'Nom', 'Prenoms', 'Poste', 'Departement', 'Site', 'Type', 'Statut', 'Date Embauche', 'Salaire Base', 'Sexe', 'Telephone', 'Email', 'CNPS', 'Situation Matrimoniale', 'Enfants'];
+    const rows = targets.map(emp => [
+      emp.matricule, emp.nom, emp.prenoms, emp.poste, emp.departement, emp.site, emp.type, emp.statut, emp.dateEmbauche, emp.salaireBase, emp.sexe, emp.telephone, emp.email, emp.cnps, emp.situationMatrimoniale, emp.nbEnfants
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(';'), ...rows.map(e => e.join(';'))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `collaborateurs_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const allEmps = data?.employees || [];
   const activeEmps = allEmps.filter(e => e.statut === 'Actif');
@@ -1296,14 +1357,30 @@ const Employees = () => {
     <div className="animate-fadeIn space-y-8">
       <PageHeader 
         title="Base Collaborateurs" 
-        subtitle={`${filteredEmployees.length} employés affichés`}
+        subtitle={`${filteredEmployees.length} employés affichés (${activeEmps.length} actifs)`}
         actions={
-            <div className="flex gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+                <div className="bg-slate-100 p-1 rounded-2xl flex items-center border border-slate-200">
+                    <button
+                        onClick={() => setViewMode('table')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-white text-[#2563EB] shadow-sm font-extrabold' : 'text-slate-500 hover:text-slate-900'}`}
+                        title="Vue Tableau Détaillé"
+                    >
+                        <List size={16} /> <span className="hidden sm:inline">Tableau</span>
+                    </button>
+                    <button
+                        onClick={() => setViewMode('grid')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'grid' ? 'bg-white text-[#2563EB] shadow-sm font-extrabold' : 'text-slate-500 hover:text-slate-900'}`}
+                        title="Vue Trombinoscope Cartes"
+                    >
+                        <LayoutGrid size={16} /> <span className="hidden sm:inline">Trombinoscope</span>
+                    </button>
+                </div>
                 <button 
-                    onClick={handleExportCSV}
-                    className="bg-white border border-ci-border text-ci-text px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-ci-bg transition-all flex items-center gap-2"
+                    onClick={handleBulkExportCSV}
+                    className="bg-white border border-ci-border text-ci-text px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-ci-bg transition-all flex items-center gap-2"
                 >
-                    <Download size={14} /> Export CSV
+                    <Download size={14} /> Export CSV {selectedIds.length > 0 && `(${selectedIds.length})`}
                 </button>
                 <button onClick={() => setShowModal(true)} className="bg-ci-green text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-ci-greenDark transition-all shadow-lg shadow-ci-green/20 flex items-center gap-2">
                     <UserPlus size={14} /> Nouveau
@@ -1359,39 +1436,282 @@ const Employees = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-[2.5rem] shadow-xl border border-ci-border p-4 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="relative flex-1 max-w-xl">
-            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-ci-muted" size={20} />
-            <input 
-                type="text" 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Rechercher par nom, matricule, département..." 
-                className="w-full pl-14 pr-6 py-4 bg-ci-bg border-none rounded-[1.5rem] text-sm font-bold focus:ring-4 focus:ring-ci-green/10 outline-none transition-all" 
-            />
+      {/* Floating Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <div className="sticky top-20 z-40 bg-slate-900 text-white p-4 rounded-2xl shadow-2xl flex flex-wrap items-center justify-between gap-4 animate-fadeIn border border-slate-700">
+            <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-xl bg-[#2563EB] text-white flex items-center justify-center text-xs font-black">
+                    {selectedIds.length}
+                </span>
+                <span className="text-xs font-bold">Collaborateur(s) sélectionné(s)</span>
+            </div>
+            <div className="flex items-center gap-3">
+                <button
+                    onClick={handleBulkExportCSV}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-md"
+                >
+                    <Download size={14} /> Exporter Sélection (CSV)
+                </button>
+                <button
+                    onClick={() => setSelectedIds([])}
+                    className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-bold transition-all"
+                >
+                    Désélectionner tout
+                </button>
+            </div>
         </div>
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
+      )}
+
+      {/* Search & Advanced Filters Bar */}
+      <div className="bg-white rounded-[2rem] shadow-xl border border-ci-border p-4 md:p-6 space-y-4">
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+            {/* Search Input */}
+            <div className="relative flex-1">
+                <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-ci-muted" size={18} />
+                <input 
+                    type="text" 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Rechercher par nom, matricule, poste, département..." 
+                    className="w-full pl-12 pr-10 py-3.5 bg-ci-bg border-none rounded-2xl text-xs font-bold focus:ring-4 focus:ring-ci-green/10 outline-none transition-all" 
+                />
+                {searchTerm && (
+                    <button onClick={() => setSearchTerm('')} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        <X size={16} />
+                    </button>
+                )}
+            </div>
+
+            {/* Dropdown Filters */}
+            <div className="flex flex-wrap items-center gap-3">
+                {/* Department Filter */}
+                <div className="flex items-center gap-2 bg-ci-bg px-3 py-2 rounded-2xl border border-slate-200">
+                    <Filter size={14} className="text-[#2563EB]" />
+                    <select
+                        value={selectedDept}
+                        onChange={(e) => setSelectedDept(e.target.value)}
+                        className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+                    >
+                        <option value="Tous">Tous Départements</option>
+                        {departmentsList.filter(d => d !== 'Tous').map(d => (
+                            <option key={d} value={d}>{d}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Contract Type Filter */}
+                <div className="flex items-center gap-2 bg-ci-bg px-3 py-2 rounded-2xl border border-slate-200">
+                    <Briefcase size={14} className="text-amber-600" />
+                    <select
+                        value={selectedContract}
+                        onChange={(e) => setSelectedContract(e.target.value)}
+                        className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+                    >
+                        <option value="Tous">Tous Contrats</option>
+                        {contractTypesList.filter(c => c !== 'Tous').map(c => (
+                            <option key={c} value={c}>{c}</option>
+                        ))}
+                    </select>
+                </div>
+
+                {/* Sort By */}
+                <div className="flex items-center gap-2 bg-ci-bg px-3 py-2 rounded-2xl border border-slate-200">
+                    <ArrowUpDown size={14} className="text-emerald-600" />
+                    <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value)}
+                        className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer"
+                    >
+                        <option value="nom">Trier par Nom</option>
+                        <option value="dateEmbauche">Trier par Ancienneté</option>
+                        <option value="salaireBase">Trier par Salaire</option>
+                        <option value="departement">Trier par Département</option>
+                    </select>
+                    <button
+                        onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                        className="text-xs font-black text-slate-500 hover:text-slate-900 ml-1 px-1.5 py-0.5 rounded bg-white border"
+                    >
+                        {sortOrder === 'asc' ? '↑' : '↓'}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        {/* Status Filter Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto pt-2 border-t border-slate-100 scrollbar-hide">
+            <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider mr-2">Statut :</span>
             {['Tous', 'Actif', 'En congé', 'Inactif'].map(status => (
                 <button 
                     key={status}
                     onClick={() => setFilterStatus(status)}
-                    className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                        filterStatus === status ? 'bg-ci-sidebar text-white shadow-lg' : 'bg-ci-bg text-ci-muted hover:bg-white border border-transparent hover:border-ci-border'
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                        filterStatus === status ? 'bg-ci-sidebar text-white shadow-md' : 'bg-ci-bg text-ci-muted hover:bg-slate-100 border border-transparent'
                     }`}
                 >
                     {status}
                 </button>
             ))}
+            {(selectedDept !== 'Tous' || selectedContract !== 'Tous' || filterStatus !== 'Tous' || searchTerm) && (
+                <button
+                    onClick={() => {
+                        setSelectedDept('Tous');
+                        setSelectedContract('Tous');
+                        setFilterStatus('Tous');
+                        setSearchTerm('');
+                    }}
+                    className="ml-auto text-[10px] font-bold text-rose-500 hover:underline"
+                >
+                    Réinitialiser les filtres
+                </button>
+            )}
         </div>
       </div>
 
-      <div className="bg-white rounded-[3rem] shadow-2xl border border-ci-border overflow-hidden">
-        <div className="overflow-x-auto">
+      {/* Main Render: Grid (Trombinoscope) or Table */}
+      {viewMode === 'grid' ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredEmployees.map((emp) => {
+            const isSelected = selectedIds.includes(emp.id);
+            return (
+              <motion.div
+                layout
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                key={emp.id}
+                onClick={() => setSelectedEmp(emp)}
+                className={`bg-white rounded-3xl border ${isSelected ? 'border-[#2563EB] ring-2 ring-[#2563EB]/20 shadow-xl' : 'border-slate-200/80 shadow-sm hover:shadow-xl hover:border-slate-300'} transition-all cursor-pointer overflow-hidden flex flex-col relative group`}
+              >
+                {/* Header Top Bar Accent */}
+                <div className="h-2 bg-gradient-to-r from-[#2563EB] via-purple-500 to-[#E5A110]"></div>
+
+                {/* Checkbox Floating Button */}
+                <button
+                  onClick={(e) => toggleSelectOne(emp.id, e)}
+                  className="absolute top-4 right-4 z-10 p-1.5 rounded-xl bg-white/90 shadow-md border border-slate-200 text-slate-400 hover:text-[#2563EB] transition-colors"
+                >
+                  {isSelected ? <CheckSquare size={18} className="text-[#2563EB]" /> : <Square size={18} />}
+                </button>
+
+                <div className="p-6 flex flex-col items-center text-center flex-1">
+                  {/* Photo Profile */}
+                  <div className="relative mb-4">
+                    <EmployeeAvatar
+                      src={emp.photo}
+                      nom={emp.nom}
+                      prenoms={emp.prenoms}
+                      matricule={emp.matricule}
+                      size="xl"
+                      className="rounded-3xl shadow-lg border-2 border-white ring-4 ring-slate-100 group-hover:scale-105 transition-transform"
+                    />
+                    <span className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white shadow-md ${
+                      emp.statut === 'Actif' ? 'bg-emerald-500' : emp.statut === 'En congé' ? 'bg-amber-500' : 'bg-rose-500'
+                    }`}></span>
+                  </div>
+
+                  {/* Name & Role */}
+                  <h3 className="text-base font-black text-slate-900 uppercase tracking-tight leading-tight hover:text-[#2563EB] transition-colors">
+                    {emp.nom} {emp.prenoms}
+                  </h3>
+                  <p className="text-xs font-bold text-amber-600 uppercase tracking-wider mt-1">{emp.poste}</p>
+
+                  {/* Badges */}
+                  <div className="flex flex-wrap items-center justify-center gap-1.5 mt-3">
+                    <span className="text-[10px] font-black text-[#2563EB] uppercase bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-lg">
+                      {emp.matricule}
+                    </span>
+                    <span className="text-[10px] font-black text-slate-600 uppercase bg-slate-100 px-2 py-0.5 rounded-lg">
+                      {emp.type}
+                    </span>
+                    {emp.departement && (
+                      <span className="text-[10px] font-black text-purple-700 uppercase bg-purple-50 px-2 py-0.5 rounded-lg">
+                        {emp.departement}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Contact Info Quick Bar */}
+                  <div className="w-full mt-4 pt-4 border-t border-slate-100 flex items-center justify-center gap-3 text-slate-500 text-xs font-medium">
+                    {emp.telephone && (
+                      <a
+                        href={`tel:${emp.telephone}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-1 hover:text-[#2563EB] p-1.5 bg-slate-50 hover:bg-blue-50 rounded-xl transition-colors"
+                        title={emp.telephone}
+                      >
+                        <Phone size={14} />
+                      </a>
+                    )}
+                    {emp.email && (
+                      <a
+                        href={`mailto:${emp.email}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-1 hover:text-[#2563EB] p-1.5 bg-slate-50 hover:bg-blue-50 rounded-xl transition-colors"
+                        title={emp.email}
+                      >
+                        <Mail size={14} />
+                      </a>
+                    )}
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-slate-600">
+                      <MapPin size={12} className="text-amber-500" /> {emp.site || 'Abidjan'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Footer Quick Actions */}
+                <div className="bg-slate-50 px-4 py-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleGeneratePDF(emp); }}
+                    className="text-[10px] font-black text-slate-700 hover:text-emerald-600 uppercase flex items-center gap-1 transition-colors"
+                  >
+                    <FileText size={13} /> Fiche PDF
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleGenerateBadge(emp); }}
+                    className="text-[10px] font-black text-slate-700 hover:text-[#2563EB] uppercase flex items-center gap-1 transition-colors"
+                  >
+                    <CreditCard size={13} /> Badge Pro
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setSelectedEmp(emp); }}
+                    className="text-[10px] font-black text-[#2563EB] uppercase flex items-center gap-1 transition-colors hover:underline"
+                  >
+                    <Eye size={13} /> Profil
+                  </button>
+                </div>
+              </motion.div>
+            );
+          })}
+          {filteredEmployees.length === 0 && (
+            <div className="col-span-full p-20 text-center space-y-4 bg-white rounded-3xl border border-slate-200">
+              <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
+                <UserMinus size={40} />
+              </div>
+              <p className="text-slate-500 font-black uppercase tracking-widest text-sm">Aucun collaborateur trouvé avec ces critères</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white rounded-[3rem] shadow-2xl border border-ci-border overflow-hidden">
+          <div className="overflow-x-auto">
             <table className="w-full">
                 <thead className="bg-ci-bg/50 text-[10px] font-black uppercase tracking-widest text-ci-muted border-b border-ci-border">
                     <tr>
-                        <th className="px-8 py-6 text-left">Profil & Identité</th>
-                        <th className="px-8 py-6 text-left">Position Stratégique</th>
+                        <th className="px-6 py-6 text-center w-12">
+                          <button onClick={toggleSelectAll} className="text-slate-400 hover:text-[#2563EB]">
+                            {selectedIds.length > 0 && selectedIds.length === filteredEmployees.length ? (
+                              <CheckSquare size={18} className="text-[#2563EB]" />
+                            ) : (
+                              <Square size={18} />
+                            )}
+                          </button>
+                        </th>
+                        <th className="px-8 py-6 text-left cursor-pointer hover:text-slate-900" onClick={() => { setSortBy('nom'); setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc'); }}>
+                          <span className="flex items-center gap-1">Profil & Identité {sortBy === 'nom' && (sortOrder === 'asc' ? '↑' : '↓')}</span>
+                        </th>
+                        <th className="px-8 py-6 text-left cursor-pointer hover:text-slate-900" onClick={() => { setSortBy('departement'); setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc'); }}>
+                          <span className="flex items-center gap-1">Position Stratégique {sortBy === 'departement' && (sortOrder === 'asc' ? '↑' : '↓')}</span>
+                        </th>
                         <th className="px-8 py-6 text-left">Localisation</th>
                         <th className="px-8 py-6 text-left">Contrat</th>
                         <th className="px-8 py-6 text-left">Statut</th>
@@ -1400,7 +1720,9 @@ const Employees = () => {
                 </thead>
                 <tbody className="divide-y divide-ci-bg">
                     <AnimatePresence>
-                        {filteredEmployees.map((emp) => (
+                        {filteredEmployees.map((emp) => {
+                          const isSelected = selectedIds.includes(emp.id);
+                          return (
                             <motion.tr 
                                 layout
                                 initial={{ opacity: 0 }}
@@ -1408,8 +1730,13 @@ const Employees = () => {
                                 exit={{ opacity: 0 }}
                                 key={emp.id} 
                                 onClick={() => setSelectedEmp(emp)}
-                                className="hover:bg-ci-bg/40 transition-colors group cursor-pointer"
+                                className={`transition-colors group cursor-pointer ${isSelected ? 'bg-blue-50/60' : 'hover:bg-ci-bg/40'}`}
                             >
+                                <td className="px-6 py-6 text-center" onClick={(e) => toggleSelectOne(emp.id, e)}>
+                                  <button className="text-slate-400 hover:text-[#2563EB]">
+                                    {isSelected ? <CheckSquare size={18} className="text-[#2563EB]" /> : <Square size={18} />}
+                                  </button>
+                                </td>
                                 <td className="px-8 py-6">
                                     <div className="flex items-center gap-5">
                                         <EmployeeAvatar
@@ -1547,7 +1874,8 @@ const Employees = () => {
                                     </div>
                                 </td>
                             </motion.tr>
-                        ))}
+                          );
+                        })}
                     </AnimatePresence>
                 </tbody>
             </table>
@@ -1557,8 +1885,9 @@ const Employees = () => {
                     <p className="text-ci-muted font-black uppercase tracking-widest text-sm">Aucun collaborateur trouvé</p>
                 </div>
             )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Modal Ajout */}
       {showModal && (
