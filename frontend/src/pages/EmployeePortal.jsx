@@ -77,31 +77,40 @@ const EmployeePortal = () => {
     const file = e.target.files?.[0];
     if (!file || !employee?.id) return;
     setUploadingPhoto(true);
+    setProfileSuccessMsg('');
+    setProfileErrorMsg('');
     try {
       const compressed = await compressImage(file, { maxWidth: 400, maxHeight: 400, quality: 0.85 });
       await axios.patch('/api/profile/photo', { photo: compressed });
       if (updateUser) updateUser({ photo: compressed });
       await refreshData();
-      alert('Photo de profil mise à jour avec succès !');
+      setProfileSuccessMsg('Photo de profil mise à jour avec succès !');
+      setTimeout(() => setProfileSuccessMsg(''), 6000);
     } catch (err) {
       console.error('Erreur mise à jour photo:', err);
-      alert('Erreur lors du téléchargement de la photo.');
+      setProfileErrorMsg(err.response?.data?.error || 'Erreur lors du téléchargement de la photo.');
+      setTimeout(() => setProfileErrorMsg(''), 6000);
     } finally {
       setUploadingPhoto(false);
+      if (e.target) e.target.value = '';
     }
   };
 
   const handleRemovePhoto = async () => {
     if (!employee?.id || !window.confirm('Voulez-vous vraiment supprimer votre photo de profil ?')) return;
     setUploadingPhoto(true);
+    setProfileSuccessMsg('');
+    setProfileErrorMsg('');
     try {
       await axios.patch('/api/profile/photo', { photo: null });
       if (updateUser) updateUser({ photo: null });
       await refreshData();
-      alert('Photo de profil supprimée.');
+      setProfileSuccessMsg('Photo de profil supprimée avec succès.');
+      setTimeout(() => setProfileSuccessMsg(''), 6000);
     } catch (err) {
       console.error('Erreur suppression photo:', err);
-      alert('Erreur lors de la suppression de la photo.');
+      setProfileErrorMsg(err.response?.data?.error || 'Erreur lors de la suppression de la photo.');
+      setTimeout(() => setProfileErrorMsg(''), 6000);
     } finally {
       setUploadingPhoto(false);
     }
@@ -1288,14 +1297,38 @@ const EmployeePortal = () => {
             <aside className="lg:col-span-3 space-y-4 sm:space-y-8">
                 <div className="bg-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 shadow-xl border border-ci-border text-center overflow-hidden relative group">
                     <div className="absolute top-0 left-0 w-full h-24 bg-gradient-ci opacity-5 group-hover:opacity-10 transition-opacity"></div>
-                    <EmployeeAvatar
-                        src={employee?.photo}
-                        nom={employee?.nom}
-                        prenoms={employee?.prenoms}
-                        matricule={employee?.matricule}
-                        size="2xl"
-                        className="mx-auto mb-4 sm:mb-6 shadow-xl border-4 border-white relative z-10"
-                    />
+                    
+                    {/* Avatar avec bouton de modification rapide */}
+                    <div className="relative inline-block mx-auto mb-4 sm:mb-6">
+                        <EmployeeAvatar
+                            src={employee?.photo}
+                            nom={employee?.nom}
+                            prenoms={employee?.prenoms}
+                            matricule={employee?.matricule}
+                            size="2xl"
+                            className="shadow-xl border-4 border-white relative z-10 transition-transform group-hover:scale-105"
+                        />
+                        <label 
+                            className="absolute bottom-1 right-1 w-9 h-9 bg-ci-green hover:bg-ci-greenDark text-white rounded-full shadow-xl flex items-center justify-center cursor-pointer transition-all hover:scale-110 active:scale-95 z-20 border-2 border-white"
+                            title="Modifier ma photo de profil"
+                        >
+                            <Camera size={16} />
+                            <input 
+                                type="file" 
+                                accept="image/*" 
+                                onChange={handleProfilePhotoUpload} 
+                                className="hidden" 
+                                disabled={uploadingPhoto} 
+                            />
+                        </label>
+                        {uploadingPhoto && (
+                            <div className="absolute inset-0 bg-black/60 rounded-full flex flex-col items-center justify-center backdrop-blur-xs z-30">
+                                <div className="w-7 h-7 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                <span className="text-[8px] font-black text-white mt-1 uppercase tracking-wider">Envoi...</span>
+                            </div>
+                        )}
+                    </div>
+
                     <h2 className="text-xl sm:text-2xl font-black text-ci-text tracking-tighter leading-tight">{employee?.nom} {employee?.prenoms}</h2>
                     <p className="text-[10px] font-black text-ci-muted uppercase tracking-[0.2em] mt-1 sm:mt-2">{employee?.poste}</p>
                     <div className="mt-4 sm:mt-6 flex justify-center gap-2">

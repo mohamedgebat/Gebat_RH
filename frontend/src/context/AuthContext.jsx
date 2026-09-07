@@ -55,6 +55,11 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const logout = () => {
+    localStorage.removeItem('sirh_auth_user');
+    setUser(null);
+  };
+
   const updateUser = (newUserData) => {
     setUser((prev) => {
       const updated = { ...(prev || {}), ...newUserData };
