@@ -2,6 +2,7 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import NotificationCenter from './NotificationCenter';
+import AiRhAssistant from './AiRhAssistant';
 import { useAuth } from '../context/AuthContext';
 import { ShieldCheck, Search, Building2 } from 'lucide-react';
 
@@ -58,6 +59,9 @@ const Layout = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Floating AI RH Assistant */}
+      <AiRhAssistant />
     </div>
   );
 };

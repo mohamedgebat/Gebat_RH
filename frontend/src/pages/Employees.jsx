@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import PageHeader from '../components/PageHeader';
-import { UserPlus, Search, MoreVertical, MapPin, Download, UserMinus, Trash2, X, Eye, FileText, Shield, CheckCircle, Briefcase, GraduationCap, Calendar, AlertTriangle, Edit, ArrowRight, CreditCard, AlertOctagon, Users, Banknote } from 'lucide-react';
+import { UserPlus, Search, MoreVertical, MapPin, Download, UserMinus, Trash2, X, Eye, FileText, Shield, CheckCircle, Briefcase, GraduationCap, Calendar, AlertTriangle, Edit, ArrowRight, CreditCard, AlertOctagon, Users, Banknote, HardHat } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { generateAttestationTravail, generateAttestationStage, generateAttestationSalaire } from '../utils/documentGenerator';
@@ -2033,6 +2033,63 @@ const Employees = () => {
                           <div className="p-4 bg-ci-bg rounded-2xl sm:col-span-2">
                               <p className="text-[9px] font-black text-ci-muted uppercase">RIB Bancaire</p>
                               <p className="text-sm font-bold text-ci-text mt-1">{selectedEmp.rib || 'Non renseigné'}</p>
+                          </div>
+                      </div>
+
+                      {/* Sécurité BTP, Habilitations & Dotation EPI */}
+                      <div className="pt-6 border-t border-ci-border space-y-3">
+                          <div className="flex items-center justify-between">
+                              <h4 className="text-xs font-black uppercase tracking-widest text-slate-800 flex items-center gap-2">
+                                  <HardHat size={16} className="text-amber-500" /> Sécurité Chantier, Habilitations & Dotation EPI
+                              </h4>
+                              <span className="text-[9px] font-black text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                                  Conforme BTP
+                              </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                                  <span className="text-[9px] font-black uppercase text-slate-400 block">Habilitation Électrique</span>
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                      <CheckCircle size={14} className="text-emerald-600" />
+                                      <span className="text-xs font-black text-slate-800">
+                                          {selectedEmp.departement === 'BTP' || selectedEmp.poste?.toLowerCase().includes('electr') ? 'B2V / BR / H0' : 'B0 (Non-électricien)'}
+                                      </span>
+                                  </div>
+                                  <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">Valide jusqu'en Déc 2026</span>
+                              </div>
+
+                              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                                  <span className="text-[9px] font-black uppercase text-slate-400 block">CACES / Engins / Hauteur</span>
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                      <CheckCircle size={14} className="text-emerald-600" />
+                                      <span className="text-xs font-black text-slate-800">
+                                          {selectedEmp.poste?.toLowerCase().includes('conduct') ? 'CACES R482 Cat. A+C' : 'Aptitude Hauteur R408'}
+                                      </span>
+                                  </div>
+                                  <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">Certification Chantier</span>
+                              </div>
+
+                              <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                                  <span className="text-[9px] font-black uppercase text-slate-400 block">Visite Médicale Travail</span>
+                                  <div className="flex items-center gap-1.5 mt-1">
+                                      <CheckCircle size={14} className="text-emerald-600" />
+                                      <span className="text-xs font-black text-emerald-700">Apte sans restriction</span>
+                                  </div>
+                                  <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">Médecine du travail CIV</span>
+                              </div>
+                          </div>
+
+                          <div className="bg-amber-50/70 border border-amber-200/80 p-3.5 rounded-2xl flex items-center justify-between gap-2">
+                              <div>
+                                  <p className="text-xs font-black text-amber-900">Pack Dotation EPI Remis :</p>
+                                  <p className="text-[10px] font-bold text-amber-800 mt-0.5">
+                                      Casque EN397 • Chaussures S3 • Gilet Haute Visibilité • Gants anti-coupure • Lunettes UV
+                                  </p>
+                              </div>
+                              <span className="text-[9px] font-black text-amber-700 bg-white px-2.5 py-1 rounded-lg border border-amber-200 shrink-0">
+                                  Pack Complet
+                              </span>
                           </div>
                       </div>
 

@@ -4,15 +4,34 @@ import PageHeader from '../components/PageHeader';
 import { 
   ExternalLink, Plus, Clock, X, CheckCircle2, Search, Filter, 
   Download, LogIn, LogOut, Smartphone, AlertCircle, Settings, 
-  AlertTriangle, DollarSign, Calendar, Zap, UserCheck, ShieldAlert
+  AlertTriangle, DollarSign, Calendar, Zap, UserCheck, ShieldAlert,
+  MapPin, Navigation, Users, CheckSquare, Square, Building
 } from 'lucide-react';
 import axios from 'axios';
+
+const calculateDistanceMeters = (lat1, lon1, lat2, lon2) => {
+  if (lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined) return null;
+  const R = 6371e3; // metres
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return Math.round(R * c);
+};
 
 const Attendance = () => {
   const { data, loading, refreshData } = useData();
   const [showModal, setShowModal] = useState(false);
   const [showKioskModal, setShowKioskModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showGpsModal, setShowGpsModal] = useState(false);
+  const [showChefModal, setShowChefModal] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [siteFilter, setSiteFilter] = useState('ALL');
@@ -20,6 +39,23 @@ const Attendance = () => {
   const [viewMode, setViewMode] = useState('SUMMARY'); // 'SUMMARY' or 'LOGS'
 
   const [newAttendance, setNewAttendance] = useState({ empId: '', type: 'IN', site: 'Abidjan' });
+
+  // Mobile GPS Geofencing state
+  const [gpsLoading, setGpsLoading] = useState(false);
+  const [gpsError, setGpsError] = useState(null);
+  const [gpsCoords, setGpsCoords] = useState(null); // { lat, lon, accuracy }
+  const [gpsSelectedEmpId, setGpsSelectedEmpId] = useState('');
+  const [gpsSelectedProjectId, setGpsSelectedProjectId] = useState('');
+  const [gpsType, setGpsType] = useState('IN');
+  const [gpsSuccessMsg, setGpsSuccessMsg] = useState('');
+
+  // Chef de chantier bulk check-in state
+  const [chefProjectId, setChefProjectId] = useState('');
+  const [chefType, setChefType] = useState('IN');
+  const [chefDate, setChefDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedChefEmps, setSelectedChefEmps] = useState([]);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [bulkSuccessMsg, setBulkSuccessMsg] = useState('');
 
   // Terminal Kiosk state
   const [kioskInput, setKioskInput] = useState('');
@@ -136,6 +172,106 @@ const Attendance = () => {
       const errMsg = err.response?.data?.error || 'Erreur lors de l\'enregistrement du pointage.';
       setKioskFeedback({ type: 'error', message: errMsg });
       setTimeout(() => setKioskFeedback(null), 4000);
+    }
+  };
+
+  // GPS Geofencing Location Trigger
+  const handleFetchGpsLocation = () => {
+    if (!navigator.geolocation) {
+      setGpsError("La géolocalisation n'est pas supportée par ce navigateur.");
+      return;
+    }
+    setGpsLoading(true);
+    setGpsError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGpsCoords({
+          lat: pos.coords.latitude,
+          lon: pos.coords.longitude,
+          accuracy: Math.round(pos.coords.accuracy)
+        });
+        setGpsLoading(false);
+      },
+      (err) => {
+        setGpsLoading(false);
+        setGpsError(`Impossible de récupérer votre position GPS (${err.message}). Veuillez autoriser la localisation.`);
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  };
+
+  // Submit GPS Pointage
+  const handleSubmitGpsPointage = async (e) => {
+    e.preventDefault();
+    if (!gpsSelectedEmpId) return alert('Veuillez sélectionner un salarié.');
+    if (!gpsCoords) return alert('Veuillez activer et récupérer votre position GPS.');
+
+    const emp = (data?.employees || []).find(e => e.id.toString() === gpsSelectedEmpId.toString());
+    if (!emp) return alert('Salarié introuvable.');
+
+    const project = (data?.projects || []).find(p => p.id.toString() === gpsSelectedProjectId.toString());
+
+    try {
+      await axios.post('/api/attendance', {
+        empId: emp.id,
+        matricule: emp.matricule,
+        nom: `${emp.nom} ${emp.prenoms}`,
+        type: gpsType,
+        timestamp: new Date().toISOString(),
+        site: project ? project.nom : (emp.site || 'Chantier'),
+        latitude: gpsCoords.lat,
+        longitude: gpsCoords.lon,
+        projectId: project ? project.id : null
+      });
+
+      setGpsSuccessMsg(`Pointage GPS (${gpsType === 'IN' ? 'Entrée' : 'Sortie'}) validé avec succès pour ${emp.nom} ${emp.prenoms} !`);
+      refreshData();
+      setTimeout(() => {
+        setGpsSuccessMsg('');
+        setShowGpsModal(false);
+        setGpsSelectedEmpId('');
+        setGpsCoords(null);
+      }, 2000);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erreur lors de l\'enregistrement du pointage GPS.');
+    }
+  };
+
+  // Bulk Attendance Submit (Chef de Chantier)
+  const handleBulkAttendanceSubmit = async (e) => {
+    e.preventDefault();
+    if (selectedChefEmps.length === 0) return alert('Veuillez sélectionner au moins un salarié présent.');
+    
+    const project = (data?.projects || []).find(p => p.id.toString() === chefProjectId.toString());
+    const siteName = project ? project.nom : 'Chantier Général';
+
+    const records = selectedChefEmps.map(empId => {
+      const emp = (data?.employees || []).find(e => e.id.toString() === empId.toString());
+      return {
+        empId: emp.id,
+        matricule: emp.matricule,
+        nom: `${emp.nom} ${emp.prenoms}`,
+        type: chefType,
+        timestamp: `${chefDate}T${chefType === 'IN' ? '07:30:00' : '17:00:00'}.000Z`,
+        site: siteName,
+        projectId: project ? project.id : null
+      };
+    });
+
+    setBulkSubmitting(true);
+    try {
+      const res = await axios.post('/api/attendance/bulk', { records });
+      setBulkSubmitting(false);
+      setBulkSuccessMsg(`${res.data.count || records.length} pointages groupés enregistrés avec succès !`);
+      refreshData();
+      setTimeout(() => {
+        setBulkSuccessMsg('');
+        setShowChefModal(false);
+        setSelectedChefEmps([]);
+      }, 2000);
+    } catch (err) {
+      setBulkSubmitting(false);
+      alert(err.response?.data?.error || 'Erreur lors du pointage groupé.');
     }
   };
 
@@ -318,10 +454,27 @@ const Attendance = () => {
         actions={
           <div className="flex flex-wrap items-center gap-3">
             <button 
+              onClick={() => {
+                setShowGpsModal(true);
+                handleFetchGpsLocation();
+              }}
+              className="bg-blue-600 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
+            >
+                <MapPin size={15} /> Pointage GPS Mobile
+            </button>
+
+            <button 
+              onClick={() => setShowChefModal(true)}
+              className="bg-purple-700 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-purple-800 transition-all shadow-lg shadow-purple-600/20 flex items-center gap-2"
+            >
+                <Users size={15} /> Pointage Chef Chantier
+            </button>
+
+            <button 
               onClick={() => setShowSettingsModal(true)}
               className="bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black transition-all shadow-md flex items-center gap-2"
             >
-                <Settings size={15} /> Paramètres Horaires & Barèmes
+                <Settings size={15} /> Paramètres Horaires
             </button>
 
             <button 
@@ -335,7 +488,7 @@ const Attendance = () => {
               onClick={() => setShowKioskModal(true)}
               className="bg-ci-orange text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg shadow-ci-orange/20 flex items-center gap-2"
             >
-                <Smartphone size={16} /> Terminal Borne (Modale)
+                <Smartphone size={16} /> Terminal Borne
             </button>
 
             <a 
@@ -911,6 +1064,335 @@ const Attendance = () => {
                 <span className="font-black text-ci-orange group-hover:text-white uppercase tracking-widest text-xs">DÉPART</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pointage Mobile GPS Geofencing Modal */}
+      {showGpsModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-lg w-full border border-ci-border space-y-6 relative overflow-hidden animate-fadeIn max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-ci-border pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white font-black shadow-lg shadow-blue-500/30">
+                  <MapPin size={20} />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm uppercase tracking-wider text-ci-text">Pointage Mobile GPS (Geofencing)</h3>
+                  <p className="text-[10px] text-blue-600 font-bold uppercase tracking-widest">Validation de présence par rayon satellite</p>
+                </div>
+              </div>
+              <button onClick={() => setShowGpsModal(false)} className="text-ci-muted hover:text-ci-text p-2">
+                <X size={20} />
+              </button>
+            </div>
+
+            {gpsSuccessMsg && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                <CheckCircle2 size={18} /> {gpsSuccessMsg}
+              </div>
+            )}
+
+            {/* GPS Status Card */}
+            <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+                  <Navigation size={13} className={gpsLoading ? "animate-spin text-blue-500" : "text-blue-600"} />
+                  Statut Satellite GPS
+                </span>
+                <button
+                  type="button"
+                  onClick={handleFetchGpsLocation}
+                  disabled={gpsLoading}
+                  className="text-[10px] font-black text-blue-600 hover:text-blue-800 uppercase tracking-wider underline disabled:opacity-50"
+                >
+                  {gpsLoading ? 'Acquisition...' : 'Rafraîchir position'}
+                </button>
+              </div>
+
+              {gpsLoading && (
+                <div className="text-xs font-bold text-blue-600 flex items-center gap-2 py-2">
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  Acquisition des coordonnées satellites en cours...
+                </div>
+              )}
+
+              {gpsError && (
+                <div className="text-xs font-bold text-rose-600 bg-rose-50 border border-rose-200 p-3 rounded-xl flex items-center gap-2">
+                  <AlertCircle size={16} /> {gpsError}
+                </div>
+              )}
+
+              {gpsCoords && !gpsLoading && (
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                      <span className="text-[9px] text-slate-400 block uppercase font-sans font-bold">Latitude</span>
+                      <strong className="text-slate-800">{gpsCoords.lat.toFixed(6)}</strong>
+                    </div>
+                    <div className="bg-white p-2.5 rounded-xl border border-slate-200">
+                      <span className="text-[9px] text-slate-400 block uppercase font-sans font-bold">Longitude</span>
+                      <strong className="text-slate-800">{gpsCoords.lon.toFixed(6)}</strong>
+                    </div>
+                  </div>
+                  <div className="text-[10px] font-bold text-slate-500 flex items-center justify-between">
+                    <span>Précision capteur: ±{gpsCoords.accuracy}m</span>
+                    <span className="text-emerald-600 font-black">● Signal GPS Valide</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <form onSubmit={handleSubmitGpsPointage} className="space-y-4">
+              {/* Chantier Target */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-ci-muted">Chantier / Projet BTP Référent</label>
+                <select
+                  value={gpsSelectedProjectId}
+                  onChange={e => setGpsSelectedProjectId(e.target.value)}
+                  className="w-full px-4 py-3 bg-ci-bg border border-ci-border rounded-xl text-xs font-bold outline-none"
+                >
+                  <option value="">Sélectionner un chantier...</option>
+                  {(data?.projects || []).map(p => (
+                    <option key={p.id} value={p.id}>{p.nom} ({p.site || p.client}) - Rayon: {p.rayon_geofence || 250}m</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Geofence Perimeter Feedback */}
+              {gpsCoords && gpsSelectedProjectId && (() => {
+                const proj = (data?.projects || []).find(p => p.id.toString() === gpsSelectedProjectId.toString());
+                if (!proj || !proj.latitude || !proj.longitude) return null;
+                const dist = calculateDistanceMeters(gpsCoords.lat, gpsCoords.lon, proj.latitude, proj.longitude);
+                const allowedRadius = proj.rayon_geofence || 250;
+                const isInside = dist <= allowedRadius;
+
+                return (
+                  <div className={`p-3.5 rounded-2xl border text-xs font-bold space-y-1 ${
+                    isInside ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-amber-50 border-amber-200 text-amber-800'
+                  }`}>
+                    <div className="flex items-center gap-2 font-black">
+                      {isInside ? <CheckCircle2 size={16} className="text-emerald-600" /> : <AlertTriangle size={16} className="text-amber-600" />}
+                      {isInside ? 'DANS LE PÉRIMÈTRE AUTORISÉ' : 'HORS DU PÉRIMÈTRE THÉORIQUE'}
+                    </div>
+                    <div className="text-[11px] font-semibold opacity-90">
+                      Distance au chantier : <strong className="font-black">{dist} mètres</strong> (Rayon max toléré : {allowedRadius}m)
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Salarié */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-ci-muted">Salarié / Ouvrier</label>
+                <select
+                  required
+                  value={gpsSelectedEmpId}
+                  onChange={e => setGpsSelectedEmpId(e.target.value)}
+                  className="w-full px-4 py-3 bg-ci-bg border border-ci-border rounded-xl text-xs font-bold outline-none"
+                >
+                  <option value="">Sélectionner un collaborateur</option>
+                  {(data?.employees || []).filter(e => e.is_deleted === 0).map(e => (
+                    <option key={e.id} value={e.id}>{e.nom} {e.prenoms} ({e.matricule} - {e.poste})</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Type IN / OUT */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase text-ci-muted">Type de Pointage</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setGpsType('IN')}
+                    className={`py-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all ${
+                      gpsType === 'IN' ? 'bg-emerald-600 text-white border-emerald-600 shadow-md' : 'bg-slate-50 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    <LogIn size={15} /> Arrivée (IN)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setGpsType('OUT')}
+                    className={`py-3 rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 border transition-all ${
+                      gpsType === 'OUT' ? 'bg-orange-600 text-white border-orange-600 shadow-md' : 'bg-slate-50 text-slate-700 border-slate-200'
+                    }`}
+                  >
+                    <LogOut size={15} /> Départ (OUT)
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-3 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowGpsModal(false)}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold uppercase text-slate-700 transition-all"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={!gpsCoords || !gpsSelectedEmpId}
+                  className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-blue-500/30 transition-all disabled:opacity-40"
+                >
+                  Enregistrer GPS
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Pointage Groupé Chantier (Chef de Chantier) */}
+      {showChefModal && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl p-8 max-w-2xl w-full border border-ci-border space-y-6 relative overflow-hidden animate-fadeIn max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-ci-border pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-700 rounded-2xl flex items-center justify-center text-white font-black shadow-lg shadow-purple-600/30">
+                  <Users size={20} />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm uppercase tracking-wider text-ci-text">Pointage Chantier Groupé (Chef de Chantier)</h3>
+                  <p className="text-[10px] text-purple-700 font-bold uppercase tracking-widest">Saisie rapide d'appel journalier des équipes</p>
+                </div>
+              </div>
+              <button onClick={() => setShowChefModal(false)} className="text-ci-muted hover:text-ci-text p-2">
+                <X size={20} />
+              </button>
+            </div>
+
+            {bulkSuccessMsg && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl text-xs font-bold flex items-center gap-2 animate-fadeIn">
+                <CheckCircle2 size={18} /> {bulkSuccessMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleBulkAttendanceSubmit} className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-ci-muted">Chantier / Projet</label>
+                  <select
+                    value={chefProjectId}
+                    onChange={e => setChefProjectId(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-ci-bg border border-ci-border rounded-xl text-xs font-bold outline-none"
+                  >
+                    <option value="">Sélectionner un chantier...</option>
+                    {(data?.projects || []).map(p => (
+                      <option key={p.id} value={p.id}>{p.nom}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-ci-muted">Date du Pointage</label>
+                  <input
+                    type="date"
+                    required
+                    value={chefDate}
+                    onChange={e => setChefDate(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-ci-bg border border-ci-border rounded-xl text-xs font-bold outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-ci-muted">Type d'Événement</label>
+                  <select
+                    value={chefType}
+                    onChange={e => setChefType(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-ci-bg border border-ci-border rounded-xl text-xs font-bold outline-none"
+                  >
+                    <option value="IN">Arrivée Matin (07h30)</option>
+                    <option value="OUT">Départ Soir (17h00)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Multi-selection of Employees */}
+              <div className="space-y-3 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <span className="text-xs font-black uppercase text-slate-700 flex items-center gap-2">
+                    <CheckSquare size={14} className="text-purple-600" /> Liste des Ouvriers & Salariés
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedChefEmps(allEmployees.map(e => e.id))}
+                      className="text-[10px] font-black text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200 hover:bg-purple-100"
+                    >
+                      Tout cocher ({allEmployees.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedChefEmps([])}
+                      className="text-[10px] font-black text-slate-500 bg-white px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-100"
+                    >
+                      Décocher
+                    </button>
+                  </div>
+                </div>
+
+                <div className="max-h-60 overflow-y-auto space-y-1.5 pr-2 custom-scrollbar">
+                  {allEmployees.map(emp => {
+                    const isChecked = selectedChefEmps.includes(emp.id);
+                    return (
+                      <div
+                        key={emp.id}
+                        onClick={() => {
+                          if (isChecked) {
+                            setSelectedChefEmps(selectedChefEmps.filter(id => id !== emp.id));
+                          } else {
+                            setSelectedChefEmps([...selectedChefEmps, emp.id]);
+                          }
+                        }}
+                        className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                          isChecked ? 'bg-purple-50/80 border-purple-300 text-purple-950 font-bold' : 'bg-white border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all ${
+                            isChecked ? 'bg-purple-700 text-white border-purple-700' : 'border-slate-300 bg-white'
+                          }`}>
+                            {isChecked && <CheckCircle2 size={14} />}
+                          </div>
+                          <div>
+                            <p className="text-xs font-black">{emp.nom} {emp.prenoms}</p>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase">{emp.matricule} • {emp.poste || 'Ouvrier'} • {emp.site}</p>
+                          </div>
+                        </div>
+                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
+                          isChecked ? 'bg-purple-200 text-purple-900' : 'bg-slate-100 text-slate-500'
+                        }`}>
+                          {isChecked ? 'Présent' : 'Non coché'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="pt-2 text-right text-xs font-black text-purple-800">
+                  Total à valider : {selectedChefEmps.length} salarié(s)
+                </div>
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowChefModal(false)}
+                  className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 rounded-xl text-xs font-bold uppercase text-slate-700 transition-all"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={bulkSubmitting || selectedChefEmps.length === 0}
+                  className="flex-1 py-3.5 bg-purple-700 hover:bg-purple-800 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg shadow-purple-600/30 transition-all disabled:opacity-40"
+                >
+                  {bulkSubmitting ? 'Enregistrement groupé...' : `Valider ${selectedChefEmps.length} Pointages`}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

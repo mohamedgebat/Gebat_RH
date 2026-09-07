@@ -242,11 +242,46 @@ const Recruitment = () => {
   const emptyCandidate = { offerId: '', nom: '', prenoms: '', email: '', telephone: '', motivation: '', statut: 'Nouveau', cv: '', lm: '' };
   const [newCandidate, setNewCandidate] = useState(emptyCandidate);
 
+  // AI CV Scanner state
+  const [parsingCv, setParsingCv] = useState(false);
+  const [aiScanResult, setAiScanResult] = useState(null);
+  const [pastedCvText, setPastedCvText] = useState('');
+
   const [searchTerm, setSearchTerm] = useState('');
   const [offerSearchTerm, setOfferSearchTerm] = useState('');
   const [selectedOfferFilter, setSelectedOfferFilter] = useState('all');
   const [atsLevelFilter, setAtsLevelFilter] = useState('all');
   const [stageFilter, setStageFilter] = useState('all');
+
+  const handleAiCvScan = async () => {
+    if (!newCandidate.cv && !pastedCvText && !newCandidate.motivation) {
+      showToast("Veuillez sélectionner un fichier CV ou coller du texte.");
+      return;
+    }
+    setParsingCv(true);
+    try {
+      const res = await axios.post('/api/recruitment/parse-cv', {
+        cvText: pastedCvText || newCandidate.motivation,
+        fileName: newCandidate.nom ? `${newCandidate.nom}_CV` : 'CV_Candidat_BTP.pdf',
+        offerId: newCandidate.offerId || null
+      });
+
+      setAiScanResult(res.data);
+      setNewCandidate(prev => ({
+        ...prev,
+        nom: prev.nom || res.data.nom || '',
+        prenoms: prev.prenoms || res.data.prenoms || '',
+        email: prev.email || res.data.email || '',
+        telephone: prev.telephone || res.data.telephone || '',
+        motivation: prev.motivation || `${res.data.summary}\n\nCompétences clés: ${res.data.competences}\nDiplôme: ${res.data.diplome}`
+      }));
+      setParsingCv(false);
+      showToast("✨ CV analysé avec succès par l'IA !");
+    } catch (err) {
+      setParsingCv(false);
+      showToast("Erreur lors de l'analyse IA du CV.");
+    }
+  };
 
   const handleFileUpload = (e, field) => {
     const file = e.target.files[0];
@@ -936,10 +971,66 @@ const Recruitment = () => {
             >
               <div className="flex justify-between items-center mb-6 border-b border-slate-100 pb-5">
                 <div>
-                  <h3 className="text-xl font-black tracking-tighter uppercase text-slate-800">Ajout Candidat</h3>
-                  <p className="text-xs font-bold text-slate-400 mt-1">Saisie manuelle d'une candidature.</p>
+                  <h3 className="text-xl font-black tracking-tighter uppercase text-slate-800 flex items-center gap-2">
+                    <BrainCircuit size={22} className="text-emerald-500" /> Ajout Candidat & Scan IA
+                  </h3>
+                  <p className="text-xs font-bold text-slate-400 mt-1">Extraction automatique des compétences BTP et profil.</p>
                 </div>
                 <button onClick={() => setShowCandidateModal(false)} className="w-10 h-10 flex items-center justify-center bg-slate-100 rounded-2xl hover:bg-slate-200 transition-colors text-slate-500"><X size={18} /></button>
+              </div>
+
+              {/* AI CV Scanner Magic Box */}
+              <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 rounded-3xl space-y-3 shadow-xl relative overflow-hidden mb-6">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-1.5">
+                    <Sparkles size={14} /> Scanner IA de CV (BTP & Tous Métiers)
+                  </span>
+                  <span className="text-[9px] font-bold uppercase tracking-wider bg-white/10 px-2 py-0.5 rounded-md text-slate-300">
+                    Auto-complétion
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-slate-300 font-medium">
+                  Chargez le fichier CV ci-dessous ou collez le texte du CV, puis cliquez sur "Analyser avec l'IA" pour préremplir le profil instantanément.
+                </p>
+
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={pastedCvText}
+                    onChange={e => setPastedCvText(e.target.value)}
+                    placeholder="Coller ici extrait du CV (ex: Jean Kouassi, ingénieur BTP 5 ans exp...)"
+                    className="flex-1 px-3.5 py-2 bg-white/10 border border-white/15 rounded-xl text-xs font-medium text-white placeholder:text-slate-400 outline-none focus:border-emerald-400"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAiCvScan}
+                    disabled={parsingCv}
+                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-500/30 disabled:opacity-50 shrink-0"
+                  >
+                    {parsingCv ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Scan...
+                      </>
+                    ) : (
+                      <>
+                        <BrainCircuit size={14} /> Analyser CV
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {aiScanResult && (
+                  <div className="p-3 bg-emerald-950/70 border border-emerald-500/40 rounded-2xl text-xs space-y-1.5 animate-fadeIn">
+                    <div className="flex items-center justify-between">
+                      <span className="font-black text-emerald-400">Score de Correspondance : {aiScanResult.matchingScore}%</span>
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-bold">{aiScanResult.diplome}</span>
+                    </div>
+                    <p className="text-[11px] text-slate-200">{aiScanResult.summary}</p>
+                    <p className="text-[10px] text-emerald-300 font-semibold">Compétences: {aiScanResult.competences}</p>
+                  </div>
+                )}
               </div>
 
               <form onSubmit={handleAddCandidateManual} className="space-y-5">
@@ -976,7 +1067,7 @@ const Recruitment = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Résumé du Profil</label>
+                  <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest ml-1">Résumé du Profil & Compétences</label>
                   <textarea 
                     rows={4} value={newCandidate.motivation} onChange={e => setNewCandidate({...newCandidate, motivation: e.target.value})} 
                     className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200/60 rounded-xl text-xs font-bold outline-none resize-none focus:ring-2 focus:ring-emerald-500/30" 
