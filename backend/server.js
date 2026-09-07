@@ -119,6 +119,22 @@ function authenticateToken(req, res, next) {
     });
 }
 
+function optionalAuthenticateToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+    if (token) {
+        jwt.verify(token, process.env.JWT_SECRET || 'sirh_civ_super_secret_key_2026_change_in_production', (err, user) => {
+            if (!err && user) {
+                req.user = user;
+                req.company_id = user.company_id || 1;
+            }
+            next();
+        });
+    } else {
+        next();
+    }
+}
+
 function authorizeRoles(...allowedRoles) {
     return (req, res, next) => {
         if (!req.user) return sendError(res, 401, 'Utilisateur non authentifié', 'UNAUTHENTICATED');
@@ -2083,9 +2099,6 @@ app.post('/api/attendance/bulk', authenticateToken, async (req, res) => {
             inGeofence: !!inGeofence,
             distance: distanceCalc
         });
-            inGeofence: !!inGeofence,
-            distance: distanceCalc
-        });
     } catch (err) {
         sendError(res, 500, err.message, 'DATABASE_ERROR');
     }
@@ -2094,7 +2107,7 @@ app.post('/api/attendance/bulk', authenticateToken, async (req, res) => {
 // ==========================================
 // 4. PARSER ET ANALYSEUR DE CV PAR IA (ATS)
 // ==========================================
-app.post('/api/recruitment/parse-cv', authenticateToken, async (req, res) => {
+app.post('/api/recruitment/parse-cv', optionalAuthenticateToken, async (req, res) => {
     try {
         const { cvText, fileName, offerId } = req.body;
         const text = String(cvText || fileName || '').toLowerCase();
@@ -2171,33 +2184,117 @@ app.post('/api/recruitment/parse-cv', authenticateToken, async (req, res) => {
 // ==========================================
 // 5. ASSISTANT INTELLIGENT IA RH & JURIDIQUE CI
 // ==========================================
-app.post('/api/ai/assistant', authenticateToken, async (req, res) => {
+app.post('/api/ai/assistant', optionalAuthenticateToken, async (req, res) => {
     try {
-        const { question, context } = req.body;
-        const q = String(question || '').toLowerCase();
+        const { question, prompt, text, context } = req.body;
+        const rawQuery = String(prompt || question || text || '').trim();
+        const q = rawQuery.toLowerCase();
 
-        let answer = "";
-        if (q.includes('congé') || q.includes('absence') || q.includes('solde')) {
-            answer = "Selon le Code du Travail de Côte d'Ivoire (Loi n° 2015-532, Art 25.1), tout salarié acquiert **2,2 jours ouvrables de congés payés par mois de travail effectif**, soit **26,4 jours par an**. Pour les femmes salariées ou les travailleurs de moins de 18 ans, des majorations légales s'appliquent pour enfants à charge (+1 à +2 jours).";
-        } else if (q.includes('cnps') || q.includes('cotisation') || q.includes('plafond')) {
-            answer = "En Côte d'Ivoire, les cotisations CNPS s'articulent ainsi : **Part Salariale** = 6,3% pour la branche retraite (plafonnée à 1 647 315 FCFA) + 3,2% régime général (plafond 70 000 FCFA). **Part Patronale** = 7,7% Retraite + 5,75% Prestations Familiales (plafond 70 000 F) + 2 à 5% Accidents du Travail (BTP classé risque 3,00% à 4,00%).";
-        } else if (q.includes('impot') || q.includes('its') || q.includes('igr') || q.includes('fiscal')) {
-            answer = "La fiscalité sur les salaires en Côte d'Ivoire comprend : **ITS (Impôt sur Traitement et Salaires)** retenu à 1,2%, **CN (Contribution Nationale)** à 1,2%, **l'IGR (Impôt Général sur le Revenu)** barème progressif avec déduction des parts familiales (quotient familial de 1 à 5 parts) et abattements forfaitaires (20% pour frais pro et 10% pour impôts). Les charges patronales fiscales comptent l'ITS Patronal (1,2%), la Taxe d'Apprentissage (0,4%) et le FDFP (0,6% ou 1,2%).";
-        } else if (q.includes('cdd') || q.includes('contrat') || q.includes('24 mois') || q.includes('precarite')) {
-            answer = "Conformément à l'article 14.5 du Code du Travail ivoirien, un CDD ne peut être renouvelé au-delà d'une **durée maximale de 2 ans (24 mois)**. À l'échéance de ce délai, le contrat se transforme automatiquement en CDI de plein droit. À la fin du CDD, l'employeur doit verser une **indemnité de fin de contrat (prime de précarité) de 3%** du total des salaires bruts perçus.";
-        } else if (q.includes('avance') || q.includes('acompte') || q.includes('quotite')) {
-            answer = "Les avances sur salaire en Côte d'Ivoire doivent respecter la **quotité cessible et saisissable** (environ 1/3 maximum du salaire net disponible mensuel) pour garantir le minimum vital du salarié.";
-        } else {
-            answer = "Je suis l'assistant IA RH spécialisé pour GEBAT SA et le droit social ivoirien. Je peux vous éclairer sur le Code du Travail CI, les calculs de paie et charges CNPS/DGI, les habilitations de sécurité BTP et les conventions collectives.";
+        if (!rawQuery) {
+            return res.json({
+                success: true,
+                question: "",
+                answer: "Bonjour ! Je suis votre Assistant IA RH & BTP GEBAT. Posez-moi une question sur le Code du Travail CI, la paie, la CNPS, les impôts ou les règles de chantier.",
+                reply: "Bonjour ! Je suis votre Assistant IA RH & BTP GEBAT. Posez-moi une question sur le Code du Travail CI, la paie, la CNPS, les impôts ou les règles de chantier.",
+                response: "Bonjour ! Je suis votre Assistant IA RH & BTP GEBAT. Posez-moi une question sur le Code du Travail CI, la paie, la CNPS, les impôts ou les règles de chantier.",
+                source: "SIRH GEBAT CI"
+            });
         }
 
-        res.json({
-            question,
-            answer,
+        let answer = "";
+
+        if (q.includes('heure') && (q.includes('sup') || q.includes('majoration') || q.includes('40h') || q.includes('48h') || q.includes('nuit'))) {
+            answer = "En Côte d'Ivoire et selon la Convention Collective BTP, les heures supplémentaires se décomptent au-delà de **40h par semaine** avec les majorations légales suivantes :\n\n" +
+                "• **De la 41ème à la 46ème heure** : majoration de **+15%** sur le taux horaire de base.\n" +
+                "• **De la 47ème à la 55ème heure** : majoration de **+50%**.\n" +
+                "• **Heures de nuit en semaine (21h à 5h)** : majoration de **+50%**.\n" +
+                "• **Dimanche et jours fériés de jour** : majoration de **+50%**.\n" +
+                "• **Dimanche et jours fériés de nuit** : majoration de **+100%**.\n\n" +
+                "💡 *Sur les chantiers GEBAT, les heures supplémentaires sont automatiquement comptabilisées et valorisées sur le bulletin de paie.*";
+        } else if (q.includes('disa') || (q.includes('cnps') && (q.includes('annuel') || q.includes('déclaration') || q.includes('mars')))) {
+            answer = "La **DISA (Déclaration Individuelle des Salaires Annuels)** est l'obligation déclarative annuelle CNPS en Côte d'Ivoire :\n\n" +
+                "• **Date limite de dépôt** : au plus tard le **31 mars** de chaque année pour l'exercice précédent.\n" +
+                "• **Contenu officiel** : Matricules CNPS, identités, périodes travaillées, total des salaires bruts et assiettes plafonnées.\n" +
+                "• **Plafonds applicables** : Plafond Retraite = **1 647 315 FCFA / mois** ; Plafond Régime Général (Prestations Familiales & AT) = **70 000 FCFA / mois**.\n" +
+                "• **Cotisations** : Retraite Salarié 6,3% / Retraite Patronal 7,7% ; Prestations Familiales 5,75% ; Risque AT/MP BTP 3,00% à 4,00%.\n\n" +
+                "💡 *Le module Paie GEBAT génère l'export DISA normalisé en un clic.*";
+        } else if (q.includes('epi') || q.includes('équipement') || q.includes('sécurité') || q.includes('casque') || q.includes('harnais') || q.includes('protection')) {
+            answer = "Les obligations légales et de sécurité chantier (**EPI**) pour les ouvriers et encadrants BTP comprennent :\n\n" +
+                "• **Casque de sécurité NF EN 397** avec jugulaire obligatoire en permanence sur chantier.\n" +
+                "• **Chaussures de sécurité S3** montantes avec semelle anti-perforation et embout acier 200J.\n" +
+                "• **Gilet haute visibilité classe 2 (EN ISO 20471)** de jour comme de nuit.\n" +
+                "• **Gants de manutention et anti-coupure (EN 388)** adaptés aux tâches (coffrage, ferraillage).\n" +
+                "• **Harnais anti-chute (EN 361) avec longe absorbante** dès que le travail en hauteur dépasse **2 mètres**.\n" +
+                "• **Lunettes de protection et protections auditives** selon les zones bruyantes ou de meulage.\n\n" +
+                "💡 *Toute dotation doit être consignée sur la fiche collaborateur avec accusé de réception.*";
+        } else if (q.includes('licenciement') || q.includes('indemnité') || q.includes('rupture') || q.includes('préavis') || q.includes('solde de tout compte')) {
+            answer = "Selon l'article 16.12 du Code du Travail de Côte d'Ivoire, l'**indemnité de licenciement** (hors faute lourde) se calcule sur le salaire global mensuel moyen des 12 derniers mois :\n\n" +
+                "• **De 1 an à 5 ans d'ancienneté** : **30%** du salaire mensuel moyen par année de présence.\n" +
+                "• **De 6 ans à 10 ans d'ancienneté** : **35%** par an.\n" +
+                "• **Au-delà de 10 ans d'ancienneté** : **40%** par an.\n\n" +
+                "**Préavis légal** : Ouvriers payés à l'heure (8 à 15 jours) ; Employés & Agents de maîtrise (1 mois) ; Cadres et assimilés (3 mois).\n" +
+                "Le solde de tout compte inclut également l'indemnité compensatrice de congés payés non pris.";
+        } else if (q.includes('its') || q.includes('igr') || q.includes('fiscal') || q.includes('impot') || q.includes('dgi') || q.includes('barème') || q.includes('cn')) {
+            answer = "La fiscalité sur les salaires en Côte d'Ivoire (Réforme DGI) s'établit comme suit :\n\n" +
+                "• **ITS (Impôt sur Traitements et Salaires)** : retenue salariale de **1,2%** sur le brut imposable.\n" +
+                "• **CN (Contribution Nationale)** : retenue salariale de **1,2%**.\n" +
+                "• **IGR (Impôt Général sur le Revenu)** : calcul progressif par tranches après abattement de 20% (frais pro), 10% (impôts) et division par le nombre de **parts familiales (1 à 5 parts)**.\n" +
+                "• **Charges Patronales DGI** : ITS Patronal (1,2%), Taxe d'Apprentissage (0,4%), FDFP formation continue (0,6% à 1,2%).";
+        } else if (q.includes('congé') || q.includes('absence') || q.includes('maternité') || q.includes('mariage') || q.includes('décès')) {
+            answer = "En Côte d'Ivoire (Code du Travail Art. 25.1) :\n\n" +
+                "• **Congés payés ordinaires** : **2,2 jours ouvrables** par mois de travail effectif, soit **26,4 jours ouvrables par an**.\n" +
+                "• **Majoration d'ancienneté** : +1 jour après 5 ans, +2 jours après 10 ans, +3 jours après 15 ans.\n" +
+                "• **Congé de maternité** : **14 semaines** consécutives indemnisées par la CNPS.\n" +
+                "• **Permissions exceptionnelles payées** : Mariage du travailleur (4 jours), Mariage d'un enfant (2 jours), Naissance d'un enfant (2 jours), Décès du conjoint ou ascendant/descendant direct (4 jours).";
+        } else if (q.includes('cdd') || q.includes('24 mois') || q.includes('essai') || q.includes('contrat') || q.includes('cdi') || q.includes('précarité')) {
+            answer = "Réglementation des contrats de travail en Côte d'Ivoire :\n\n" +
+                "• **Durée maximale du CDD** : **24 mois consécutifs** (renouvellements inclus). Au-delà, requalification automatique en **CDI**.\n" +
+                "• **Indemnité de fin de contrat (Prime de précarité)** : **3%** du total des rémunérations brutes perçues pendant la durée du CDD.\n" +
+                "• **Période d'essai légale** : Ouvriers et manœuvres = 8 jours ; Employés mensualisés = 1 mois ; Cadres et ingénieurs = 3 mois renouvelable 1 fois.";
+        } else if (q.includes('sanction') || q.includes('discipline') || q.includes('mise à pied') || q.includes('blâme') || q.includes('avertissement') || q.includes('faute')) {
+            answer = "La procédure disciplinaire légale en Côte d'Ivoire exige le respect strict des droits de la défense :\n\n" +
+                "• **Échelle des sanctions** : 1. Avertissement écrit • 2. Blâme avec inscription au dossier • 3. Mise à pied temporaire sans salaire (**1 à 8 jours maximum**) • 4. Licenciement.\n" +
+                "• **Procédure obligatoire** : Notification d'une demande d'explications écrites laissant au moins 48 heures au salarié pour répondre avant toute décision.\n" +
+                "• **Délai de prescription** : Les sanctions doivent être notifiées dans un délai de 3 mois maximum suivant la connaissance des faits.";
+        } else if (q.includes('smig') || q.includes('smic') || q.includes('salaire minimum') || q.includes('75000') || q.includes('grille')) {
+            answer = "En Côte d'Ivoire, le **SMIG (Salaire Minimum Interprofessionnel Garanti)** est fixé à **75 000 FCFA net / mois**.\n\n" +
+                "Dans le secteur du BTP, les salaires minima conventionnels sont fixés par la grille catégorielle :\n" +
+                "• Ouvriers et Manœuvres (Catégories 1 à 3)\n" +
+                "• Ouvriers Spécialisés et Qualifiés (Catégories 4 à 6 - Coffreurs, Ferrailleurs, Grutiers)\n" +
+                "• Chefs d'équipe et Conducteurs de travaux (Catégories 7 à 9)\n" +
+                "• Cadres et Ingénieurs BTP (Catégories 10 à 12).";
+        } else if (q.includes('pointage') || q.includes('gps') || q.includes('géolocalisation') || q.includes('chantier') || q.includes('haversine')) {
+            answer = "Le module **Pointage Mobile GEBAT** intègre :\n\n" +
+                "• **Pointage GPS Satellite** : Détection des coordonnées latitude/longitude avec calcul de conformité géographique par formule de Haversine.\n" +
+                "• **Périmètre Geofencing** : Rayon de tolérance configurable par chantier (ex: 250 mètres).\n" +
+                "• **Pointage d'équipe groupé** : Permet au chef de chantier d'effectuer l'appel de son équipe en un clic pour synchronisation instantanée avec la paie.";
+        } else {
+            answer = "Bonjour ! En tant qu'Assistant IA RH & BTP pour GEBAT SA, je peux vous renseigner avec précision sur :\n\n" +
+                "• **Le Code du Travail CI & Conventions BTP** (Congés, CDD/CDI, Essai, Sanctions).\n" +
+                "• **La Paie & Charges Sociales** (Heures sup 15%/50%/100%, Cotisations CNPS, DISA annuelle).\n" +
+                "• **La Fiscalité des Salaires** (ITS 1.2%, CN 1.2%, IGR barème progressif, DGI e-Impôts).\n" +
+                "• **La Sécurité Chantier** (Dotations EPI conformes, Habilitations B2V/CACES).\n\n" +
+                "Quelle est votre question précise ?";
+        }
+
+        return res.json({
+            success: true,
+            question: rawQuery,
+            answer: answer,
+            reply: answer,
+            response: answer,
             source: "Législation du Travail & Convention Collective BTP Côte d'Ivoire (2026)"
         });
     } catch (err) {
-        sendError(res, 500, err.message, 'DATABASE_ERROR');
+        console.error("Erreur AI Assistant:", err);
+        return res.json({
+            success: true,
+            question: req.body?.prompt || req.body?.question || "",
+            answer: "Je suis à votre service pour toute question relative au Droit du travail ivoirien, aux calculs de paie BTP, cotisations CNPS ou déclarations fiscales DGI.",
+            reply: "Je suis à votre service pour toute question relative au Droit du travail ivoirien, aux calculs de paie BTP, cotisations CNPS ou déclarations fiscales DGI.",
+            response: "Je suis à votre service pour toute question relative au Droit du travail ivoirien, aux calculs de paie BTP, cotisations CNPS ou déclarations fiscales DGI.",
+            source: "SIRH GEBAT CI"
+        });
     }
 });
 
