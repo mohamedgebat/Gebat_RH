@@ -5,9 +5,16 @@ import {
   Building, MapPin, Globe, Shield, Save, RefreshCw, 
   Palette, Image as ImageIcon, Upload, DollarSign, 
   Check, Phone, Mail, FileText, AlertTriangle, Percent, Sliders,
-  Layers, Key, CheckSquare, Zap, Cpu, Users, Lock, Server
+  Layers, Key, CheckSquare, Zap, Cpu, Users, Lock, Server,
+  Send, Eye, EyeOff, Laptop, CheckCircle2, Volume2, VolumeX, Sparkles
 } from 'lucide-react';
 import axios from 'axios';
+import { 
+  getNotificationPermission, 
+  requestNotificationPermission, 
+  testBrowserNotification,
+  playNotificationSound
+} from '../utils/browserNotifications';
 
 const COLOR_PRESETS = [
   { name: "Côte d'Ivoire (Vert & Orange)", primary: '#009E49', secondary: '#F77F00' },
@@ -69,11 +76,35 @@ const Settings = () => {
     modulePortal: true,
     moduleMobileMoney: true,
     slogan: "L'Excellence RH & Paie en Afrique",
-    footerStampText: "Document Officiel Certifié RH"
+    footerStampText: "Document Officiel Certifié RH",
+    smtp_host: '',
+    smtp_port: 587,
+    smtp_user: '',
+    smtp_pass: '',
+    smtp_secure: false,
+    sender_email: 'notifications@gebat-sa.com',
+    sender_name: 'GEBAT SA - Notifications RH',
+    email_notif_leaves: true,
+    email_notif_advances: true,
+    email_notif_payroll: true,
+    email_notif_contracts: true,
+    email_notif_disciplinary: true
   });
 
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('saas_identity');
+  
+  // États dédiés aux tests SMTP & notifications
+  const [testEmailRecipient, setTestEmailRecipient] = useState('');
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState(null);
+  const [showSmtpPass, setShowSmtpPass] = useState(false);
+  const [browserPermStatus, setBrowserPermStatus] = useState('default');
+  const [testingBrowserNotif, setTestingBrowserNotif] = useState(false);
+
+  useEffect(() => {
+    setBrowserPermStatus(getNotificationPermission());
+  }, []);
 
   useEffect(() => {
     if (data?.settings) {
@@ -115,7 +146,19 @@ const Settings = () => {
         modulePortal: s.modulePortal !== undefined ? Boolean(s.modulePortal) : true,
         moduleMobileMoney: s.moduleMobileMoney !== undefined ? Boolean(s.moduleMobileMoney) : true,
         slogan: s.slogan || "L'Excellence RH & Paie en Afrique",
-        footerStampText: s.footerStampText || "Document Officiel Certifié RH"
+        footerStampText: s.footerStampText || "Document Officiel Certifié RH",
+        smtp_host: s.smtp_host || '',
+        smtp_port: s.smtp_port !== undefined ? s.smtp_port : 587,
+        smtp_user: s.smtp_user || '',
+        smtp_pass: s.smtp_pass || '',
+        smtp_secure: s.smtp_secure !== undefined ? Boolean(s.smtp_secure) : false,
+        sender_email: s.sender_email || 'notifications@gebat-sa.com',
+        sender_name: s.sender_name || 'GEBAT SA - Notifications RH',
+        email_notif_leaves: s.email_notif_leaves !== undefined ? Boolean(s.email_notif_leaves) : true,
+        email_notif_advances: s.email_notif_advances !== undefined ? Boolean(s.email_notif_advances) : true,
+        email_notif_payroll: s.email_notif_payroll !== undefined ? Boolean(s.email_notif_payroll) : true,
+        email_notif_contracts: s.email_notif_contracts !== undefined ? Boolean(s.email_notif_contracts) : true,
+        email_notif_disciplinary: s.email_notif_disciplinary !== undefined ? Boolean(s.email_notif_disciplinary) : true
       });
     }
   }, [data]);
@@ -153,6 +196,54 @@ const Settings = () => {
     }
   };
 
+  const handleSendTestEmail = async () => {
+    if (!testEmailRecipient || !testEmailRecipient.includes('@')) {
+      alert('Veuillez saisir une adresse email de test valide.');
+      return;
+    }
+    setTestingEmail(true);
+    setTestEmailResult(null);
+    try {
+      const res = await axios.post('/api/settings/test-email', {
+        to: testEmailRecipient,
+        smtpConfig: {
+          host: formData.smtp_host,
+          port: formData.smtp_port,
+          user: formData.smtp_user,
+          pass: formData.smtp_pass,
+          secure: formData.smtp_secure
+        },
+        senderEmail: formData.sender_email,
+        senderName: formData.sender_name
+      });
+      setTestEmailResult({ success: true, message: res.data.message, simulated: res.data.simulated });
+    } catch (err) {
+      setTestEmailResult({
+        success: false,
+        message: err.response?.data?.error || err.message || 'Échec de connexion au serveur SMTP'
+      });
+    } finally {
+      setTestingEmail(false);
+    }
+  };
+
+  const handleToggleBrowserPush = async () => {
+    const res = await requestNotificationPermission();
+    setBrowserPermStatus(res);
+    if (res === 'granted') {
+      testBrowserNotification();
+    }
+  };
+
+  const handleTestBrowserPush = async () => {
+    setTestingBrowserNotif(true);
+    try {
+      await testBrowserNotification();
+    } finally {
+      setTimeout(() => setTestingBrowserNotif(false), 800);
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -171,7 +262,7 @@ const Settings = () => {
     <div className="animate-fadeIn space-y-8">
       <PageHeader 
         title="Configuration SaaS Multi-Tenant & Adaptabilité" 
-        subtitle="Personnalisez le domaine, le logo, la charte graphique, les modules d'abonnement et la réglementation pays"
+        subtitle="Personnalisez le domaine, le logo, la charte graphique, les notifications emails et la réglementation pays"
       />
 
       <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-hide">
@@ -183,7 +274,18 @@ const Settings = () => {
               : 'bg-white text-ci-muted hover:bg-ci-bg border border-ci-border'
           }`}
         >
-          <Building size={16} /> Identité Organisation & Marque Blanched
+          <Building size={16} /> Identité Organisation & Marque Blanche
+        </button>
+
+        <button
+          onClick={() => setActiveTab('notifications_email')}
+          className={`px-6 py-3.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${
+            activeTab === 'notifications_email' 
+              ? 'bg-[#2563EB] text-white shadow-lg shadow-blue-600/20' 
+              : 'bg-white text-ci-muted hover:bg-ci-bg border border-ci-border'
+          }`}
+        >
+          <Mail size={16} /> Emails & Notifications Intelligentes
         </button>
 
         <button
@@ -750,6 +852,314 @@ const Settings = () => {
                   className="w-full px-6 py-4 bg-white border border-ci-border rounded-2xl text-lg font-black text-[#2563EB] outline-none"
                 />
               </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'notifications_email' && (
+          <div className="space-y-8 animate-fadeIn">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              
+              {/* Carte 1 : Configuration du Serveur SMTP */}
+              <div className="lg:col-span-7 bg-white p-8 rounded-[2.5rem] border border-ci-border shadow-sm space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-black">
+                    <Server size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-wider text-ci-text">Serveur d'Envoi SMTP & Passerelle Email</h3>
+                    <p className="text-xs text-ci-muted font-bold">Configurez vos identifiants SMTP (Gmail, Microsoft 365, OVH ou serveur d'entreprise).</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="sm:col-span-2 space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-ci-muted">Hôte / Serveur SMTP</label>
+                      <input 
+                        type="text"
+                        placeholder="ex: smtp.gmail.com ou mail.gebat-sa.com"
+                        value={formData.smtp_host}
+                        onChange={e => setFormData({ ...formData, smtp_host: e.target.value })}
+                        className="w-full px-4 py-3 bg-ci-bg border-none rounded-2xl text-xs font-mono font-bold text-slate-800 outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-ci-muted">Port SMTP</label>
+                      <input 
+                        type="number"
+                        placeholder="587"
+                        value={formData.smtp_port}
+                        onChange={e => setFormData({ ...formData, smtp_port: parseInt(e.target.value, 10) || 587 })}
+                        className="w-full px-4 py-3 bg-ci-bg border-none rounded-2xl text-xs font-mono font-bold text-slate-800 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-ci-muted">Utilisateur / Compte SMTP</label>
+                      <input 
+                        type="text"
+                        placeholder="ex: notifications@gebat-sa.com"
+                        value={formData.smtp_user}
+                        onChange={e => setFormData({ ...formData, smtp_user: e.target.value })}
+                        className="w-full px-4 py-3 bg-ci-bg border-none rounded-2xl text-xs font-mono font-bold text-slate-800 outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-ci-muted">Mot de passe SMTP / Clé d'application</label>
+                      <div className="relative">
+                        <input 
+                          type={showSmtpPass ? "text" : "password"}
+                          placeholder="••••••••••••"
+                          value={formData.smtp_pass}
+                          onChange={e => setFormData({ ...formData, smtp_pass: e.target.value })}
+                          className="w-full px-4 py-3 pr-10 bg-ci-bg border-none rounded-2xl text-xs font-mono font-bold text-slate-800 outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowSmtpPass(!showSmtpPass)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                        >
+                          {showSmtpPass ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-ci-muted">Nom de l'Expéditeur Affiché</label>
+                      <input 
+                        type="text"
+                        placeholder="GEBAT SA - Notifications RH"
+                        value={formData.sender_name}
+                        onChange={e => setFormData({ ...formData, sender_name: e.target.value })}
+                        className="w-full px-4 py-3 bg-ci-bg border-none rounded-2xl text-xs font-bold text-slate-800 outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-black uppercase tracking-wider text-ci-muted">Email Expéditeur (From)</label>
+                      <input 
+                        type="email"
+                        placeholder="notifications@gebat-sa.com"
+                        value={formData.sender_email}
+                        onChange={e => setFormData({ ...formData, sender_email: e.target.value })}
+                        className="w-full px-4 py-3 bg-ci-bg border-none rounded-2xl text-xs font-bold text-slate-800 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                    <div>
+                      <div className="text-xs font-black text-slate-800">Chiffrement SSL/TLS Sécurisé (Port 465)</div>
+                      <div className="text-[11px] text-slate-500 font-medium">Activez pour les connexions SSL directes. Laissez désactivé pour STARTTLS (Port 587).</div>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input 
+                        type="checkbox"
+                        checked={formData.smtp_secure}
+                        onChange={e => setFormData({ ...formData, smtp_secure: e.target.checked })}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#2563EB]"></div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Carte 2 : Test Direct de la Connexion SMTP */}
+              <div className="lg:col-span-5 bg-gradient-to-br from-slate-900 to-slate-800 text-white p-8 rounded-[2.5rem] shadow-xl space-y-6 flex flex-col justify-between">
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 bg-[#E5A110]/20 text-[#E5A110] rounded-xl">
+                        <Sparkles size={18} />
+                      </div>
+                      <h4 className="text-xs font-black uppercase tracking-wider text-white">Diagnostic & Test SMTP</h4>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                      Moteur Prêt
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                    Saisissez votre adresse email pour expédier instantanément un email de test certifié GEBAT SA et valider vos paramètres réseau.
+                  </p>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Email du destinataire test</label>
+                    <div className="flex items-center gap-2 bg-slate-800/90 border border-slate-700 rounded-2xl p-1.5 focus-within:border-blue-500">
+                      <Mail size={16} className="text-slate-400 ml-2 shrink-0" />
+                      <input 
+                        type="email"
+                        placeholder="votre.email@domaine.ci"
+                        value={testEmailRecipient}
+                        onChange={e => setTestEmailRecipient(e.target.value)}
+                        className="w-full bg-transparent text-xs text-white placeholder-slate-500 outline-none px-2 py-1.5 font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSendTestEmail}
+                    disabled={testingEmail}
+                    className="w-full py-3.5 bg-gradient-to-r from-[#2563EB] to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 active:scale-98"
+                  >
+                    {testingEmail ? (
+                      <>
+                        <RefreshCw size={15} className="animate-spin" /> Connexion au serveur SMTP...
+                      </>
+                    ) : (
+                      <>
+                        <Send size={15} /> Expédier un Email de Test
+                      </>
+                    )}
+                  </button>
+
+                  {/* Résultat du test */}
+                  {testEmailResult && (
+                    <div className={`p-4 rounded-2xl border text-xs font-bold transition-all animate-scaleIn ${
+                      testEmailResult.success 
+                        ? 'bg-emerald-950/60 border-emerald-500/40 text-emerald-200' 
+                        : 'bg-rose-950/60 border-rose-500/40 text-rose-200'
+                    }`}>
+                      <div className="flex items-start gap-2">
+                        {testEmailResult.success ? (
+                          <CheckCircle2 size={16} className="text-emerald-400 shrink-0 mt-0.5" />
+                        ) : (
+                          <AlertTriangle size={16} className="text-rose-400 shrink-0 mt-0.5" />
+                        )}
+                        <div>
+                          <div className="font-black uppercase text-[10px] tracking-wider mb-0.5">
+                            {testEmailResult.success ? 'Succès de transmission' : 'Échec de transmission'}
+                          </div>
+                          <div className="text-[11px] font-medium leading-relaxed opacity-90">{testEmailResult.message}</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-3.5 bg-slate-800/60 rounded-2xl border border-slate-700/60 text-[11px] text-slate-400">
+                  💡 <strong className="text-slate-200">Mode Simulation Sécurisé :</strong> En l'absence de serveur SMTP externe, le SIRH journalise et prévisualise les emails sans bloquer les opérations RH.
+                </div>
+              </div>
+
+            </div>
+
+            {/* Ligne 2 : Déclencheurs d'Emails Automatiques & Push Navigateur */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              
+              {/* Carte 3 : Règles d'Emails Automatiques */}
+              <div className="lg:col-span-7 bg-white p-8 rounded-[2.5rem] border border-ci-border shadow-sm space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-black">
+                    <CheckSquare size={20} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase tracking-wider text-ci-text">Événements Déclencheurs d'Emails Automatiques</h3>
+                    <p className="text-xs text-ci-muted font-bold">Sélectionnez les actions RH qui génèrent l'envoi d'emails aux collaborateurs et à la Direction.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    { key: 'email_notif_leaves', title: 'Demandes & Validations de Congés', desc: 'Email envoyé aux RH lors d\'un dépôt de congé, et au salarié lors de la validation/rejet.' },
+                    { key: 'email_notif_advances', title: 'Demandes & Accords d\'Avances sur Salaire', desc: 'Email envoyé à la comptabilité/RH pour toute avance et confirmation au salarié.' },
+                    { key: 'email_notif_payroll', title: 'Mise à Disposition des Bulletins de Paie', desc: 'Notification automatique avec récapitulatif du Net à payer dès l\'édition du bulletin.' },
+                    { key: 'email_notif_contracts', title: 'Alertes Échéances de Contrat CDD (J-30 / J-15)', desc: 'Email proactif envoyé à la Direction RH pour anticiper le renouvellement ou terme de contrat.' },
+                    { key: 'email_notif_disciplinary', title: 'Procédures Disciplinaires & Demandes d\'Explications', desc: 'Notification formelle par email au salarié avec accusé de traitement.' }
+                  ].map((trigger) => (
+                    <label key={trigger.key} className="flex items-start justify-between p-4 bg-slate-50 hover:bg-slate-100/70 rounded-2xl border border-slate-200 cursor-pointer transition-colors">
+                      <div className="pr-4">
+                        <div className="text-xs font-black text-slate-900">{trigger.title}</div>
+                        <div className="text-[11px] text-slate-500 font-medium mt-0.5">{trigger.desc}</div>
+                      </div>
+                      <input 
+                        type="checkbox"
+                        checked={Boolean(formData[trigger.key])}
+                        onChange={e => setFormData({ ...formData, [trigger.key]: e.target.checked })}
+                        className="w-5 h-5 rounded-lg text-[#2563EB] focus:ring-blue-500 mt-1 cursor-pointer"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Carte 4 : Notifications Push Système & Navigateur */}
+              <div className="lg:col-span-5 bg-white p-8 rounded-[2.5rem] border border-ci-border shadow-sm space-y-6 flex flex-col justify-between">
+                <div className="space-y-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black">
+                      <Laptop size={20} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black uppercase tracking-wider text-ci-text">Notifications Bureau & Push Navigateur</h3>
+                      <p className="text-xs text-ci-muted font-bold">Alertes en temps réel sur votre écran d'ordinateur (Windows, Mac, Mobile).</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+                    <div>
+                      <div className="text-xs font-black text-slate-800">Statut de la permission</div>
+                      <div className="text-[11px] font-bold mt-0.5">
+                        {browserPermStatus === 'granted' ? (
+                          <span className="text-emerald-600 flex items-center gap-1">
+                            <CheckCircle2 size={12} /> Autorisée & Opérationnelle
+                          </span>
+                        ) : browserPermStatus === 'denied' ? (
+                          <span className="text-rose-600">Bloquée dans le navigateur</span>
+                        ) : (
+                          <span className="text-slate-500">Non configurée / En attente</span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleToggleBrowserPush}
+                      className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-sm ${
+                        browserPermStatus === 'granted'
+                          ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                          : 'bg-[#2563EB] text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      {browserPermStatus === 'granted' ? 'Réinitialiser' : 'Activer'}
+                    </button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <button
+                      type="button"
+                      onClick={handleTestBrowserPush}
+                      disabled={testingBrowserNotif}
+                      className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-md active:scale-98 disabled:opacity-50"
+                    >
+                      <Bell size={14} className="text-[#E5A110]" />
+                      {testingBrowserNotif ? 'Déclenchement du test...' : 'Tester la notification push sur cet écran'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => playNotificationSound()}
+                      className="w-full py-3 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2"
+                    >
+                      <Volume2 size={14} className="text-blue-600" /> Tester le carillon sonore audio
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs font-bold text-emerald-900 flex items-center gap-3">
+                  <CheckCircle2 size={18} className="shrink-0 text-emerald-600" />
+                  <span>Les notifications push s'affichent même si vous travaillez dans un autre onglet ou une autre application.</span>
+                </div>
+              </div>
+
             </div>
           </div>
         )}

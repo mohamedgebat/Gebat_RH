@@ -66,6 +66,18 @@ CREATE TABLE IF NOT EXISTS `settings` (
     `moduleMobileMoney` TINYINT DEFAULT 1,
     `slogan` VARCHAR(255) DEFAULT 'Constructeur d\'Infrastructures & Capital Humain',
     `footerStampText` VARCHAR(255) DEFAULT 'Document Officiel Certifié RH',
+    `smtp_host` VARCHAR(255) DEFAULT '',
+    `smtp_port` INT DEFAULT 587,
+    `smtp_user` VARCHAR(255) DEFAULT '',
+    `smtp_pass` VARCHAR(255) DEFAULT '',
+    `smtp_secure` TINYINT DEFAULT 0,
+    `sender_email` VARCHAR(255) DEFAULT 'notifications@gebat-sa.com',
+    `sender_name` VARCHAR(255) DEFAULT 'GEBAT SA - Notifications RH',
+    `email_notif_leaves` TINYINT DEFAULT 1,
+    `email_notif_advances` TINYINT DEFAULT 1,
+    `email_notif_payroll` TINYINT DEFAULT 1,
+    `email_notif_contracts` TINYINT DEFAULT 1,
+    `email_notif_disciplinary` TINYINT DEFAULT 1,
     FOREIGN KEY (`company_id`) REFERENCES `companies`(`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

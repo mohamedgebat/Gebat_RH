@@ -224,8 +224,41 @@ function initSQLiteSchema(sDb) {
             primaryColor TEXT DEFAULT '#2563EB',
             secondaryColor TEXT DEFAULT '#E5A110',
             slogan TEXT DEFAULT 'Constructeur d''Infrastructures & Capital Humain',
+            footerStampText TEXT DEFAULT 'Document Officiel Certifié RH',
+            smtp_host TEXT DEFAULT '',
+            smtp_port INTEGER DEFAULT 587,
+            smtp_user TEXT DEFAULT '',
+            smtp_pass TEXT DEFAULT '',
+            smtp_secure INTEGER DEFAULT 0,
+            sender_email TEXT DEFAULT 'notifications@gebat-sa.com',
+            sender_name TEXT DEFAULT 'GEBAT SA - Notifications RH',
+            email_notif_leaves INTEGER DEFAULT 1,
+            email_notif_advances INTEGER DEFAULT 1,
+            email_notif_payroll INTEGER DEFAULT 1,
+            email_notif_contracts INTEGER DEFAULT 1,
+            email_notif_disciplinary INTEGER DEFAULT 1,
             FOREIGN KEY(company_id) REFERENCES companies(id)
         )`);
+
+        // Migration sécurisée des colonnes SMTP pour bases existantes
+        const smtpCols = [
+            'smtp_host TEXT DEFAULT ""',
+            'smtp_port INTEGER DEFAULT 587',
+            'smtp_user TEXT DEFAULT ""',
+            'smtp_pass TEXT DEFAULT ""',
+            'smtp_secure INTEGER DEFAULT 0',
+            'sender_email TEXT DEFAULT "notifications@gebat-sa.com"',
+            'sender_name TEXT DEFAULT "GEBAT SA - Notifications RH"',
+            'email_notif_leaves INTEGER DEFAULT 1',
+            'email_notif_advances INTEGER DEFAULT 1',
+            'email_notif_payroll INTEGER DEFAULT 1',
+            'email_notif_contracts INTEGER DEFAULT 1',
+            'email_notif_disciplinary INTEGER DEFAULT 1'
+        ];
+        smtpCols.forEach(colDef => {
+            const colName = colDef.split(' ')[0];
+            sDb.run(`ALTER TABLE settings ADD COLUMN ${colDef}`, () => {});
+        });
 
         sDb.run(`CREATE TABLE IF NOT EXISTS departments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -1,21 +1,87 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Bell, CheckCheck, Trash2, ShieldAlert, AlertTriangle, Info, ExternalLink, Sparkles, X } from 'lucide-react';
+import { 
+  Bell, CheckCheck, Trash2, ShieldAlert, AlertTriangle, 
+  Info, ExternalLink, Sparkles, X, Volume2, VolumeX, 
+  Laptop, CheckCircle2, Send
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { 
+  isNotificationSupported, 
+  getNotificationPermission, 
+  requestNotificationPermission, 
+  sendBrowserNotification, 
+  testBrowserNotification 
+} from '../utils/browserNotifications';
 
 const NotificationCenter = () => {
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [filter, setFilter] = useState('all'); // 'all', 'urgente', 'importante', 'info'
   const [loading, setLoading] = useState(false);
+  const [browserPerm, setBrowserPerm] = useState('default');
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [testingPush, setTestingPush] = useState(false);
+  
   const dropdownRef = useRef(null);
+  const prevCountRef = useRef(0);
+  const isFirstLoadRef = useRef(true);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setBrowserPerm(getNotificationPermission());
+    const storedSound = localStorage.getItem('gebat_notification_sound_enabled');
+    if (storedSound !== null) {
+      setSoundEnabled(storedSound === 'true');
+    }
+  }, []);
+
+  const toggleSound = () => {
+    const nextVal = !soundEnabled;
+    setSoundEnabled(nextVal);
+    localStorage.setItem('gebat_notification_sound_enabled', String(nextVal));
+  };
+
+  const handleEnableBrowserPush = async () => {
+    const res = await requestNotificationPermission();
+    setBrowserPerm(res);
+    if (res === 'granted') {
+      sendBrowserNotification("🔔 GEBAT RH - Notifications Activées", {
+        body: "Vous recevrez désormais les alertes de congés, contrats et paie en temps réel sur votre écran."
+      });
+    }
+  };
+
+  const handleTestNotification = async () => {
+    setTestingPush(true);
+    try {
+      await testBrowserNotification();
+    } finally {
+      setTimeout(() => setTestingPush(false), 800);
+    }
+  };
 
   const fetchNotifications = async () => {
     try {
       setLoading(true);
       const res = await axios.get('/api/notifications');
-      setNotifications(Array.isArray(res.data) ? res.data : []);
+      const incoming = Array.isArray(res.data) ? res.data : [];
+      
+      // Détection des nouvelles notifications pour déclencher la push notification
+      const unreadIncoming = incoming.filter(n => !n.is_read);
+      if (!isFirstLoadRef.current && unreadIncoming.length > prevCountRef.current) {
+        const newest = unreadIncoming[0];
+        if (newest) {
+          sendBrowserNotification(`⚡ GEBAT RH : ${newest.title}`, {
+            body: typeof newest.message === 'string' ? newest.message : 'Nouvelle alerte RH disponible.',
+            tag: `notif-${newest.id}`
+          });
+        }
+      }
+      
+      prevCountRef.current = unreadIncoming.length;
+      isFirstLoadRef.current = false;
+      setNotifications(incoming);
     } catch (err) {
       console.error("Erreur chargement notifications:", err);
       setNotifications([]);
@@ -70,11 +136,12 @@ const NotificationCenter = () => {
     setIsOpen(false);
     
     // Routage intelligent selon le type de notification
-    if (notif.title.includes('Contrat')) navigate('/contracts');
-    else if (notif.title.includes('Congé')) navigate('/leaves');
-    else if (notif.title.includes('Attestation')) navigate('/documents');
-    else if (notif.title.includes('Disciplinaire')) navigate('/disciplinary');
-    else if (notif.title.includes('Avance')) navigate('/payroll');
+    const t = String(notif.title || '').toLowerCase();
+    if (t.includes('contrat')) navigate('/contracts');
+    else if (t.includes('congé') || t.includes('conge')) navigate('/leaves');
+    else if (t.includes('attestation') || t.includes('document')) navigate('/documents');
+    else if (t.includes('disciplinaire') || t.includes('discipline')) navigate('/disciplinary');
+    else if (t.includes('avance') || t.includes('bulletin') || t.includes('paie')) navigate('/payroll');
     else navigate('/employees');
   };
 
@@ -113,7 +180,7 @@ const NotificationCenter = () => {
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 hover:text-slate-900 rounded-2xl shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 active:scale-95"
-        title="Notifications Intelligentes GEBAT"
+        title="Centre de Notifications GEBAT RH"
       >
         <Bell size={20} className={unreadCount > 0 ? "text-[#2563EB] animate-wiggle" : "text-slate-500"} />
         
@@ -128,7 +195,7 @@ const NotificationCenter = () => {
 
       {/* Tiroir / Dropdown de Notifications */}
       {isOpen && (
-        <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-white rounded-3xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-scaleIn">
+        <div className="absolute right-0 mt-3 w-84 sm:w-[410px] bg-white rounded-3xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-scaleIn">
           
           {/* Header du Panneau */}
           <div className="p-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
@@ -137,19 +204,72 @@ const NotificationCenter = () => {
                 <Sparkles size={16} />
               </div>
               <div>
-                <h3 className="text-xs font-black uppercase tracking-wider text-white">Alertes Intelligentes</h3>
+                <h3 className="text-xs font-black uppercase tracking-wider text-white">Alertes & Notifications</h3>
                 <p className="text-[9px] font-bold text-slate-400">Suivi automatisé GEBAT RH</p>
               </div>
             </div>
 
-            {unreadCount > 0 && (
+            <div className="flex items-center gap-2">
+              {/* Bouton Son On/Off */}
               <button
-                onClick={markAllAsRead}
-                className="text-[10px] font-bold text-[#E5A110] hover:underline flex items-center gap-1 bg-slate-800/80 px-2 py-1 rounded-lg border border-amber-500/30"
+                onClick={toggleSound}
+                className={`p-1.5 rounded-lg border transition-colors ${
+                  soundEnabled 
+                    ? 'text-emerald-400 border-emerald-500/30 bg-slate-800' 
+                    : 'text-slate-400 border-slate-700 bg-slate-800/50'
+                }`}
+                title={soundEnabled ? "Sons d'alerte activés (Cliquer pour couper)" : "Sons désactivés"}
               >
-                <CheckCheck size={12} /> Tout lire
+                {soundEnabled ? <Volume2 size={13} /> : <VolumeX size={13} />}
               </button>
-            )}
+
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-[10px] font-bold text-[#E5A110] hover:underline flex items-center gap-1 bg-slate-800/80 px-2 py-1 rounded-lg border border-amber-500/30"
+                >
+                  <CheckCheck size={12} /> Tout lire
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Bandeau d'état des Notifications Navigateur Push */}
+          <div className="px-4 py-2.5 bg-slate-100/90 border-b border-slate-200 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              <Laptop size={14} className="text-slate-600 shrink-0" />
+              <div className="text-[10px] truncate">
+                {browserPerm === 'granted' ? (
+                  <span className="font-bold text-emerald-700 flex items-center gap-1">
+                    <CheckCircle2 size={11} className="inline" /> Notifications bureau activées
+                  </span>
+                ) : browserPerm === 'denied' ? (
+                  <span className="font-bold text-rose-600">Notifications bureau bloquées</span>
+                ) : (
+                  <span className="font-bold text-slate-600">Alertes bureau inactives</span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0">
+              {browserPerm !== 'granted' ? (
+                <button
+                  onClick={handleEnableBrowserPush}
+                  className="px-2 py-1 bg-[#2563EB] text-white text-[9px] font-black uppercase rounded-lg hover:bg-blue-700 shadow-sm transition-all"
+                >
+                  Activer
+                </button>
+              ) : (
+                <button
+                  onClick={handleTestNotification}
+                  disabled={testingPush}
+                  className="px-2 py-1 bg-white hover:bg-slate-200 border border-slate-300 text-slate-700 text-[9px] font-bold rounded-lg transition-all flex items-center gap-1"
+                  title="Envoyer une notification test sur l'écran"
+                >
+                  <Send size={9} /> {testingPush ? 'Envoi...' : 'Tester'}
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Onglets Filtres */}
@@ -181,7 +301,7 @@ const NotificationCenter = () => {
                   ✓
                 </div>
                 <p className="text-xs font-bold text-slate-700">Aucune alerte pour le moment</p>
-                <p className="text-[10px] text-slate-400">Le système surveille vos données chantiers et RH en temps réel.</p>
+                <p className="text-[10px] text-slate-400">Le système surveille vos données RH et chantiers en temps réel.</p>
               </div>
             ) : (
               filteredNotifications.map(notif => (
@@ -241,13 +361,14 @@ const NotificationCenter = () => {
           </div>
 
           {/* Footer du Panneau */}
-          <div className="p-3 bg-slate-50 border-t border-slate-100 text-center">
+          <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[10px]">
             <button
               onClick={fetchNotifications}
-              className="text-[10px] font-bold text-slate-500 hover:text-slate-800 transition-colors flex items-center justify-center gap-1.5 mx-auto"
+              className="font-bold text-slate-500 hover:text-slate-800 transition-colors flex items-center gap-1.5"
             >
-              <Sparkles size={12} className="text-[#E5A110]" /> Actualiser l'analyse intelligente
+              <Sparkles size={12} className="text-[#E5A110]" /> Actualiser les alertes
             </button>
+            <span className="text-[9px] font-bold text-slate-400">Auto-refresh 45s</span>
           </div>
 
         </div>

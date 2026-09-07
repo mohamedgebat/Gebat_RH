@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { encrypt, decrypt, maskPhone, maskCnps, maskEmail, anonymizeData } = require('./encryption');
 const db = require('./database');
+const emailService = require('./emailService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -1032,7 +1033,7 @@ app.post('/api/sirh-data', authenticateToken, authorizeRoles('admin'), async (re
     try {
         if (data.settings) {
             const s = data.settings;
-            db.run(`UPDATE settings SET companyName=?, rc=?, cc=?, cnps_employer=?, address=?, phone=?, email=?, logo=?, primaryColor=?, secondaryColor=?, smicAmount=?, cnpsPlafond=?, cnpsSalarial=?, cnpsPatronalRetraite=?, cnpsPatronalPF=?, cnpsPatronalAT=?, itsPatronalIvoirien=?, itsPatronalExpat=?, taFdfpRate=?, timezone=?, currency=?, language=?, tenantSlug=?, saasPlan=?, maxEmployees=?, countryCode=?, legalHoursPerMonth=?, leaveAccrualRate=?, apiKey=?, modulePayroll=?, moduleLeaves=?, moduleEvaluations=?, moduleRecruitment=?, modulePortal=?, moduleMobileMoney=?, slogan=?, footerStampText=? WHERE id=1`,
+            db.run(`UPDATE settings SET companyName=?, rc=?, cc=?, cnps_employer=?, address=?, phone=?, email=?, logo=?, primaryColor=?, secondaryColor=?, smicAmount=?, cnpsPlafond=?, cnpsSalarial=?, cnpsPatronalRetraite=?, cnpsPatronalPF=?, cnpsPatronalAT=?, itsPatronalIvoirien=?, itsPatronalExpat=?, taFdfpRate=?, timezone=?, currency=?, language=?, tenantSlug=?, saasPlan=?, maxEmployees=?, countryCode=?, legalHoursPerMonth=?, leaveAccrualRate=?, apiKey=?, modulePayroll=?, moduleLeaves=?, moduleEvaluations=?, moduleRecruitment=?, modulePortal=?, moduleMobileMoney=?, slogan=?, footerStampText=?, smtp_host=?, smtp_port=?, smtp_user=?, smtp_pass=?, smtp_secure=?, sender_email=?, sender_name=?, email_notif_leaves=?, email_notif_advances=?, email_notif_payroll=?, email_notif_contracts=?, email_notif_disciplinary=? WHERE id=1`,
                 [
                     s.companyName, s.rc, s.cc, s.cnps_employer, s.address, s.phone, s.email, s.logo, 
                     s.primaryColor || '#009E49', s.secondaryColor || '#F77F00', s.smicAmount || 75000,
@@ -1050,12 +1051,139 @@ app.post('/api/sirh-data', authenticateToken, authorizeRoles('admin'), async (re
                     s.modulePortal !== undefined ? (s.modulePortal ? 1 : 0) : 1,
                     s.moduleMobileMoney !== undefined ? (s.moduleMobileMoney ? 1 : 0) : 1,
                     s.slogan || 'L\'Excellence RH & Paie en Afrique',
-                    s.footerStampText || 'Document Officiel Certifié RH'
+                    s.footerStampText || 'Document Officiel Certifié RH',
+                    s.smtp_host || '',
+                    s.smtp_port ? parseInt(s.smtp_port, 10) : 587,
+                    s.smtp_user || '',
+                    s.smtp_pass || '',
+                    s.smtp_secure ? 1 : 0,
+                    s.sender_email || 'notifications@gebat-sa.com',
+                    s.sender_name || 'GEBAT SA - Notifications RH',
+                    s.email_notif_leaves !== undefined ? (s.email_notif_leaves ? 1 : 0) : 1,
+                    s.email_notif_advances !== undefined ? (s.email_notif_advances ? 1 : 0) : 1,
+                    s.email_notif_payroll !== undefined ? (s.email_notif_payroll ? 1 : 0) : 1,
+                    s.email_notif_contracts !== undefined ? (s.email_notif_contracts ? 1 : 0) : 1,
+                    s.email_notif_disciplinary !== undefined ? (s.email_notif_disciplinary ? 1 : 0) : 1
                 ]);
         }
         res.json({ message: 'Synchronisation effectuée avec succès' });
     } catch (error) {
         sendError(res, 500, 'Échec de la synchronisation', 'SYNC_ERROR');
+    }
+});
+
+// --- CONFIGURATION SMTP & ENVOI D'EMAILS DE TEST ---
+app.post('/api/settings/email-config', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+    try {
+        const { smtp_host, smtp_port, smtp_user, smtp_pass, smtp_secure, sender_email, sender_name, email_notif_leaves, email_notif_advances, email_notif_payroll, email_notif_contracts, email_notif_disciplinary } = req.body;
+
+        db.run(`UPDATE settings SET 
+            smtp_host = COALESCE(?, smtp_host),
+            smtp_port = COALESCE(?, smtp_port),
+            smtp_user = COALESCE(?, smtp_user),
+            smtp_pass = COALESCE(?, smtp_pass),
+            smtp_secure = COALESCE(?, smtp_secure),
+            sender_email = COALESCE(?, sender_email),
+            sender_name = COALESCE(?, sender_name),
+            email_notif_leaves = COALESCE(?, email_notif_leaves),
+            email_notif_advances = COALESCE(?, email_notif_advances),
+            email_notif_payroll = COALESCE(?, email_notif_payroll),
+            email_notif_contracts = COALESCE(?, email_notif_contracts),
+            email_notif_disciplinary = COALESCE(?, email_notif_disciplinary)
+            WHERE id = 1`,
+            [
+                smtp_host, smtp_port, smtp_user, smtp_pass, 
+                smtp_secure !== undefined ? (smtp_secure ? 1 : 0) : null,
+                sender_email, sender_name,
+                email_notif_leaves !== undefined ? (email_notif_leaves ? 1 : 0) : null,
+                email_notif_advances !== undefined ? (email_notif_advances ? 1 : 0) : null,
+                email_notif_payroll !== undefined ? (email_notif_payroll ? 1 : 0) : null,
+                email_notif_contracts !== undefined ? (email_notif_contracts ? 1 : 0) : null,
+                email_notif_disciplinary !== undefined ? (email_notif_disciplinary ? 1 : 0) : null
+            ],
+            function(err) {
+                if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+                logAuditAction(req, 'CONFIG_EMAIL_MAJ', 'Mise à jour des paramètres SMTP et notifications emails', 'Paramètres');
+                res.json({ message: 'Configuration email mise à jour avec succès' });
+            }
+        );
+    } catch (err) {
+        sendError(res, 500, err.message, 'SERVER_ERROR');
+    }
+});
+
+app.post('/api/settings/test-email', authenticateToken, authorizeRoles('admin'), async (req, res) => {
+    try {
+        const { to, smtpConfig, senderEmail, senderName } = req.body;
+        if (!to || !to.includes('@')) {
+            return sendError(res, 400, 'Adresse email destinataire valide obligatoire', 'INVALID_EMAIL');
+        }
+
+        const result = await emailService.sendTestEmail({
+            to,
+            smtpConfig,
+            senderEmail,
+            senderName
+        });
+
+        if (result.success) {
+            logAuditAction(req, 'TEST_EMAIL_REUSSI', `Email de test envoyé à ${to} (${result.simulated ? 'Mode Simulation' : 'Envoi Réel'})`, 'Paramètres');
+            res.json({
+                success: true,
+                simulated: result.simulated || false,
+                message: result.simulated 
+                    ? `Mode simulation : Votre système est configuré. Renseignez vos identifiants SMTP réels pour expédier les emails.`
+                    : `Email de test transmis avec succès à ${to} !`
+            });
+        } else {
+            logAuditAction(req, 'TEST_EMAIL_ECHEC', `Échec envoi test à ${to} : ${result.error}`, 'Paramètres');
+            res.status(400).json({
+                success: false,
+                error: result.error || 'Impossible d\'envoyer l\'email avec les paramètres fournis.',
+                code: 'SMTP_ERROR'
+            });
+        }
+    } catch (err) {
+        sendError(res, 500, err.message, 'SERVER_ERROR');
+    }
+});
+
+// --- TRANSMISSION DU BULLETIN DE PAIE PAR EMAIL ---
+app.post('/api/payroll/send-payslip-email', authenticateToken, authorizeRoles('admin', 'assistant'), async (req, res) => {
+    try {
+        const { empId, periode, netAPayer, totalBrut, datePaiement } = req.body;
+        if (!empId) {
+            return sendError(res, 400, 'Identifiant employé requis', 'MISSING_FIELDS');
+        }
+
+        const employee = await queryGet("SELECT * FROM employees WHERE id = ?", [empId]);
+        if (!employee) {
+            return sendError(res, 404, 'Employé introuvable', 'NOT_FOUND');
+        }
+
+        if (!employee.email) {
+            return sendError(res, 400, 'Cet employé n\'a pas d\'adresse email enregistrée', 'NO_EMAIL');
+        }
+
+        const result = await emailService.sendPayslipEmail({
+            employee,
+            payslipData: { netAPayer, totalBrut, datePaiement },
+            period: periode,
+            originUrl: req.headers.origin
+        });
+
+        if (result.success) {
+            // Créer une notification in-app pour l'employé
+            await queryRun("INSERT INTO notifications (company_id, empId, title, message, type) VALUES (?, ?, ?, ?, 'success')",
+                [req.company_id || 1, empId, `Bulletin de Paie (${periode})`, `Votre bulletin de paie pour la période de ${periode} a été transmis à votre adresse email.`]);
+
+            logAuditAction(req, 'TRANSMISSION_BULLETIN_EMAIL', `Bulletin de paie (${periode}) envoyé par email à ${employee.nom} ${employee.prenoms} (${employee.email})`, 'Paie');
+            res.json({ success: true, message: `Bulletin de paie transmis par email à ${employee.email}` });
+        } else {
+            res.status(400).json({ success: false, error: result.error || 'Erreur lors de l\'envoi du bulletin' });
+        }
+    } catch (err) {
+        sendError(res, 500, err.message, 'SERVER_ERROR');
     }
 });
 
@@ -1342,7 +1470,24 @@ app.post('/api/leaves', authenticateToken, (req, res) => {
         [empId, type, debut, fin, duree || 1, statut || 'En attente', motif || ''],
         function(err) {
             if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
-            res.json({ id: this.lastID, message: 'Demande de congé enregistrée' });
+            const newLeaveId = this.lastID;
+
+            // Notification In-App & Email
+            db.get("SELECT * FROM employees WHERE id = ?", [empId], (errEmp, employee) => {
+                if (!errEmp && employee) {
+                    const empName = `${employee.nom} ${employee.prenoms}`;
+                    db.run(`INSERT INTO notifications (company_id, title, message, type) VALUES (1, '🌴 Demande de Congé', ?, 'importante')`,
+                        [`${empName} sollicite un congé (${type}) du ${debut} au ${fin}.`]);
+
+                    emailService.sendLeaveRequestEmail({
+                        leave: { id: newLeaveId, type, debut, fin, duree: duree || 1, motif },
+                        employee,
+                        originUrl: req.headers.origin
+                    }).catch(() => {});
+                }
+            });
+
+            res.json({ id: newLeaveId, message: 'Demande de congé enregistrée' });
         });
 });
 
@@ -1357,25 +1502,37 @@ app.patch('/api/leaves/:id', authenticateToken, validateIdParam('id'), (req, res
         db.run("UPDATE leaves SET statut = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [statut, leaveId], function(err) {
             if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
             
-            if (statut === 'Approuvé') {
-                db.run("UPDATE employees SET statut = 'En congé' WHERE id = ?", [leave.empId]);
-                // Update leave balance
-                const year = new Date().getFullYear();
-                db.run(`INSERT INTO leave_balances (company_id, empId, annee, acquis, pris, solde)
-                        VALUES (?, ?, ?, 26.4, ?, 26.4 - ?)
-                        ON CONFLICT(company_id, empId, annee) DO UPDATE SET
-                        pris = pris + excluded.pris,
-                        solde = solde - excluded.pris,
-                        updated_at = CURRENT_TIMESTAMP`,
-                        [companyId, leave.empId, year, leave.duree || 0, leave.duree || 0]);
-                
-                // Notification
-                db.run("INSERT INTO notifications (company_id, empId, title, message, type) VALUES (?, ?, ?, ?, 'success')",
-                    [companyId, leave.empId, 'Congé Approuvé', `Votre demande de congé de ${leave.duree} jour(s) a été approuvée.`]);
-            } else if (statut === 'Refusé') {
-                db.run("INSERT INTO notifications (company_id, empId, title, message, type) VALUES (?, ?, ?, ?, 'warning')",
-                    [companyId, leave.empId, 'Congé Refusé', `Votre demande de congé a été refusée par la Direction RH.`]);
-            }
+            db.get("SELECT * FROM employees WHERE id = ?", [leave.empId], (errEmp, employee) => {
+                if (statut === 'Approuvé') {
+                    db.run("UPDATE employees SET statut = 'En congé' WHERE id = ?", [leave.empId]);
+                    // Update leave balance
+                    const year = new Date().getFullYear();
+                    db.run(`INSERT INTO leave_balances (company_id, empId, annee, acquis, pris, solde)
+                            VALUES (?, ?, ?, 26.4, ?, 26.4 - ?)
+                            ON CONFLICT(company_id, empId, annee) DO UPDATE SET
+                            pris = pris + excluded.pris,
+                            solde = solde - excluded.pris,
+                            updated_at = CURRENT_TIMESTAMP`,
+                            [companyId, leave.empId, year, leave.duree || 0, leave.duree || 0]);
+                    
+                    // Notification In-App
+                    db.run("INSERT INTO notifications (company_id, empId, title, message, type) VALUES (?, ?, ?, ?, 'success')",
+                        [companyId, leave.empId, 'Congé Approuvé', `Votre demande de congé de ${leave.duree} jour(s) a été approuvée.`]);
+                } else if (statut === 'Refusé') {
+                    db.run("INSERT INTO notifications (company_id, empId, title, message, type) VALUES (?, ?, ?, ?, 'warning')",
+                        [companyId, leave.empId, 'Congé Refusé', `Votre demande de congé a été refusée par la Direction RH.`]);
+                }
+
+                // Notification Email au Salarié
+                if (employee) {
+                    emailService.sendLeaveDecisionEmail({
+                        leave,
+                        employee,
+                        status: statut,
+                        originUrl: req.headers.origin
+                    }).catch(() => {});
+                }
+            });
 
             logAuditAction(req, 'VALIDATION_CONGE', `Décision congé #${leaveId} : ${statut}`, 'Congés');
             res.json({ message: 'Décision enregistrée avec succès' });
@@ -1528,17 +1685,55 @@ app.post('/api/advances', authenticateToken, (req, res) => {
         [empId, montant, dateDemande || new Date().toISOString().split('T')[0], moisRemboursement, statut || 'En attente', motif || '', montant],
         function(err) {
             if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
-            res.json({ id: this.lastID, message: 'Demande d\'avance enregistrée' });
+            const newAdvId = this.lastID;
+
+            // Notification In-App & Email
+            db.get("SELECT * FROM employees WHERE id = ?", [empId], (errEmp, employee) => {
+                if (!errEmp && employee) {
+                    const empName = `${employee.nom} ${employee.prenoms}`;
+                    const formattedMontant = new Intl.NumberFormat('fr-CI').format(montant);
+                    db.run(`INSERT INTO notifications (company_id, title, message, type) VALUES (1, '💰 Demande d\\'Avance', ?, 'importante')`,
+                        [`${empName} sollicite une avance de ${formattedMontant} F CFA.`]);
+
+                    emailService.sendAdvanceRequestEmail({
+                        advance: { id: newAdvId, montant, moisRemboursement, motif },
+                        employee,
+                        originUrl: req.headers.origin
+                    }).catch(() => {});
+                }
+            });
+
+            res.json({ id: newAdvId, message: 'Demande d\'avance enregistrée' });
         });
 });
 
 app.patch('/api/advances/:id', authenticateToken, validateIdParam('id'), (req, res) => {
     const { statut, resteAPayer } = req.body;
-    db.run("UPDATE advances SET statut = COALESCE(?, statut), resteAPayer = COALESCE(?, resteAPayer) WHERE id = ?",
-        [statut, resteAPayer, req.params.id], function(err) {
-            if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
-            res.json({ message: 'Avance mise à jour' });
-        });
+    const advId = req.params.id;
+
+    db.get("SELECT a.*, e.nom, e.prenoms, e.email, e.matricule FROM advances a JOIN employees e ON a.empId = e.id WHERE a.id = ?", [advId], (errAdv, adv) => {
+        db.run("UPDATE advances SET statut = COALESCE(?, statut), resteAPayer = COALESCE(?, resteAPayer) WHERE id = ?",
+            [statut, resteAPayer, advId], function(err) {
+                if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+
+                if (statut && adv) {
+                    const isApproved = statut === 'Accordée' || statut === 'Approuvée' || statut === 'En cours';
+                    db.run("INSERT INTO notifications (company_id, empId, title, message, type) VALUES (?, ?, ?, ?, ?)",
+                        [1, adv.empId, isApproved ? 'Avance Accordée' : 'Avance Refusée',
+                         isApproved ? `Votre avance de ${new Intl.NumberFormat('fr-CI').format(adv.montant)} F CFA a été accordée.` : `Votre demande d'avance a été refusée.`,
+                         isApproved ? 'success' : 'warning']);
+
+                    emailService.sendAdvanceDecisionEmail({
+                        advance: adv,
+                        employee: adv,
+                        status: statut,
+                        originUrl: req.headers.origin
+                    }).catch(() => {});
+                }
+
+                res.json({ message: 'Avance mise à jour' });
+            });
+    });
 });
 
 app.delete('/api/advances/:id', authenticateToken, validateIdParam('id'), authorizeRoles('admin'), (req, res) => {
@@ -1564,7 +1759,23 @@ app.post('/api/disciplinary', authenticateToken, (req, res) => {
         [empId, type, dateEmission || new Date().toISOString().split('T')[0], motif || '', reponseSalarie || '', dateReponse || '', statut || 'En attente de réponse', dateCloture || '', sanction || ''],
         function(err) {
             if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
-            res.json({ id: this.lastID, message: 'Action disciplinaire enregistrée' });
+            const newDiscId = this.lastID;
+
+            // Notification In-App & Email
+            db.get("SELECT * FROM employees WHERE id = ?", [empId], (errEmp, employee) => {
+                if (!errEmp && employee) {
+                    db.run("INSERT INTO notifications (company_id, empId, title, message, type) VALUES (1, ?, '⚠️ Procédure RH / Discipline', ?, 'urgente')",
+                        [empId, `Un document disciplinaire (${type}) a été émis à votre attention. Une réponse écrite est requise.`]);
+
+                    emailService.sendDisciplinaryEmail({
+                        action: { id: newDiscId, type, dateEmission, motif, statut: 'En attente de réponse' },
+                        employee,
+                        originUrl: req.headers.origin
+                    }).catch(() => {});
+                }
+            });
+
+            res.json({ id: newDiscId, message: 'Action disciplinaire enregistrée' });
         });
 });
 
@@ -1805,6 +2016,15 @@ async function generateSmartNotifications() {
                 if (existing.length === 0) {
                     await queryRun(`INSERT INTO notifications (company_id, title, message, type, is_read, created_at) VALUES (1, ?, ?, ?, 0, CURRENT_TIMESTAMP)`,
                         [title, message, type]);
+
+                    // Alerte email envoyée aux gestionnaires RH à J-30 et J-15
+                    if (diffDays <= 30 && diffDays >= 0) {
+                        emailService.sendContractExpiryAlertEmail({
+                            contract,
+                            employee: { nom: contract.nom, prenoms: contract.prenoms, matricule: contract.matricule, poste: contract.poste },
+                            daysLeft: diffDays
+                        }).catch(() => {});
+                    }
                 }
             }
         }

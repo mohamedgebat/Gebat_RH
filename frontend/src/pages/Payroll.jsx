@@ -5,7 +5,7 @@ import {
   Calculator, Download, Printer, CheckCircle2, TrendingUp, Info, 
   PieChart, ArrowUpRight, DollarSign, FileText, Smartphone, ShieldCheck, 
   Plus, Check, X, Building, Wallet, HardHat, FileSpreadsheet, Share2, 
-  MessageCircle, Send, AlertTriangle, Layers, UserCheck, Briefcase
+  MessageCircle, Send, AlertTriangle, Layers, UserCheck, Briefcase, Mail
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
@@ -123,6 +123,26 @@ const Payroll = () => {
       ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
       : `https://wa.me/?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
+  };
+
+  // Envoi direct du bulletin de paie par email
+  const handleSendEmailPayslip = async (emp, paie) => {
+    if (!emp.email) {
+      alert(`L'employé ${emp.nom} ${emp.prenoms} n'a pas d'adresse email enregistrée dans sa fiche.`);
+      return;
+    }
+    try {
+      const res = await axios.post('/api/payroll/send-payslip-email', {
+        empId: emp.id,
+        periode: selectedMonth,
+        netAPayer: paie.net,
+        totalBrut: paie.brut,
+        datePaiement: new Date().toLocaleDateString('fr-FR')
+      });
+      alert(`✅ Bulletin de paie transmis par email avec succès à ${emp.email} !`);
+    } catch (err) {
+      alert('Erreur lors de l\'envoi par email : ' + (err.response?.data?.error || err.message));
+    }
   };
 
   // Export DISA CNPS Format Normalisé (e-CNPS Côte d'Ivoire)
@@ -437,6 +457,13 @@ const Payroll = () => {
                                             className="p-2.5 bg-slate-100 text-slate-700 rounded-xl hover:bg-emerald-600 hover:text-white transition-all shadow-sm"
                                         >
                                             <Printer size={15} />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleSendEmailPayslip(emp, paie)}
+                                            title="Transmettre le bulletin par Email"
+                                            className="p-2.5 bg-blue-50 text-[#2563EB] rounded-xl hover:bg-[#2563EB] hover:text-white transition-all shadow-sm"
+                                        >
+                                            <Mail size={15} />
                                         </button>
                                         <button 
                                             onClick={() => handleShareWhatsApp(emp, paie)}
