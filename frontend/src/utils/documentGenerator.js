@@ -649,7 +649,7 @@ export const generateContratTravail = (emp, company, contract) => {
           <div>
             <table class="header-table">
               <tr>
-                ${company.logo ? `<td class="logo-cell"><img src="${company.logo}" class="logo-img" alt="Logo" /></td>` : ''}
+                ${renderDocLogoCell(company)}
                 <td class="company-info">
                   <h1>${company.companyName || 'ENTREPRISE IVOIRIENNE SAS'}</h1>
                   <p>RC : ${company.rc || '—'} | CC : ${company.cc || '—'}</p>
@@ -751,7 +751,7 @@ export const generateAttestationStage = (emp, company) => {
           <div>
             <table class="header-table">
               <tr>
-                ${company.logo ? `<td class="logo-cell"><img src="${company.logo}" class="logo-img" alt="Logo" /></td>` : ''}
+                ${renderDocLogoCell(company)}
                 <td class="company-info">
                   <h1>${company.companyName || 'ENTREPRISE IVOIRIENNE SAS'}</h1>
                   <p>RC : ${company.rc || '—'} | CC : ${company.cc || '—'}</p>
@@ -827,7 +827,7 @@ export const generateOrdreMission = (emp, company, missionDetails) => {
           <div>
             <table class="header-table">
               <tr>
-                ${company.logo ? `<td class="logo-cell"><img src="${company.logo}" class="logo-img" alt="Logo" /></td>` : ''}
+                ${renderDocLogoCell(company)}
                 <td class="company-info">
                   <h1>${company.companyName || 'ENTREPRISE IVOIRIENNE SAS'}</h1>
                   <p>RC : ${company.rc || '—'} | CC : ${company.cc || '—'}</p>
@@ -914,7 +914,7 @@ export const generateDemandeExplication = (emp, company, deDetails) => {
           <div>
             <table class="header-table">
               <tr>
-                ${company.logo ? `<td class="logo-cell"><img src="${company.logo}" class="logo-img" alt="Logo" /></td>` : ''}
+                ${renderDocLogoCell(company)}
                 <td class="company-info">
                   <h1>${company.companyName || 'ENTREPRISE IVOIRIENNE SAS'}</h1>
                   <p>RC : ${company.rc || '—'} | CC : ${company.cc || '—'}</p>
@@ -984,7 +984,7 @@ export const generateLettreAvertissement = (emp, company, warningDetails) => {
           <div>
             <table class="header-table">
               <tr>
-                ${company.logo ? `<td class="logo-cell"><img src="${company.logo}" class="logo-img" alt="Logo" /></td>` : ''}
+                ${renderDocLogoCell(company)}
                 <td class="company-info">
                   <h1>${company.companyName || 'ENTREPRISE IVOIRIENNE SAS'}</h1>
                 </td>
@@ -1388,7 +1388,7 @@ export const generateOfficialCIVBulletin = (emp, payslipDetails, company, select
     <!-- Top Header -->
     <div class="top-header-grid">
       <div style="display: flex; flex-direction: column; justify-content: space-between; align-items: flex-start;">
-        ${company.logo ? `<img src="${company.logo}" style="max-width: 150px; max-height: 60px; object-fit: contain; margin-bottom: 6px;" alt="Logo Entreprise" />` : `<div style="width: 48px; height: 48px; background: linear-gradient(135deg, ${company.primaryColor || '#009E49'} 0%, ${company.secondaryColor || '#F77F00'} 100%); color: white; border-radius: 10px; font-weight: 900; font-size: 22px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 8px rgba(0,0,0,0.15); margin-bottom: 6px;">${(company.companyName || 'E').charAt(0)}</div>`}
+        <img src="${company.logo || '/gebat_logo.png'}" style="max-width: 150px; max-height: 60px; object-fit: contain; margin-bottom: 6px;" alt="GEBAT Logo Officiel" />
         <div class="bulletin-badge-box">BULLETIN DE PAIE</div>
       </div>
       <div>

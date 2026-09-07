@@ -44,7 +44,7 @@ const Employees = () => {
 
     const primaryColor = company.primaryColor || '#009E49';
     const secondaryColor = company.secondaryColor || '#F77F00';
-    const logoUrl = company.logo || '';
+    const logoUrl = company.logo || '/gebat_logo.png';
 
     // Responsable Hiérarchique
     const managerObj = emp.responsable ? (data?.employees || []).find(e => e.id.toString() === emp.responsable.toString()) : null;
@@ -327,9 +327,9 @@ const Employees = () => {
     
     <div class="header">
       <div class="logo-container">
-        ${logoUrl ? `<img src="${logoUrl}" class="logo-img" alt="Logo Entreprise" />` : `<div style="width: 55px; height: 55px; background: linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%); color: white; border-radius: 14px; font-weight: 900; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">${(company.companyName || 'E').charAt(0)}</div>`}
+        <img src="${logoUrl}" class="logo-img" alt="Logo GEBAT" />
         <div class="company-info">
-          <h1>${company.companyName || 'ENTREPRISE IVOIRIENNE SAS'}</h1>
+          <h1>${company.companyName || 'GEBAT SA'}</h1>
           <p>Adresse : ${company.address || 'Abidjan, Plateau, Côte d\'Ivoire'}</p>
           <p>Tél : ${company.phone || '+225 27 20 00 00 00'} | E-mail : ${company.email || 'rh@entreprise.ci'}</p>
         </div>
@@ -818,32 +818,38 @@ const Employees = () => {
     .brand-box {
       display: flex;
       align-items: center;
-      gap: 1.5mm;
+      gap: 2mm;
       margin-bottom: 0.5mm;
     }
 
-    .logo-icon {
-      width: 6.5mm;
-      height: 6.5mm;
-      background: linear-gradient(135deg, #F77F00 0%, #009E49 100%);
-      border-radius: 1.8mm;
+    .logo-container-badge {
+      background: #ffffff;
+      padding: 0.8mm 1.5mm;
+      border-radius: 4px;
+      border: 1px solid rgba(0, 0, 0, 0.08);
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #ffffff;
-      font-weight: 900;
-      font-size: 7.5pt;
-      box-shadow: 0 2px 6px rgba(0, 158, 73, 0.3);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      height: 8mm;
+    }
+
+    .logo-badge-img {
+      max-height: 6.5mm;
+      max-width: 16mm;
+      object-fit: contain;
+      display: block;
     }
 
     .company-title {
-      font-size: 7.5pt;
+      font-size: 7.2pt;
       font-weight: 900;
       color: #0f172a;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.3px;
       margin: 0;
-      line-height: 1;
+      line-height: 1.1;
+      text-align: left;
     }
 
     .badge-sub {
@@ -1118,13 +1124,17 @@ const Employees = () => {
       <div class="geo-shape-bottom"></div>
       <div class="diagonal-line"></div>
 
-      <!-- 1. Header & Logo (NO STAR) -->
+      <!-- 1. Header & Logo Officiel GEBAT -->
       <div class="card-header">
         <div class="brand-box">
-          <div class="logo-icon">CI</div>
-          <h1 class="company-title">${company.companyName || 'ENTREPRISE IVOIRIENNE'}</h1>
+          <div class="logo-container-badge">
+            <img src="${company.logo || '/gebat_logo.png'}" class="logo-badge-img" alt="Logo GEBAT" />
+          </div>
+          <div>
+            <h1 class="company-title">${company.companyName || 'GEBAT SA'}</h1>
+            <div class="badge-sub">CARTE D'IDENTITÉ PROFESSIONNELLE</div>
+          </div>
         </div>
-        <div class="badge-sub">CARTE D'IDENTITÉ PROFESSIONNELLE</div>
       </div>
 
       <!-- 2. Photo Portrait avec cadre dégradé -->
@@ -1154,6 +1164,7 @@ const Employees = () => {
         <div class="qr-box">
           <img src="${qrCodeUrl}" class="qr-img" alt="Code QR Verification" />
         </div>
+        <div class="card-side-label">RECTO • VÉRIFICATION OFFICIELLE</div>
       </div>
     </div>
   </div>
@@ -1167,10 +1178,14 @@ const Employees = () => {
       <div class="geo-shape-bottom"></div>
 
       <!-- 1. Header & Branding Verso -->
-      <div class="card-header" style="padding-top: 4mm;">
+      <div class="card-header" style="padding-top: 3.5mm;">
         <div class="brand-box">
-          <div class="logo-icon">CI</div>
-          <h1 class="company-title">${company.companyName || 'ENTREPRISE IVOIRIENNE'}</h1>
+          <div class="logo-container-badge">
+            <img src="${company.logo || '/gebat_logo.png'}" class="logo-badge-img" alt="Logo GEBAT" />
+          </div>
+          <div>
+            <h1 class="company-title">${company.companyName || 'GEBAT SA'}</h1>
+          </div>
         </div>
       </div>
 
@@ -1178,18 +1193,18 @@ const Employees = () => {
       <div class="verso-notice-container">
         <div class="verso-notice-title">CLAUSE D'UTILISATION</div>
         <p class="verso-notice-text">
-          La présente carte est la propriété exclusive de l'entreprise. Elle est strictement personnelle et incessible. Le titulaire est tenu de la présenter à toute réquisition et de la restituer en cas de départ.
+          La présente carte est la propriété exclusive de <strong>${company.companyName || 'GEBAT SA'}</strong>. Elle est strictement personnelle et incessible. Le titulaire est tenu de la présenter à toute réquisition et de la restituer en cas de cessation de fonction.
         </p>
         <p class="verso-notice-lost">
-          En cas de perte ou de découverte, prière de la rapporter à la Direction des Ressources Humaines.
+          En cas de perte, prière de contacter la Direction des Ressources Humaines.
         </p>
       </div>
 
       <!-- 3. Coordonnées de l'Entreprise -->
       <div class="company-contact-box">
-        <p class="company-contact-name">${company.companyName || 'ENTREPRISE IVOIRIENNE SAS'}</p>
+        <p class="company-contact-name">${company.companyName || 'GEBAT SA'}</p>
         <p class="company-contact-info">${company.address || 'Abidjan, Côte d\'Ivoire'}</p>
-        <p class="company-contact-info">Tél: ${company.phone || '+225 27 20 00 00 00'} • Email: ${company.email || 'contact@entreprise.ci'}</p>
+        <p class="company-contact-info">Tél: ${company.phone || '+225 27 22 52 34 23'} • Email: ${company.email || 'gebat@gebat-sa.com'}</p>
       </div>
 
       <!-- 4. Bloc Signature & Cachet DRH -->
@@ -1198,6 +1213,7 @@ const Employees = () => {
           <span>Cachet & Signature de la Direction</span>
           <div class="sig-area"></div>
         </div>
+        <div class="card-side-label" style="margin-top: 1mm;">VERSO • RH & ADMINISTRATION</div>
       </div>
     </div>
   </div>

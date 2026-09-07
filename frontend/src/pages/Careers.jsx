@@ -184,14 +184,14 @@ const Careers = () => {
       <header className="bg-[#051915] text-white sticky top-0 z-40 border-b border-emerald-900/50 shadow-xl">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           
-          {/* Logo Branding SIRH-CIV */}
+          {/* Logo Branding GEBAT SA */}
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/30">
-              <Briefcase size={22} />
+            <div className="bg-white p-1.5 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20 border border-emerald-500/30">
+              <img src="/gebat_logo.png" alt="GEBAT Logo Officiel" className="h-9 max-w-[80px] object-contain" />
             </div>
             <div>
-              <div className="font-extrabold text-xs tracking-wider text-emerald-400 uppercase">Logiciel RH</div>
-              <div className="font-black text-xl tracking-tight text-white leading-none">SIRH-CIV</div>
+              <div className="font-extrabold text-xs tracking-wider text-emerald-400 uppercase">Portail Recrutement</div>
+              <div className="font-black text-xl tracking-tight text-white leading-none">GEBAT SA</div>
             </div>
           </div>
 
@@ -208,7 +208,7 @@ const Careers = () => {
         {/* Hero Title Banner Inside Header */}
         <div className="py-12 bg-gradient-to-r from-[#031310] via-[#051915] to-[#0A2922] text-center border-t border-emerald-950">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight">
-            Trouvez Votre Avenir avec SIRH-CIV – Côte d'Ivoire
+            Trouvez Votre Avenir chez GEBAT SA – BTP & Génie Civil Côte d'Ivoire
           </h1>
         </div>
       </header>
@@ -292,8 +292,8 @@ const Careers = () => {
                     <div className="space-y-3">
                       {/* Logo Icon & Title Header */}
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center font-black text-xs shrink-0 shadow-sm">
-                          ✨
+                        <div className="w-10 h-10 p-1 bg-white border border-slate-200 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
+                          <img src="/gebat_logo.png" alt="GEBAT" className="max-h-8 max-w-8 object-contain" />
                         </div>
                         <div>
                           <h3 className="text-base font-extrabold text-slate-900 leading-snug">
