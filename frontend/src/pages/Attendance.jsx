@@ -449,60 +449,65 @@ const Attendance = () => {
 
   return (
     <div className="animate-fadeIn space-y-8">
-      <PageHeader 
-        title="Pointage & Présence" 
-        subtitle="Suivi des entrées/sorties, retards, heures sup & rémunération en temps réel"
-        actions={
-          <div className="flex flex-wrap items-center gap-3">
-            <button 
-              onClick={() => {
-                setShowGpsModal(true);
-                handleFetchGpsLocation();
-              }}
-              className="bg-blue-600 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 flex items-center gap-2"
-            >
-                <MapPin size={15} /> Pointage GPS Mobile
-            </button>
+      {/* Dedicated Header: Title & Subtitle */}
+      <div className="space-y-1">
+        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase">
+          Pointage & Présence
+        </h1>
+        <p className="text-slate-500 text-xs sm:text-sm font-semibold max-w-3xl leading-relaxed">
+          Suivi des entrées/sorties, retards, heures sup & rémunération en temps réel
+        </p>
+      </div>
 
-            <button 
-              onClick={() => setShowChefModal(true)}
-              className="bg-purple-700 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-purple-800 transition-all shadow-lg shadow-purple-600/20 flex items-center gap-2"
-            >
-                <Users size={15} /> Pointage Chef Chantier
-            </button>
+      {/* Quick Action Toolbar Card */}
+      <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm flex flex-wrap items-center gap-3">
+        <button 
+          onClick={() => {
+            setShowGpsModal(true);
+            handleFetchGpsLocation();
+          }}
+          className="bg-blue-600 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 flex items-center gap-2"
+        >
+            <MapPin size={15} /> Pointage GPS Mobile
+        </button>
 
-            <button 
-              onClick={() => setShowSettingsModal(true)}
-              className="bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-black transition-all shadow-md flex items-center gap-2"
-            >
-                <Settings size={15} /> Paramètres Horaires
-            </button>
+        <button 
+          onClick={() => setShowChefModal(true)}
+          className="bg-purple-700 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-purple-800 transition-all shadow-md shadow-purple-600/20 flex items-center gap-2"
+        >
+            <Users size={15} /> Pointage Chef Chantier
+        </button>
 
-            <button 
-              onClick={() => setShowModal(true)}
-              className="bg-ci-green text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-ci-greenDark transition-all shadow-lg shadow-ci-green/20 flex items-center gap-2"
-            >
-                <Plus size={16} /> Nouveau Pointage
-            </button>
+        <button 
+          onClick={() => setShowSettingsModal(true)}
+          className="bg-slate-800 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-black transition-all shadow-sm flex items-center gap-2"
+        >
+            <Settings size={15} /> Paramètres Horaires
+        </button>
 
-            <button 
-              onClick={() => setShowKioskModal(true)}
-              className="bg-ci-orange text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-orange-600 transition-all shadow-lg shadow-ci-orange/20 flex items-center gap-2"
-            >
-                <Smartphone size={16} /> Terminal Borne
-            </button>
+        <button 
+          onClick={() => setShowModal(true)}
+          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 flex items-center gap-2"
+        >
+            <Plus size={16} /> Nouveau Pointage
+        </button>
 
-            <a 
-              href="/terminal" 
-              target="_blank" 
-              rel="noopener noreferrer" 
-              className="bg-emerald-900 text-emerald-300 border border-emerald-700/60 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-950 transition-all shadow-lg flex items-center gap-2"
-            >
-                <ExternalLink size={14} /> Plein Écran (/terminal)
-            </a>
-          </div>
-        }
-      />
+        <button 
+          onClick={() => setShowKioskModal(true)}
+          className="bg-amber-500 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-amber-600 transition-all shadow-md shadow-amber-500/20 flex items-center gap-2"
+        >
+            <Smartphone size={16} /> Terminal Borne
+        </button>
+
+        <a 
+          href="/terminal" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="bg-slate-900 text-amber-400 border border-slate-700 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-black transition-all flex items-center gap-2 sm:ml-auto"
+        >
+            <ExternalLink size={14} /> Plein Écran (/terminal)
+        </a>
+      </div>
 
       {/* KPI Cards: Shift & Financial Analytics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
