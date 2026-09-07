@@ -1,7 +1,13 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, Palmtree, Banknote, Clock, UserPlus, Star, FileText, BarChart3, Link, HelpCircle, Settings, LogOut, Shield, GraduationCap, FolderKanban, Briefcase, AlertOctagon, ClipboardList, ShieldAlert, X } from 'lucide-react';
+import { 
+  LayoutDashboard, Users, Palmtree, Banknote, Clock, UserPlus, 
+  Star, FileText, BarChart3, Link, HelpCircle, Settings, LogOut, 
+  Shield, GraduationCap, FolderKanban, Briefcase, AlertOctagon, 
+  ClipboardList, ShieldAlert, X, GitMerge, ShieldCheck, UserCheck, 
+  Car, TrendingUp
+} from 'lucide-react';
 import axios from 'axios';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -19,11 +25,16 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   const navItems = [
     { icon: <LayoutDashboard size={18} />, label: 'Tableau de bord', path: '/' },
+    { icon: <GitMerge size={18} />, label: 'Organigramme', path: '/org-chart' },
+    { icon: <ShieldCheck size={18} />, label: 'Espace Manager (MSS)', path: '/manager-hub' },
     { icon: <Users size={18} />, label: 'Employés', path: '/employees' },
-    { icon: <AlertOctagon size={18} />, label: 'Disciplinaire', path: '/disciplinary' },
+    { icon: <UserCheck size={18} />, label: 'Cycle de Vie & STC', path: '/lifecycle' },
+    { icon: <Car size={18} />, label: 'Missions & Frais', path: '/missions-expenses' },
+    { icon: <TrendingUp size={18} />, label: 'People Analytics (BI)', path: '/analytics' },
     { icon: <Palmtree size={18} />, label: 'Congés', path: '/leaves' },
     { icon: <Banknote size={18} />, label: 'Paie', path: '/payroll' },
     { icon: <Clock size={18} />, label: 'Pointage', path: '/attendance' },
+    { icon: <AlertOctagon size={18} />, label: 'Disciplinaire', path: '/disciplinary' },
     { icon: <UserPlus size={18} />, label: 'Recrutement', path: '/recruitment' },
     { icon: <Briefcase size={18} />, label: 'Portail Carrière', path: '/careers', external: true },
     { icon: <Star size={18} />, label: 'Évaluations (Internes)', path: '/evaluations' },

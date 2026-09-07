@@ -27,6 +27,11 @@ import CandidateTest from './pages/CandidateTest';
 import AuditLogs from './pages/AuditLogs';
 import ForcePasswordChange from './pages/ForcePasswordChange';
 import AttendanceTerminal from './pages/AttendanceTerminal';
+import Organigram from './pages/Organigram';
+import ManagerHub from './pages/ManagerHub';
+import Lifecycle from './pages/Lifecycle';
+import MissionsExpenses from './pages/MissionsExpenses';
+import PeopleAnalytics from './pages/PeopleAnalytics';
 
 const ProtectedRoute = ({ children, role, roles }) => {
   const { user, loading } = useAuth();
@@ -57,6 +62,11 @@ function App() {
             <Route path="/" element={<ProtectedRoute roles={['admin', 'assistant']}><Layout /></ProtectedRoute>}>
               <Route index element={<Dashboard />} />
               <Route path="employees" element={<Employees />} />
+              <Route path="org-chart" element={<Organigram />} />
+              <Route path="manager-hub" element={<ManagerHub />} />
+              <Route path="lifecycle" element={<Lifecycle />} />
+              <Route path="missions-expenses" element={<MissionsExpenses />} />
+              <Route path="analytics" element={<PeopleAnalytics />} />
               <Route path="leaves" element={<Leaves />} />
               <Route path="payroll" element={<Payroll />} />
               <Route path="attendance" element={<Attendance />} />

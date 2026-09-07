@@ -2918,6 +2918,602 @@ app.post('/api/ai/assistant', optionalAuthenticateToken, async (req, res) => {
     }
 });
 
+// ==========================================
+// 6. MODULE ORDRES DE MISSION & NOTES DE FRAIS
+// ==========================================
+app.get('/api/missions', authenticateToken, async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const role = req.user.role;
+        const empId = req.user.empId;
+
+        let sql = `SELECT m.*, e.nom, e.prenoms, e.matricule, e.poste, e.departement, e.telephone, e.photo
+                   FROM missions m
+                   JOIN employees e ON m.empId = e.id
+                   WHERE (m.company_id = ? OR m.company_id = 1)`;
+        const params = [companyId];
+
+        if (role === 'employee' && empId) {
+            sql += ` AND m.empId = ?`;
+            params.push(empId);
+        }
+
+        sql += ` ORDER BY m.date_debut DESC, m.created_at DESC`;
+        const rows = await queryAll(sql, params);
+        res.json(rows);
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.post('/api/missions', authenticateToken, async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const { empId, titre, motif, destination, site, date_debut, date_fin, moyen_transport, vehicule, avance_frais, commentaires } = req.body;
+        const targetEmpId = empId || req.user.empId || req.user.id;
+
+        if (!titre || !destination || !date_debut || !date_fin) {
+            return sendError(res, 400, 'Titre, destination et dates obligatoires', 'MISSING_FIELDS');
+        }
+
+        const result = await queryRun(
+            `INSERT INTO missions (company_id, empId, titre, motif, destination, site, date_debut, date_fin, moyen_transport, vehicule, avance_frais, statut, commentaires)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'En attente N+1', ?)`,
+            [companyId, targetEmpId, titre, motif || '', destination, site || '', date_debut, date_fin, moyen_transport || 'Véhicule de Société', vehicule || '', avance_frais || 0, commentaires || '']
+        );
+
+        dispatchNotification({
+            companyId,
+            empId: targetEmpId,
+            title: '🚗 Nouvel Ordre de Mission',
+            message: `Ordre de mission enregistré vers ${destination} (${date_debut} au ${date_fin}). En attente de validation N+1.`,
+            type: 'info'
+        }).catch(() => {});
+
+        logAuditAction(req, 'CREATION_MISSION', `Ordre de mission créé pour employé #${targetEmpId} (${destination})`, 'Missions & Frais');
+        res.json({ success: true, id: result.lastID, message: 'Ordre de mission enregistré avec succès' });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.patch('/api/missions/:id', authenticateToken, validateIdParam('id'), async (req, res) => {
+    try {
+        const id = req.params.id;
+        const { statut, validation_n1, validation_rh, commentaires, avance_frais } = req.body;
+        const mission = await queryGet("SELECT m.*, e.nom, e.prenoms, e.email FROM missions m JOIN employees e ON m.empId = e.id WHERE m.id = ?", [id]);
+        if (!mission) return sendError(res, 404, 'Ordre de mission non trouvé', 'NOT_FOUND');
+
+        await queryRun(
+            `UPDATE missions SET 
+                statut = COALESCE(?, statut),
+                validation_n1 = COALESCE(?, validation_n1),
+                validation_rh = COALESCE(?, validation_rh),
+                commentaires = COALESCE(?, commentaires),
+                avance_frais = COALESCE(?, avance_frais)
+             WHERE id = ?`,
+            [statut, validation_n1, validation_rh, commentaires, avance_frais, id]
+        );
+
+        if (statut) {
+            const isApproved = statut === 'Approuvée' || statut === 'Validée';
+            dispatchNotification({
+                companyId: mission.company_id || 1,
+                empId: mission.empId,
+                title: isApproved ? '✅ Mission Validée' : '⚠️ Mission Mise à Jour',
+                message: `Votre ordre de mission pour "${mission.destination}" est désormais : ${statut}.`,
+                type: isApproved ? 'success' : 'warning'
+            }).catch(() => {});
+        }
+
+        logAuditAction(req, 'MODIFICATION_MISSION', `Mission #${id} mise à jour (${statut || 'Modification'})`, 'Missions & Frais');
+        res.json({ success: true, message: 'Mission mise à jour avec succès' });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.delete('/api/missions/:id', authenticateToken, validateIdParam('id'), authorizeRoles('admin', 'assistant'), async (req, res) => {
+    try {
+        await queryRun("DELETE FROM missions WHERE id = ?", [req.params.id]);
+        logAuditAction(req, 'SUPPRESSION_MISSION', `Suppression mission #${req.params.id}`, 'Missions & Frais');
+        res.json({ success: true, message: 'Ordre de mission supprimé' });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.get('/api/expenses', authenticateToken, async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const role = req.user.role;
+        const empId = req.user.empId;
+
+        let sql = `SELECT exp.*, e.nom, e.prenoms, e.matricule, e.poste, e.departement, m.titre as mission_titre, m.destination as mission_destination
+                   FROM expense_reports exp
+                   JOIN employees e ON exp.empId = e.id
+                   LEFT JOIN missions m ON exp.mission_id = m.id
+                   WHERE (exp.company_id = ? OR exp.company_id = 1)`;
+        const params = [companyId];
+
+        if (role === 'employee' && empId) {
+            sql += ` AND exp.empId = ?`;
+            params.push(empId);
+        }
+
+        sql += ` ORDER BY exp.date_depense DESC, exp.created_at DESC`;
+        const rows = await queryAll(sql, params);
+        res.json(rows);
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.post('/api/expenses', authenticateToken, async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const { empId, mission_id, date_depense, categorie, montant, description, justificatif } = req.body;
+        const targetEmpId = empId || req.user.empId || req.user.id;
+
+        if (!date_depense || !categorie || !montant) {
+            return sendError(res, 400, 'Date, catégorie et montant obligatoires', 'MISSING_FIELDS');
+        }
+
+        const result = await queryRun(
+            `INSERT INTO expense_reports (company_id, empId, mission_id, date_depense, categorie, montant, description, justificatif, statut)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Soumis')`,
+            [companyId, targetEmpId, mission_id || null, date_depense, categorie, montant, description || '', justificatif || null]
+        );
+
+        dispatchNotification({
+            companyId,
+            empId: targetEmpId,
+            title: '🧾 Note de Frais Enregistrée',
+            message: `Votre note de frais de ${new Intl.NumberFormat('fr-CI').format(montant)} FCFA (${categorie}) a été soumise pour validation.`,
+            type: 'info'
+        }).catch(() => {});
+
+        logAuditAction(req, 'CREATION_NOTE_FRAIS', `Note de frais créée pour employé #${targetEmpId} (${montant} FCFA)`, 'Missions & Frais');
+        res.json({ success: true, id: result.lastID, message: 'Note de frais enregistrée avec succès' });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.patch('/api/expenses/:id', authenticateToken, validateIdParam('id'), async (req, res) => {
+    try {
+        const id = req.params.id;
+        const { statut, validation_n1, validation_rh, inclus_paie, mois_paie } = req.body;
+        const expense = await queryGet("SELECT exp.*, e.nom, e.prenoms, e.email FROM expense_reports exp JOIN employees e ON exp.empId = e.id WHERE exp.id = ?", [id]);
+        if (!expense) return sendError(res, 404, 'Note de frais non trouvée', 'NOT_FOUND');
+
+        await queryRun(
+            `UPDATE expense_reports SET 
+                statut = COALESCE(?, statut),
+                validation_n1 = COALESCE(?, validation_n1),
+                validation_rh = COALESCE(?, validation_rh),
+                inclus_paie = COALESCE(?, inclus_paie),
+                mois_paie = COALESCE(?, mois_paie)
+             WHERE id = ?`,
+            [statut, validation_n1, validation_rh, inclus_paie !== undefined ? inclus_paie : null, mois_paie !== undefined ? mois_paie : null, id]
+        );
+
+        if (statut) {
+            const isApproved = statut === 'Approuvée' || statut === 'Remboursée';
+            dispatchNotification({
+                companyId: expense.company_id || 1,
+                empId: expense.empId,
+                title: isApproved ? '💰 Note de Frais Approuvée' : '⚠️ Note de Frais Modifiée',
+                message: `Votre note de frais (${new Intl.NumberFormat('fr-CI').format(expense.montant)} F CFA) a été marquée : ${statut}.`,
+                type: isApproved ? 'success' : 'warning'
+            }).catch(() => {});
+        }
+
+        logAuditAction(req, 'MODIFICATION_NOTE_FRAIS', `Note de frais #${id} mise à jour (${statut || 'Modification'})`, 'Missions & Frais');
+        res.json({ success: true, message: 'Note de frais mise à jour avec succès' });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.delete('/api/expenses/:id', authenticateToken, validateIdParam('id'), authorizeRoles('admin', 'assistant'), async (req, res) => {
+    try {
+        await queryRun("DELETE FROM expense_reports WHERE id = ?", [req.params.id]);
+        logAuditAction(req, 'SUPPRESSION_NOTE_FRAIS', `Suppression note de frais #${req.params.id}`, 'Missions & Frais');
+        res.json({ success: true, message: 'Note de frais supprimée' });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+// ==========================================
+// 7. MODULE CYCLE DE VIE : ONBOARDING & OFFBOARDING (STC)
+// ==========================================
+app.get('/api/lifecycle/onboarding', authenticateToken, async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const rows = await queryAll(
+            `SELECT t.*, e.nom, e.prenoms, e.matricule, e.poste, e.departement, e.dateEmbauche, e.photo
+             FROM onboarding_tasks t
+             JOIN employees e ON t.empId = e.id
+             WHERE (t.company_id = ? OR t.company_id = 1)
+             ORDER BY t.statut ASC, t.echeance ASC`,
+            [companyId]
+        );
+        res.json(rows);
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.post('/api/lifecycle/onboarding', authenticateToken, authorizeRoles('admin', 'assistant'), async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const { empId, titre, categorie, description, echeance, responsable_action } = req.body;
+        if (!empId || !titre) {
+            return sendError(res, 400, 'Employé et titre de la tâche obligatoires', 'MISSING_FIELDS');
+        }
+
+        const result = await queryRun(
+            `INSERT INTO onboarding_tasks (company_id, empId, titre, categorie, description, echeance, responsable_action, statut)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 'À faire')`,
+            [companyId, empId, titre, categorie || 'EPI & Sécurité', description || '', echeance || null, responsable_action || 'RH']
+        );
+
+        logAuditAction(req, 'CREATION_TACHE_ONBOARDING', `Tâche onboarding "${titre}" assignée à employé #${empId}`, 'Cycle de Vie');
+        res.json({ success: true, id: result.lastID, message: 'Tâche d\'intégration créée avec succès' });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.patch('/api/lifecycle/onboarding/:id', authenticateToken, validateIdParam('id'), async (req, res) => {
+    try {
+        const id = req.params.id;
+        const { statut, date_realisation, description } = req.body;
+        await queryRun(
+            `UPDATE onboarding_tasks SET 
+                statut = COALESCE(?, statut),
+                date_realisation = COALESCE(?, date_realisation),
+                description = COALESCE(?, description)
+             WHERE id = ?`,
+            [statut, statut === 'Fait' ? (date_realisation || new Date().toISOString().split('T')[0]) : null, description, id]
+        );
+
+        logAuditAction(req, 'MODIFICATION_TACHE_ONBOARDING', `Tâche onboarding #${id} mise à jour : ${statut}`, 'Cycle de Vie');
+        res.json({ success: true, message: 'Tâche mise à jour' });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.delete('/api/lifecycle/onboarding/:id', authenticateToken, validateIdParam('id'), authorizeRoles('admin'), async (req, res) => {
+    try {
+        await queryRun("DELETE FROM onboarding_tasks WHERE id = ?", [req.params.id]);
+        res.json({ success: true, message: 'Tâche supprimée' });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.get('/api/lifecycle/offboarding', authenticateToken, async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const rows = await queryAll(
+            `SELECT off.*, e.nom, e.prenoms, e.matricule, e.poste, e.departement, e.dateEmbauche, e.salaireBase, e.photo, e.email
+             FROM offboarding_records off
+             JOIN employees e ON off.empId = e.id
+             WHERE (off.company_id = ? OR off.company_id = 1)
+             ORDER BY off.date_depart DESC, off.created_at DESC`,
+            [companyId]
+        );
+        res.json(rows);
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.post('/api/lifecycle/stc-calculate', authenticateToken, async (req, res) => {
+    try {
+        const { empId, dateDepart, motifDepart, preavisEffectue, joursPresenceMois, deductions } = req.body;
+        const employee = await queryGet("SELECT * FROM employees WHERE id = ?", [empId]);
+        if (!employee) return sendError(res, 404, 'Employé non trouvé', 'NOT_FOUND');
+
+        const salaireBase = employee.salaireBase || 75000;
+        const dateEmbauche = new Date(employee.dateEmbauche || Date.now());
+        const dateFin = new Date(dateDepart || Date.now());
+        
+        const diffYears = Math.max(0, (dateFin - dateEmbauche) / (1000 * 60 * 60 * 24 * 365.25));
+        const seniorityYears = Math.floor(diffYears);
+
+        const presenceDays = parseInt(joursPresenceMois || 30, 10);
+        const stc_salaire_presence = Math.round((salaireBase / 30) * Math.min(30, Math.max(0, presenceDays)));
+
+        const leaveBalanceRow = await queryGet("SELECT solde FROM leave_balances WHERE empId = ? ORDER BY annee DESC LIMIT 1", [empId]);
+        const soldeConges = leaveBalanceRow ? leaveBalanceRow.solde : 15;
+        const tauxJournalierConge = salaireBase / 30;
+        const stc_conges_payes = Math.round(soldeConges * tauxJournalierConge);
+
+        let moisPreavis = 1;
+        if (employee.poste && (employee.poste.toLowerCase().includes('cadre') || employee.poste.toLowerCase().includes('directeur') || employee.poste.toLowerCase().includes('ingénieur'))) {
+            moisPreavis = 3;
+        }
+        const stc_preavis = preavisEffectue ? 0 : Math.round(salaireBase * moisPreavis);
+
+        let stc_indemnite_rupture = 0;
+        if (motifDepart !== 'Démission' && motifDepart !== 'Faute Lourde' && seniorityYears >= 1) {
+            let totalTaux = 0;
+            for (let y = 1; y <= seniorityYears; y++) {
+                if (y <= 5) totalTaux += 0.30;
+                else if (y <= 10) totalTaux += 0.35;
+                else totalTaux += 0.40;
+            }
+            stc_indemnite_rupture = Math.round(salaireBase * totalTaux);
+        }
+
+        const monthIndex = dateFin.getMonth() + 1;
+        const stc_prorata_gratification = Math.round((salaireBase / 12) * monthIndex * 0.75);
+
+        const totalBrut = stc_salaire_presence + stc_conges_payes + stc_preavis + stc_indemnite_rupture + stc_prorata_gratification;
+        const ded = parseFloat(deductions || 0);
+        const stc_total_net = Math.max(0, Math.round(totalBrut - ded));
+
+        res.json({
+            success: true,
+            calculation: {
+                seniorityYears,
+                seniorityExact: diffYears.toFixed(1),
+                salaireBase,
+                stc_salaire_presence,
+                stc_conges_payes,
+                soldeConges,
+                stc_preavis,
+                moisPreavis,
+                stc_indemnite_rupture,
+                stc_prorata_gratification,
+                stc_deductions: ded,
+                totalBrut,
+                stc_total_net
+            }
+        });
+    } catch (err) {
+        sendError(res, 500, err.message, 'CALCULATION_ERROR');
+    }
+});
+
+app.post('/api/lifecycle/offboarding', authenticateToken, authorizeRoles('admin', 'assistant'), async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const { 
+            empId, date_notification, date_depart, motif_depart, 
+            preavis_effectue, mois_preavis, stc_salaire_presence, 
+            stc_conges_payes, stc_preavis, stc_indemnite_rupture, 
+            stc_prorata_gratification, stc_deductions, stc_total_net, 
+            restitution_materiel, entretien_depart, certificat_emis, notes 
+        } = req.body;
+
+        if (!empId || !date_depart || !motif_depart) {
+            return sendError(res, 400, 'Employé, date et motif de départ obligatoires', 'MISSING_FIELDS');
+        }
+
+        const result = await queryRun(
+            `INSERT INTO offboarding_records (
+                company_id, empId, date_notification, date_depart, motif_depart, statut,
+                preavis_effectue, mois_preavis, stc_salaire_presence, stc_conges_payes,
+                stc_preavis, stc_indemnite_rupture, stc_prorata_gratification, stc_deductions,
+                stc_total_net, restitution_materiel, entretien_depart, certificat_emis, notes
+             ) VALUES (?, ?, ?, ?, ?, 'Clôturé', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                companyId, empId, date_notification || null, date_depart, motif_depart,
+                preavis_effectue ? 1 : 0, mois_preavis || 1, stc_salaire_presence || 0,
+                stc_conges_payes || 0, stc_preavis || 0, stc_indemnite_rupture || 0,
+                stc_prorata_gratification || 0, stc_deductions || 0, stc_total_net || 0,
+                restitution_materiel ? 1 : 0, entretien_depart ? 1 : 0, certificat_emis ? 1 : 0, notes || ''
+            ]
+        );
+
+        await queryRun("UPDATE employees SET statut = 'Inactif', compteActif = 0 WHERE id = ?", [empId]);
+
+        logAuditAction(req, 'CLOTURE_OFFBOARDING', `Dossier de départ & STC clôturé pour employé #${empId} (${motif_depart})`, 'Cycle de Vie');
+        res.json({ success: true, id: result.lastID, message: 'Dossier de départ et STC enregistrés avec succès' });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+// ==========================================
+// 8. MODULE ESPACE MANAGER (MSS) & APPROBATIONS
+// ==========================================
+app.get('/api/manager/overview', authenticateToken, async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const currentUserId = req.user.id;
+        const currentEmpId = req.user.empId;
+        const currentUserRole = req.user.role;
+
+        const allEmployees = await queryAll("SELECT id, nom, prenoms, matricule, poste, departement, site, telephone, email, photo, responsable, statut FROM employees WHERE (company_id = ? OR company_id = 1) AND statut = 'Actif'", [companyId]);
+        
+        let team = allEmployees;
+        if (currentUserRole === 'employee' && currentEmpId) {
+            const myEmp = allEmployees.find(e => e.id === currentEmpId);
+            const myFullName = myEmp ? `${myEmp.nom} ${myEmp.prenoms}`.trim() : '';
+            team = allEmployees.filter(e => e.id === currentEmpId || (myFullName && e.responsable && e.responsable.toLowerCase().includes(myFullName.toLowerCase())));
+        }
+
+        const teamIds = team.map(t => t.id);
+        const teamPlaceholders = teamIds.length > 0 ? teamIds.map(() => '?').join(',') : '0';
+
+        const pendingLeaves = teamIds.length > 0 ? await queryAll(
+            `SELECT l.*, e.nom, e.prenoms, e.matricule, e.poste, e.departement, e.photo
+             FROM leaves l JOIN employees e ON l.empId = e.id
+             WHERE l.empId IN (${teamPlaceholders}) AND l.statut = 'En attente'
+             ORDER BY l.debut ASC`,
+            teamIds
+        ) : [];
+
+        const pendingAdvances = teamIds.length > 0 ? await queryAll(
+            `SELECT a.*, e.nom, e.prenoms, e.matricule, e.poste, e.departement, e.photo
+             FROM advances a JOIN employees e ON a.empId = e.id
+             WHERE a.empId IN (${teamPlaceholders}) AND a.statut = 'En attente'
+             ORDER BY a.dateDemande DESC`,
+            teamIds
+        ) : [];
+
+        const pendingMissions = teamIds.length > 0 ? await queryAll(
+            `SELECT m.*, e.nom, e.prenoms, e.matricule, e.poste, e.departement, e.photo
+             FROM missions m JOIN employees e ON m.empId = e.id
+             WHERE m.empId IN (${teamPlaceholders}) AND m.statut LIKE '%attente%'
+             ORDER BY m.date_debut ASC`,
+            teamIds
+        ) : [];
+
+        const pendingExpenses = teamIds.length > 0 ? await queryAll(
+            `SELECT exp.*, e.nom, e.prenoms, e.matricule, e.poste, e.departement, exp.montant
+             FROM expense_reports exp JOIN employees e ON exp.empId = e.id
+             WHERE exp.empId IN (${teamPlaceholders}) AND exp.statut = 'Soumis'
+             ORDER BY exp.date_depense DESC`,
+            teamIds
+        ) : [];
+
+        const today = new Date().toISOString().split('T')[0];
+        const todayAttendances = teamIds.length > 0 ? await queryAll(
+            `SELECT a.*, e.nom, e.prenoms, e.matricule
+             FROM attendances a JOIN employees e ON a.empId = e.id
+             WHERE a.date = ? AND a.empId IN (${teamPlaceholders})`,
+            [today, ...teamIds]
+        ) : [];
+
+        res.json({
+            team,
+            teamCount: team.length,
+            presentCount: todayAttendances.filter(a => a.statut === 'Présent' || a.heureArrivee).length,
+            pendingLeaves,
+            pendingAdvances,
+            pendingMissions,
+            pendingExpenses,
+            todayAttendances
+        });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+// ==========================================
+// 9. MODULE PEOPLE ANALYTICS & EXPORT BANCAIRE
+// ==========================================
+app.get('/api/analytics/kpis', authenticateToken, async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const employees = await queryAll("SELECT id, nom, prenoms, matricule, poste, departement, site, sexe, dateEmbauche, dateNaissance, salaireBase, statut, type FROM employees WHERE company_id = ? OR company_id = 1", [companyId]);
+        const leaves = await queryAll("SELECT * FROM leaves WHERE (statut = 'Approuvé' OR statut = 'Validé')", []);
+        
+        const currentYear = new Date().getFullYear();
+        const bradfordScores = employees.map(emp => {
+            const empLeaves = leaves.filter(l => l.empId === emp.id && new Date(l.debut).getFullYear() === currentYear);
+            const S = empLeaves.length;
+            const D = empLeaves.reduce((acc, l) => acc + (parseFloat(l.duree) || 1), 0);
+            const score = S * S * D;
+            return {
+                id: emp.id,
+                nom: `${emp.nom} ${emp.prenoms}`,
+                matricule: emp.matricule,
+                departement: emp.departement,
+                occurrences: S,
+                totalJours: D,
+                score,
+                risque: score > 200 ? 'Élevé' : score > 50 ? 'Modéré' : 'Faible'
+            };
+        }).sort((a, b) => b.score - a.score);
+
+        const agePyramid = {
+            '< 25 ans': { M: 0, F: 0 },
+            '25-34 ans': { M: 0, F: 0 },
+            '35-44 ans': { M: 0, F: 0 },
+            '45-54 ans': { M: 0, F: 0 },
+            '55+ ans': { M: 0, F: 0 }
+        };
+
+        const now = new Date();
+        employees.forEach(emp => {
+            let age = 32;
+            if (emp.dateNaissance) {
+                age = Math.floor((now - new Date(emp.dateNaissance)) / (1000 * 60 * 60 * 24 * 365.25));
+            }
+            const gender = (emp.sexe === 'F' || emp.sexe === 'Femme') ? 'F' : 'M';
+            if (age < 25) agePyramid['< 25 ans'][gender]++;
+            else if (age <= 34) agePyramid['25-34 ans'][gender]++;
+            else if (age <= 44) agePyramid['35-44 ans'][gender]++;
+            else if (age <= 54) agePyramid['45-54 ans'][gender]++;
+            else agePyramid['55+ ans'][gender]++;
+        });
+
+        const deptStats = {};
+        let masseSalarialeTotale = 0;
+        employees.forEach(emp => {
+            const dept = emp.departement || 'Non affecté';
+            if (!deptStats[dept]) {
+                deptStats[dept] = { count: 0, masseSalariale: 0 };
+            }
+            deptStats[dept].count++;
+            const sal = parseFloat(emp.salaireBase) || 0;
+            deptStats[dept].masseSalariale += sal;
+            masseSalarialeTotale += sal;
+        });
+
+        const contractStats = { CDI: 0, CDD: 0, Stage: 0, Prestation: 0 };
+        employees.forEach(emp => {
+            const t = emp.type || 'CDI';
+            if (contractStats[t] !== undefined) contractStats[t]++;
+            else contractStats['CDI']++;
+        });
+
+        res.json({
+            totalEmployees: employees.length,
+            activeEmployees: employees.filter(e => e.statut === 'Actif').length,
+            masseSalarialeTotale,
+            bradfordScores: bradfordScores.slice(0, 10),
+            agePyramid,
+            deptStats,
+            contractStats
+        });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.post('/api/analytics/bank-transfer-file', authenticateToken, authorizeRoles('admin', 'assistant'), async (req, res) => {
+    try {
+        const { mois, format = 'UEMOA_STANDARD' } = req.body;
+        const employees = await queryAll("SELECT * FROM employees WHERE statut = 'Actif' AND rib IS NOT NULL AND rib != ''", []);
+        const settings = await queryGet("SELECT * FROM settings WHERE id = 1") || {};
+
+        const companyName = settings.companyName || 'GEBAT SA';
+        const dateStr = new Date().toISOString().split('T')[0];
+        
+        let fileContent = `HEADER|VIR_SALAIRES|${companyName}|${mois || dateStr}|DEV=XOF\n`;
+        let totalMontant = 0;
+
+        employees.forEach((emp, index) => {
+            const salNet = Math.round((emp.salaireBase || 150000) * 0.85);
+            totalMontant += salNet;
+            fileContent += `LINE|${index + 1}|${emp.matricule}|${emp.nom} ${emp.prenoms}|${emp.rib || 'CI0000000000'}|${salNet}|SALAIRE_${mois || dateStr}\n`;
+        });
+
+        fileContent += `FOOTER|COUNT=${employees.length}|TOTAL=${totalMontant}\n`;
+
+        res.json({
+            success: true,
+            format,
+            filename: `VIREMENT_SALAIRES_${companyName.replace(/\s+/g, '_')}_${mois || dateStr}.txt`,
+            fileContent,
+            totalEmployees: employees.length,
+            totalAmount: totalMontant
+        });
+    } catch (err) {
+        sendError(res, 500, err.message, 'EXPORT_ERROR');
+    }
+});
+
 // --- HEALTH CHECK ENDPOINT (POUR RAILWAY / CLOUD MONITORING) ---
 app.get(['/health', '/api/health'], (req, res) => {
     res.json({

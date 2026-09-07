@@ -647,6 +647,95 @@ function initSQLiteSchema(sDb) {
             FOREIGN KEY(project_id) REFERENCES projects(id)
         )`);
 
+        // Module Ordres de Mission (BTP / Déplacements Chantiers)
+        sDb.run(`CREATE TABLE IF NOT EXISTS missions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            empId INTEGER NOT NULL,
+            titre TEXT NOT NULL,
+            motif TEXT,
+            destination TEXT NOT NULL,
+            site TEXT,
+            date_debut TEXT NOT NULL,
+            date_fin TEXT NOT NULL,
+            moyen_transport TEXT DEFAULT 'Véhicule de Société',
+            vehicule TEXT,
+            avance_frais REAL DEFAULT 0,
+            statut TEXT DEFAULT 'En attente N+1',
+            commentaires TEXT,
+            validation_n1 TEXT,
+            validation_rh TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(empId) REFERENCES employees(id)
+        )`);
+
+        // Module Notes de Frais & Justificatifs
+        sDb.run(`CREATE TABLE IF NOT EXISTS expense_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            empId INTEGER NOT NULL,
+            mission_id INTEGER,
+            date_depense TEXT NOT NULL,
+            categorie TEXT NOT NULL,
+            montant REAL NOT NULL,
+            description TEXT,
+            justificatif TEXT,
+            statut TEXT DEFAULT 'Soumis',
+            validation_n1 TEXT,
+            validation_rh TEXT,
+            inclus_paie INTEGER DEFAULT 0,
+            mois_paie TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(empId) REFERENCES employees(id),
+            FOREIGN KEY(mission_id) REFERENCES missions(id) ON DELETE SET NULL
+        )`);
+
+        // Module Onboarding (Intégration & Dotations EPI/IT)
+        sDb.run(`CREATE TABLE IF NOT EXISTS onboarding_tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            empId INTEGER NOT NULL,
+            titre TEXT NOT NULL,
+            categorie TEXT DEFAULT 'EPI & Sécurité',
+            description TEXT,
+            echeance TEXT,
+            statut TEXT DEFAULT 'À faire',
+            responsable_action TEXT DEFAULT 'RH',
+            date_realisation TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(empId) REFERENCES employees(id)
+        )`);
+
+        // Module Offboarding & Solde de Tout Compte (STC)
+        sDb.run(`CREATE TABLE IF NOT EXISTS offboarding_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            empId INTEGER NOT NULL,
+            date_notification TEXT,
+            date_depart TEXT NOT NULL,
+            motif_depart TEXT NOT NULL,
+            statut TEXT DEFAULT 'En cours',
+            preavis_effectue INTEGER DEFAULT 1,
+            mois_preavis INTEGER DEFAULT 1,
+            stc_salaire_presence REAL DEFAULT 0,
+            stc_conges_payes REAL DEFAULT 0,
+            stc_preavis REAL DEFAULT 0,
+            stc_indemnite_rupture REAL DEFAULT 0,
+            stc_prorata_gratification REAL DEFAULT 0,
+            stc_deductions REAL DEFAULT 0,
+            stc_total_net REAL DEFAULT 0,
+            restitution_materiel INTEGER DEFAULT 0,
+            entretien_depart INTEGER DEFAULT 0,
+            certificat_emis INTEGER DEFAULT 0,
+            notes TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(empId) REFERENCES employees(id)
+        )`);
+
         // Seed default projects if table is empty
         sDb.get("SELECT COUNT(*) as count FROM projects", (err, row) => {
             if (!err && (!row || row.count === 0)) {
