@@ -55,7 +55,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       items: [
         { icon: <UserPlus size={17} />, label: 'Recrutement', path: '/recruitment' },
         { icon: <Briefcase size={17} />, label: 'Portail Carrière', path: '/careers', external: true },
-        { icon: <Star size={17} />, label: 'Évaluations', path: '/evaluations' },
+        { icon: <Star size={17} />, label: 'Performance & Évaluations', path: '/evaluations' },
         { icon: <ClipboardList size={17} />, label: 'Tests Candidats', path: '/assessments' },
         { icon: <GraduationCap size={17} />, label: 'Formations', path: '/trainings' },
       ]
@@ -63,12 +63,12 @@ const Sidebar = ({ isOpen, onClose }) => {
     {
       title: 'ADMINISTRATION & COMPLIANCE',
       items: [
-        { icon: <AlertOctagon size={17} />, label: 'Disciplinaire', path: '/disciplinary' },
+        { icon: <AlertOctagon size={17} />, label: 'Alertes, Dérives & Disciplinaire', path: '/disciplinary' },
+        { icon: <ShieldAlert size={17} />, label: 'Registre Audit Trail & Sécurité', path: '/audit-logs' },
         { icon: <FolderKanban size={17} />, label: 'Documents RH', path: '/documents' },
         { icon: <BarChart3 size={17} />, label: 'Rapports RH', path: '/reports' },
         { icon: <Link size={17} />, label: 'API Comptabilité', path: '/accounting' },
         { icon: <Shield size={17} />, label: 'Administration', path: '/administration' },
-        { icon: <ShieldAlert size={17} />, label: 'Journal d\'Audit', path: '/audit-logs' },
         { icon: <Settings size={17} />, label: 'Paramètres', path: '/settings' },
         { icon: <HelpCircle size={17} />, label: 'Support', path: '/support' },
       ]
