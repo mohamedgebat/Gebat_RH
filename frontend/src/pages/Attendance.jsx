@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import PageHeader from '../components/PageHeader';
+import EmployeeAvatar from '../components/EmployeeAvatar';
 import { 
   ExternalLink, Plus, Clock, X, CheckCircle2, Search, Filter, 
   Download, LogIn, LogOut, Smartphone, AlertCircle, Settings, 
@@ -655,9 +656,14 @@ const Attendance = () => {
                 <tr key={s.id} className="hover:bg-slate-50/80 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-ci-green text-white font-black flex items-center justify-center text-xs shadow-sm uppercase shrink-0">
-                        {s.emp.nom?.[0]}{s.emp.prenoms?.[0]}
-                      </div>
+                      <EmployeeAvatar
+                        src={s.emp.photo}
+                        nom={s.emp.nom}
+                        prenoms={s.emp.prenoms}
+                        matricule={s.emp.matricule}
+                        size="sm"
+                        className="rounded-xl shadow-sm shrink-0"
+                      />
                       <div>
                         <h4 className="font-black text-ci-text">{s.emp.nom} {s.emp.prenoms}</h4>
                         <p className="text-[10px] text-ci-muted font-bold uppercase">{s.emp.matricule} • {s.emp.poste || 'Salarié'}</p>

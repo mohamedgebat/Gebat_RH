@@ -533,7 +533,8 @@ app.post('/api/public/attendance/terminal', (req, res) => {
                             message: 'Pointage effectué avec succès', 
                             employeeName: `${emp.nom} ${emp.prenoms}`,
                             matricule: emp.matricule,
-                            type: pointageType
+                            type: pointageType,
+                            photo: emp.photo || null
                         });
                     }
                 );
@@ -1257,6 +1258,15 @@ app.patch('/api/employees/:id', authenticateToken, validateIdParam('id'), (req, 
             res.json({ message: 'Statut mis à jour' });
         });
     }
+});
+
+app.patch('/api/employees/:id/photo', authenticateToken, validateIdParam('id'), (req, res) => {
+    const { photo } = req.body;
+    db.run("UPDATE employees SET photo = ? WHERE id = ?", [photo || null, req.params.id], function(err) {
+        if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+        logAuditAction(req, 'PHOTO_EMPLOYE_MAJ', `Mise à jour photo de profil employé #${req.params.id}`, 'Employés');
+        res.json({ success: true, message: 'Photo de profil mise à jour avec succès', photo: photo || null });
+    });
 });
 
 app.put('/api/employees/:id', authenticateToken, validateIdParam('id'), async (req, res) => {

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import PageHeader from '../components/PageHeader';
-import { UserPlus, Search, MoreVertical, MapPin, Download, UserMinus, Trash2, X, Eye, FileText, Shield, CheckCircle, Briefcase, GraduationCap, Calendar, AlertTriangle, Edit, ArrowRight, CreditCard, AlertOctagon, Users, Banknote, HardHat } from 'lucide-react';
+import EmployeeAvatar from '../components/EmployeeAvatar';
+import { compressImage } from '../utils/imageCompressor';
+import { UserPlus, Search, MoreVertical, MapPin, Download, UserMinus, Trash2, X, Eye, FileText, Shield, CheckCircle, Briefcase, GraduationCap, Calendar, AlertTriangle, Edit, ArrowRight, CreditCard, AlertOctagon, Users, Banknote, HardHat, Camera, UploadCloud } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { generateAttestationTravail, generateAttestationStage, generateAttestationSalaire } from '../utils/documentGenerator';
@@ -346,7 +348,10 @@ const Employees = () => {
     </div>
 
     <div class="profile-hero">
-      ${emp.photo ? `<img src="${emp.photo}" class="employee-photo" alt="${emp.nom}" />` : `<div class="avatar-placeholder">${emp.nom[0]}${emp.prenoms[0]}</div>`}
+      ${emp.photo 
+        ? `<img src="${emp.photo}" class="employee-photo" alt="${emp.nom}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><div class="avatar-placeholder" style="display:none;">${emp.nom ? emp.nom[0] : ''}${emp.prenoms ? emp.prenoms[0] : ''}</div>` 
+        : `<div class="avatar-placeholder">${emp.nom ? emp.nom[0] : ''}${emp.prenoms ? emp.prenoms[0] : ''}</div>`
+      }
       <div class="hero-details">
         <h2 class="hero-name">${emp.nom} ${emp.prenoms}</h2>
         <p style="font-size: 12px; font-weight: 800; color: ${primaryColor}; text-transform: uppercase; margin: 0 0 8px 0;">${emp.poste}</p>
@@ -604,25 +609,33 @@ const Employees = () => {
     }
   };
 
-  const handlePhotoUpload = (e) => {
+  const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
+      try {
+        const compressed = await compressImage(file, { maxWidth: 400, maxHeight: 400, quality: 0.85 });
+        setNewEmp(prev => ({ ...prev, photo: compressed }));
+      } catch (err) {
+        console.error('Erreur compression photo:', err);
         const reader = new FileReader();
-        reader.onloadend = () => {
-            setNewEmp({ ...newEmp, photo: reader.result });
-        };
+        reader.onloadend = () => setNewEmp(prev => ({ ...prev, photo: reader.result }));
         reader.readAsDataURL(file);
+      }
     }
   };
 
-  const handleEditPhotoUpload = (e) => {
+  const handleEditPhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (file) {
+      try {
+        const compressed = await compressImage(file, { maxWidth: 400, maxHeight: 400, quality: 0.85 });
+        setEditEmp(prev => ({ ...prev, photo: compressed }));
+      } catch (err) {
+        console.error('Erreur compression photo:', err);
         const reader = new FileReader();
-        reader.onloadend = () => {
-            setEditEmp({ ...editEmp, photo: reader.result });
-        };
+        reader.onloadend = () => setEditEmp(prev => ({ ...prev, photo: reader.result }));
         reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -1141,8 +1154,8 @@ const Employees = () => {
       <div class="photo-section">
         <div class="photo-frame">
           ${emp.photo 
-            ? `<img src="${emp.photo}" class="employee-photo" alt="${emp.nom}" />`
-            : `<div class="employee-avatar">${emp.nom[0]}${emp.prenoms[0]}</div>`
+            ? `<img src="${emp.photo}" class="employee-photo" alt="${emp.nom}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" /><div class="employee-avatar" style="display:none;">${emp.nom ? emp.nom[0] : ''}${emp.prenoms ? emp.prenoms[0] : ''}</div>`
+            : `<div class="employee-avatar">${emp.nom ? emp.nom[0] : ''}${emp.prenoms ? emp.prenoms[0] : ''}</div>`
           }
         </div>
         <div class="status-dot"></div>
@@ -1399,13 +1412,14 @@ const Employees = () => {
                             >
                                 <td className="px-8 py-6">
                                     <div className="flex items-center gap-5">
-                                        {emp.photo ? (
-                                            <img src={emp.photo} alt={emp.nom} className="w-14 h-14 rounded-[1.5rem] object-cover border-2 border-ci-green/10 shadow-sm group-hover:rotate-3 transition-transform" />
-                                        ) : (
-                                            <div className="w-14 h-14 bg-gradient-to-br from-ci-greenLight to-white text-ci-green rounded-[1.5rem] flex items-center justify-center font-black text-lg border-2 border-ci-green/10 shadow-sm group-hover:rotate-3 transition-transform">
-                                                {emp?.nom?.charAt(0)}{emp?.prenoms?.charAt(0)}
-                                            </div>
-                                        )}
+                                        <EmployeeAvatar
+                                            src={emp.photo}
+                                            nom={emp.nom}
+                                            prenoms={emp.prenoms}
+                                            matricule={emp.matricule}
+                                            size="lg"
+                                            className="rounded-[1.5rem] group-hover:rotate-3 transition-transform"
+                                        />
                                         <div>
                                             <p className="text-base font-black text-ci-text tracking-tighter leading-none">{emp.nom} {emp.prenoms}</p>
                                             <div className="flex items-center gap-2 mt-2">
@@ -1678,12 +1692,32 @@ const Employees = () => {
                           <input type="password" value={newEmp.password} onChange={e => setNewEmp({...newEmp, password: e.target.value})} className="w-full px-6 py-4 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-ci-green/10 outline-none" placeholder="Pour connexion employé" />
                       </div>
                       <div className="md:col-span-2 space-y-2">
-                          <label className="text-[10px] font-black uppercase ml-1">Photo de profil</label>
-                          <div className="flex items-center gap-4">
+                          <label className="text-[10px] font-black uppercase ml-1 flex items-center gap-1.5 text-slate-700">
+                              <Camera size={13} className="text-ci-green" /> Photo de profil
+                          </label>
+                          <div className="flex items-center gap-4 p-4 bg-ci-bg rounded-2xl border border-ci-border">
+                              <EmployeeAvatar
+                                  src={newEmp.photo}
+                                  nom={newEmp.nom}
+                                  prenoms={newEmp.prenoms}
+                                  matricule={newEmp.matricule}
+                                  size="xl"
+                                  className="rounded-2xl"
+                              />
+                              <div className="flex-1 space-y-2">
+                                  <input type="file" accept="image/*" onChange={handlePhotoUpload} className="w-full text-xs font-bold file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-ci-green file:text-white hover:file:opacity-90 cursor-pointer" />
+                                  <p className="text-[10px] text-slate-400 font-medium">Format JPEG/PNG optimisé automatiquement (max 400x400px)</p>
+                              </div>
                               {newEmp.photo && (
-                                  <img src={newEmp.photo} alt="Photo" className="w-20 h-20 rounded-2xl object-cover border-2 border-ci-border" />
+                                  <button
+                                      type="button"
+                                      onClick={() => setNewEmp({ ...newEmp, photo: '' })}
+                                      className="p-2.5 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition-colors"
+                                      title="Supprimer la photo"
+                                  >
+                                      <Trash2 size={16} />
+                                  </button>
                               )}
-                              <input type="file" accept="image/*" onChange={handlePhotoUpload} className="flex-1 px-6 py-4 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-ci-green/10 outline-none" />
                           </div>
                       </div>
                       <div className="md:col-span-2 flex gap-4 pt-4">
@@ -1827,12 +1861,32 @@ const Employees = () => {
                           <input type="password" value={editEmp.password || ''} onChange={e => setEditEmp({...editEmp, password: e.target.value})} className="w-full px-6 py-4 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-ci-green/10 outline-none" placeholder="Pour connexion employé" />
                       </div>
                       <div className="md:col-span-2 space-y-2">
-                          <label className="text-[10px] font-black uppercase ml-1">Photo de profil</label>
-                          <div className="flex items-center gap-4">
+                          <label className="text-[10px] font-black uppercase ml-1 flex items-center gap-1.5 text-slate-700">
+                              <Camera size={13} className="text-ci-green" /> Photo de profil
+                          </label>
+                          <div className="flex items-center gap-4 p-4 bg-ci-bg rounded-2xl border border-ci-border">
+                              <EmployeeAvatar
+                                  src={editEmp.photo}
+                                  nom={editEmp.nom}
+                                  prenoms={editEmp.prenoms}
+                                  matricule={editEmp.matricule}
+                                  size="xl"
+                                  className="rounded-2xl"
+                              />
+                              <div className="flex-1 space-y-2">
+                                  <input type="file" accept="image/*" onChange={handleEditPhotoUpload} className="w-full text-xs font-bold file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:bg-ci-green file:text-white hover:file:opacity-90 cursor-pointer" />
+                                  <p className="text-[10px] text-slate-400 font-medium">Format JPEG/PNG optimisé automatiquement (max 400x400px)</p>
+                              </div>
                               {editEmp.photo && (
-                                  <img src={editEmp.photo} alt="Photo" className="w-20 h-20 rounded-2xl object-cover border-2 border-ci-border" />
+                                  <button
+                                      type="button"
+                                      onClick={() => setEditEmp({ ...editEmp, photo: '' })}
+                                      className="p-2.5 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 transition-colors"
+                                      title="Supprimer la photo"
+                                  >
+                                      <Trash2 size={16} />
+                                  </button>
                               )}
-                              <input type="file" accept="image/*" onChange={handleEditPhotoUpload} className="flex-1 px-6 py-4 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-ci-green/10 outline-none" />
                           </div>
                       </div>
                       <div className="md:col-span-2 flex gap-4 pt-4">
@@ -1943,13 +1997,14 @@ const Employees = () => {
 
                   <div className="space-y-6">
                       <div className="flex flex-col sm:flex-row items-center gap-6 bg-ci-bg/50 p-8 rounded-3xl">
-                          {selectedEmp.photo ? (
-                              <img src={selectedEmp.photo} alt={selectedEmp.nom} className="w-24 h-24 rounded-3xl object-cover border-2 border-ci-green/10 shadow-sm" />
-                          ) : (
-                              <div className="w-24 h-24 bg-gradient-to-br from-ci-greenLight to-white text-ci-green rounded-3xl flex items-center justify-center font-black text-3xl border-2 border-ci-green/10 shadow-sm">
-                                  {selectedEmp.nom[0]}{selectedEmp.prenoms[0]}
-                              </div>
-                          )}
+                          <EmployeeAvatar
+                              src={selectedEmp.photo}
+                              nom={selectedEmp.nom}
+                              prenoms={selectedEmp.prenoms}
+                              matricule={selectedEmp.matricule}
+                              size="2xl"
+                              className="rounded-3xl shadow-lg border-2 border-slate-200"
+                          />
                           <div className="text-center sm:text-left flex-1">
                               <h4 className="text-2xl font-black text-ci-text leading-tight">{selectedEmp.nom} {selectedEmp.prenoms}</h4>
                               <p className="text-sm font-black text-ci-green uppercase mt-1">{selectedEmp.poste}</p>

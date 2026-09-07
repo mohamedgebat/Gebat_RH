@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import NotificationCenter from './NotificationCenter';
 import AiRhAssistant from './AiRhAssistant';
+import EmployeeAvatar from './EmployeeAvatar';
 import { useAuth } from '../context/AuthContext';
 import { ShieldCheck, Search, Building2, Menu } from 'lucide-react';
 
@@ -56,9 +57,12 @@ const Layout = () => {
 
             {/* Profile Badge */}
             <div className="flex items-center gap-2 sm:gap-3 bg-slate-50 p-1 sm:p-1.5 sm:pr-4 rounded-2xl border border-slate-200">
-              <div className="w-8 h-8 rounded-xl bg-[#2563EB] text-white flex items-center justify-center font-black text-xs shadow-md shrink-0">
-                {user?.name ? user.name.substring(0, 2).toUpperCase() : 'RH'}
-              </div>
+              <EmployeeAvatar
+                src={user?.photo}
+                nom={user?.name || 'RH'}
+                size="sm"
+                className="rounded-xl shadow-md shrink-0"
+              />
               <div className="text-left leading-tight hidden sm:block">
                 <div className="text-xs font-black text-slate-900 flex items-center gap-1 truncate max-w-[120px] md:max-w-[180px]">
                   <span>{user?.name || 'Administrateur GEBAT'}</span>

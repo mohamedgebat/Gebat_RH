@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
-import { LogOut, Palmtree, FileText, Settings, LayoutGrid, Calendar, Bell, ChevronRight, CheckCircle2, Printer, Download, Info, User, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon, Shield, Lock, Eye, EyeOff, Save, GraduationCap, AlertTriangle, DollarSign, Plus } from 'lucide-react';
+import EmployeeAvatar from '../components/EmployeeAvatar';
+import { compressImage } from '../utils/imageCompressor';
+import { LogOut, Palmtree, FileText, Settings, LayoutGrid, Calendar, Bell, ChevronRight, CheckCircle2, Printer, Download, Info, User, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon, Shield, Lock, Eye, EyeOff, Save, GraduationCap, AlertTriangle, DollarSign, Plus, Camera, UploadCloud, Trash2 } from 'lucide-react';
 import { calculateDetailedPaie } from '../utils/payrollCalc';
 import { generateAttestationTravail, generateCertificatTravail, generateAttestationSalaire } from '../utils/documentGenerator';
 import { useNavigate } from 'react-router-dom';
@@ -22,6 +24,39 @@ const EmployeePortal = () => {
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [passwordSubmitting, setPasswordSubmitting] = useState(false);
   const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const handleProfilePhotoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !employee?.id) return;
+    setUploadingPhoto(true);
+    try {
+      const compressed = await compressImage(file, { maxWidth: 400, maxHeight: 400, quality: 0.85 });
+      await axios.patch(`/api/employees/${employee.id}/photo`, { photo: compressed });
+      await refreshData();
+      alert('Photo de profil mise à jour avec succès !');
+    } catch (err) {
+      console.error('Erreur mise à jour photo:', err);
+      alert('Erreur lors du téléchargement de la photo.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    if (!employee?.id || !window.confirm('Voulez-vous vraiment supprimer votre photo de profil ?')) return;
+    setUploadingPhoto(true);
+    try {
+      await axios.patch(`/api/employees/${employee.id}/photo`, { photo: null });
+      await refreshData();
+      alert('Photo de profil supprimée.');
+    } catch (err) {
+      console.error('Erreur suppression photo:', err);
+      alert('Erreur lors de la suppression de la photo.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   // Check if employee account is active
   useEffect(() => {
@@ -1182,9 +1217,14 @@ const EmployeePortal = () => {
             <aside className="lg:col-span-3 space-y-4 sm:space-y-8">
                 <div className="bg-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 shadow-xl border border-ci-border text-center overflow-hidden relative group">
                     <div className="absolute top-0 left-0 w-full h-24 bg-gradient-ci opacity-5 group-hover:opacity-10 transition-opacity"></div>
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-2xl sm:rounded-[2rem] shadow-lg flex items-center justify-center mx-auto mb-4 sm:mb-6 text-2xl sm:text-3xl font-black text-ci-green border-4 border-ci-bg relative z-10">
-                        {employee?.nom[0]}{employee?.prenoms[0]}
-                    </div>
+                    <EmployeeAvatar
+                        src={employee?.photo}
+                        nom={employee?.nom}
+                        prenoms={employee?.prenoms}
+                        matricule={employee?.matricule}
+                        size="2xl"
+                        className="mx-auto mb-4 sm:mb-6 shadow-xl border-4 border-white relative z-10"
+                    />
                     <h2 className="text-xl sm:text-2xl font-black text-ci-text tracking-tighter leading-tight">{employee?.nom} {employee?.prenoms}</h2>
                     <p className="text-[10px] font-black text-ci-muted uppercase tracking-[0.2em] mt-1 sm:mt-2">{employee?.poste}</p>
                     <div className="mt-4 sm:mt-6 flex justify-center gap-2">
@@ -1832,6 +1872,155 @@ const EmployeePortal = () => {
                                     <div className="text-[10px] font-bold text-red-500 uppercase flex items-center gap-1"><Lock size={12}/> Non autorisée</div>
                                 )}
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'settings' && (
+                    <div className="space-y-8 animate-fadeIn">
+                        {/* Photo & Identity Section */}
+                        <div className="bg-white rounded-[3rem] p-8 sm:p-10 shadow-xl border border-ci-border">
+                            <h3 className="text-2xl font-black text-ci-text uppercase tracking-tight mb-8 flex items-center gap-3">
+                                <User className="text-ci-green" size={24} /> Mon Profil & Identité
+                            </h3>
+
+                            <div className="flex flex-col sm:flex-row items-center gap-8 pb-8 border-b border-ci-border">
+                                <div className="relative group">
+                                    <EmployeeAvatar
+                                        src={employee?.photo}
+                                        nom={employee?.nom}
+                                        prenoms={employee?.prenoms}
+                                        matricule={employee?.matricule}
+                                        size="2xl"
+                                        className="shadow-2xl border-4 border-ci-greenLight"
+                                    />
+                                    <label 
+                                        className="absolute bottom-0 right-0 p-2.5 bg-ci-green text-white rounded-2xl shadow-lg cursor-pointer hover:bg-ci-greenDark transition-all"
+                                        title="Changer la photo de profil"
+                                    >
+                                        <Camera size={16} />
+                                        <input type="file" accept="image/*" onChange={handleProfilePhotoUpload} className="hidden" disabled={uploadingPhoto} />
+                                    </label>
+                                </div>
+
+                                <div className="text-center sm:text-left flex-1 space-y-2">
+                                    <h4 className="text-2xl font-black text-ci-text">{employee?.nom} {employee?.prenoms}</h4>
+                                    <p className="text-xs font-bold text-ci-green uppercase tracking-widest">{employee?.poste} • {employee?.departement}</p>
+                                    <div className="flex flex-wrap gap-2 pt-2 justify-center sm:justify-start">
+                                        <span className="px-3 py-1 bg-ci-bg text-ci-text text-[10px] font-black rounded-full uppercase border border-ci-border">Matricule: {employee?.matricule}</span>
+                                        <span className="px-3 py-1 bg-emerald-50 text-emerald-700 text-[10px] font-black rounded-full uppercase border border-emerald-200">Statut: {employee?.statut || 'Actif'}</span>
+                                        <span className="px-3 py-1 bg-blue-50 text-blue-700 text-[10px] font-black rounded-full uppercase border border-blue-200">Contrat: {employee?.type || 'CDI'}</span>
+                                    </div>
+
+                                    <div className="pt-4 flex flex-wrap gap-3 justify-center sm:justify-start">
+                                        <label className="px-4 py-2.5 bg-ci-green text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer hover:bg-ci-greenDark transition-all flex items-center gap-2 shadow-sm">
+                                            <UploadCloud size={14} /> {uploadingPhoto ? 'Optimisation...' : 'Changer ma photo'}
+                                            <input type="file" accept="image/*" onChange={handleProfilePhotoUpload} className="hidden" disabled={uploadingPhoto} />
+                                        </label>
+                                        {employee?.photo && (
+                                            <button 
+                                                onClick={handleRemovePhoto}
+                                                disabled={uploadingPhoto}
+                                                className="px-4 py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-red-100 transition-all flex items-center gap-2"
+                                            >
+                                                <Trash2 size={14} /> Supprimer la photo
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Informations Détaillées */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 pt-8">
+                                <div className="p-4 bg-ci-bg/50 rounded-2xl border border-ci-border">
+                                    <p className="text-[9px] font-black uppercase text-ci-muted">Téléphone</p>
+                                    <p className="text-sm font-bold text-ci-text mt-1">{employee?.telephone || 'Non renseigné'}</p>
+                                </div>
+                                <div className="p-4 bg-ci-bg/50 rounded-2xl border border-ci-border">
+                                    <p className="text-[9px] font-black uppercase text-ci-muted">Email Professionnel</p>
+                                    <p className="text-sm font-bold text-ci-text mt-1">{employee?.email || 'Non renseigné'}</p>
+                                </div>
+                                <div className="p-4 bg-ci-bg/50 rounded-2xl border border-ci-border">
+                                    <p className="text-[9px] font-black uppercase text-ci-muted">N° CNPS</p>
+                                    <p className="text-sm font-bold text-ci-text mt-1">{employee?.cnps || '-'}</p>
+                                </div>
+                                <div className="p-4 bg-ci-bg/50 rounded-2xl border border-ci-border">
+                                    <p className="text-[9px] font-black uppercase text-ci-muted">Date d'embauche</p>
+                                    <p className="text-sm font-bold text-ci-text mt-1">{employee?.dateEmbauche || '-'}</p>
+                                </div>
+                                <div className="p-4 bg-ci-bg/50 rounded-2xl border border-ci-border">
+                                    <p className="text-[9px] font-black uppercase text-ci-muted">Site d'affectation</p>
+                                    <p className="text-sm font-bold text-ci-text mt-1">{employee?.site || 'Siège'}</p>
+                                </div>
+                                <div className="p-4 bg-ci-bg/50 rounded-2xl border border-ci-border">
+                                    <p className="text-[9px] font-black uppercase text-ci-muted">Mode de Paiement</p>
+                                    <p className="text-sm font-bold text-ci-text mt-1">{employee?.modePaiement || 'Virement Bancaire'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Password Update Form */}
+                        <div className="bg-white rounded-[3rem] p-8 sm:p-10 shadow-xl border border-ci-border">
+                            <h3 className="text-2xl font-black text-ci-text uppercase tracking-tight mb-6 flex items-center gap-3">
+                                <Lock className="text-amber-500" size={24} /> Sécurité & Mot de Passe
+                            </h3>
+                            <form onSubmit={handlePasswordSubmit} className="max-w-xl space-y-4">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase text-ci-muted">Mot de passe actuel</label>
+                                    <div className="relative">
+                                        <input 
+                                            type={showPasswords.current ? "text" : "password"} 
+                                            required
+                                            value={passwordForm.currentPassword}
+                                            onChange={e => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+                                            className="w-full px-6 py-4 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-ci-green/10 outline-none pr-12"
+                                            placeholder="••••••••"
+                                        />
+                                        <button type="button" onClick={() => setShowPasswords({...showPasswords, current: !showPasswords.current})} className="absolute right-4 top-1/2 -translate-y-1/2 text-ci-muted hover:text-ci-text">
+                                            {showPasswords.current ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase text-ci-muted">Nouveau mot de passe</label>
+                                    <div className="relative">
+                                        <input 
+                                            type={showPasswords.new ? "text" : "password"} 
+                                            required minLength={6}
+                                            value={passwordForm.newPassword}
+                                            onChange={e => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                                            className="w-full px-6 py-4 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-ci-green/10 outline-none pr-12"
+                                            placeholder="Au moins 6 caractères"
+                                        />
+                                        <button type="button" onClick={() => setShowPasswords({...showPasswords, new: !showPasswords.new})} className="absolute right-4 top-1/2 -translate-y-1/2 text-ci-muted hover:text-ci-text">
+                                            {showPasswords.new ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase text-ci-muted">Confirmer le nouveau mot de passe</label>
+                                    <div className="relative">
+                                        <input 
+                                            type={showPasswords.confirm ? "text" : "password"} 
+                                            required minLength={6}
+                                            value={passwordForm.confirmPassword}
+                                            onChange={e => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                                            className="w-full px-6 py-4 bg-ci-bg border-none rounded-2xl text-sm font-bold focus:ring-4 focus:ring-ci-green/10 outline-none pr-12"
+                                            placeholder="Confirmez à l'identique"
+                                        />
+                                        <button type="button" onClick={() => setShowPasswords({...showPasswords, confirm: !showPasswords.confirm})} className="absolute right-4 top-1/2 -translate-y-1/2 text-ci-muted hover:text-ci-text">
+                                            {showPasswords.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
+                                </div>
+                                <button 
+                                    type="submit" 
+                                    disabled={passwordSubmitting}
+                                    className="py-4 px-8 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all flex items-center gap-2"
+                                >
+                                    <Save size={16} /> {passwordSubmitting ? 'Mise à jour...' : 'Enregistrer le nouveau mot de passe'}
+                                </button>
+                            </form>
                         </div>
                     </div>
                 )}
