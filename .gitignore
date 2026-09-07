@@ -2,10 +2,6 @@
 node_modules/
 **/node_modules/
 
-# Production build output
-dist/
-**/dist/
-
 # Environment files & secret keys
 .env
 .env.local
