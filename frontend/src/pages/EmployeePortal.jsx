@@ -1175,36 +1175,36 @@ const EmployeePortal = () => {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10">
             
             {/* Sidebar User Info */}
-            <aside className="lg:col-span-3 space-y-8">
-                <div className="bg-white rounded-[2.5rem] p-8 shadow-xl border border-ci-border text-center overflow-hidden relative group">
+            <aside className="lg:col-span-3 space-y-4 sm:space-y-8">
+                <div className="bg-white rounded-3xl sm:rounded-[2.5rem] p-6 sm:p-8 shadow-xl border border-ci-border text-center overflow-hidden relative group">
                     <div className="absolute top-0 left-0 w-full h-24 bg-gradient-ci opacity-5 group-hover:opacity-10 transition-opacity"></div>
-                    <div className="w-24 h-24 bg-white rounded-[2rem] shadow-lg flex items-center justify-center mx-auto mb-6 text-3xl font-black text-ci-green border-4 border-ci-bg relative z-10">
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white rounded-2xl sm:rounded-[2rem] shadow-lg flex items-center justify-center mx-auto mb-4 sm:mb-6 text-2xl sm:text-3xl font-black text-ci-green border-4 border-ci-bg relative z-10">
                         {employee?.nom[0]}{employee?.prenoms[0]}
                     </div>
-                    <h2 className="text-2xl font-black text-ci-text tracking-tighter leading-tight">{employee?.nom} {employee?.prenoms}</h2>
-                    <p className="text-[10px] font-black text-ci-muted uppercase tracking-[0.2em] mt-2">{employee?.poste}</p>
-                    <div className="mt-6 flex justify-center gap-2">
-                        <span className="px-4 py-1.5 bg-ci-greenLight text-ci-green text-[9px] font-black rounded-full border border-ci-green/20 uppercase tracking-widest">Actif</span>
-                        <span className="px-4 py-1.5 bg-ci-bg text-ci-text text-[9px] font-black rounded-full border border-ci-border uppercase tracking-widest">{employee?.matricule}</span>
+                    <h2 className="text-xl sm:text-2xl font-black text-ci-text tracking-tighter leading-tight">{employee?.nom} {employee?.prenoms}</h2>
+                    <p className="text-[10px] font-black text-ci-muted uppercase tracking-[0.2em] mt-1 sm:mt-2">{employee?.poste}</p>
+                    <div className="mt-4 sm:mt-6 flex justify-center gap-2">
+                        <span className="px-3 sm:px-4 py-1 sm:py-1.5 bg-ci-greenLight text-ci-green text-[9px] font-black rounded-full border border-ci-green/20 uppercase tracking-widest">Actif</span>
+                        <span className="px-3 sm:px-4 py-1 sm:py-1.5 bg-ci-bg text-ci-text text-[9px] font-black rounded-full border border-ci-border uppercase tracking-widest">{employee?.matricule}</span>
                     </div>
                 </div>
 
-                <nav className="bg-white rounded-[2.5rem] p-4 shadow-xl border border-ci-border space-y-2">
+                <nav className="bg-white rounded-3xl sm:rounded-[2.5rem] p-2 sm:p-4 shadow-xl border border-ci-border flex lg:flex-col gap-1.5 overflow-x-auto max-w-full custom-scrollbar">
                     {[
-                        { id: 'dashboard', label: 'Dashboard', icon: <LayoutGrid size={18} /> },
-                        { id: 'leaves', label: 'Mes Congés', icon: <Palmtree size={18} /> },
-                        { id: 'payroll', label: 'Ma Paie', icon: <FileText size={18} /> },
-                        { id: 'advances', label: 'Mes Avances', icon: <DollarSign size={18} /> },
-                        { id: 'certificates', label: 'Attestations', icon: <Printer size={18} /> },
-                        { id: 'settings', label: 'Mon Profil', icon: <Settings size={18} /> },
+                        { id: 'dashboard', label: 'Dashboard', icon: <LayoutGrid size={17} /> },
+                        { id: 'leaves', label: 'Mes Congés', icon: <Palmtree size={17} /> },
+                        { id: 'payroll', label: 'Ma Paie', icon: <FileText size={17} /> },
+                        { id: 'advances', label: 'Mes Avances', icon: <DollarSign size={17} /> },
+                        { id: 'certificates', label: 'Attestations', icon: <Printer size={17} /> },
+                        { id: 'settings', label: 'Mon Profil', icon: <Settings size={17} /> },
                     ].map(tab => (
                         <button 
                             key={tab.id} onClick={() => setActiveTab(tab.id)}
-                            className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all ${
+                            className={`flex items-center gap-2 sm:gap-4 px-4 sm:px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all whitespace-nowrap shrink-0 lg:w-full ${
                                 activeTab === tab.id ? 'bg-ci-green text-white shadow-lg shadow-ci-green/20' : 'text-ci-text hover:bg-ci-bg'
                             }`}
                         >
@@ -1215,7 +1215,7 @@ const EmployeePortal = () => {
             </aside>
 
             {/* Main Portal Content */}
-            <div className="lg:col-span-9 space-y-8 animate-fadeIn">
+            <div className="lg:col-span-9 space-y-6 sm:space-y-8 animate-fadeIn">
                 {activeTab === 'dashboard' && (
                     <div className="space-y-8">
                         {/* Welcome Section */}

@@ -114,24 +114,24 @@ const AiRhAssistant = () => {
   return (
     <>
       {/* Floating Trigger Button */}
-      <div className="fixed bottom-6 right-6 z-50">
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
         {!isOpen && (
           <button
             onClick={() => setIsOpen(true)}
-            className="group relative flex items-center gap-3 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 text-white px-5 py-3.5 rounded-full shadow-2xl hover:shadow-emerald-500/20 border border-slate-700 hover:border-emerald-500/50 transition-all duration-300 hover:scale-105 active:scale-95"
+            className="group relative flex items-center gap-2.5 sm:gap-3 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-950 text-white px-4 sm:px-5 py-3 sm:py-3.5 rounded-full shadow-2xl hover:shadow-emerald-500/20 border border-slate-700 hover:border-emerald-500/50 transition-all duration-300 hover:scale-105 active:scale-95"
           >
             <div className="relative">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-lg">
-                <Sparkles size={16} className="animate-pulse" />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center text-white shadow-lg">
+                <Sparkles size={15} className="animate-pulse" />
               </div>
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full ring-2 ring-slate-900 animate-ping"></span>
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full ring-2 ring-slate-900 animate-ping"></span>
             </div>
             <div className="text-left pr-1">
               <div className="text-xs font-black tracking-wide text-white flex items-center gap-1.5">
                 Assistant IA RH
                 <span className="text-[9px] bg-emerald-500/30 text-emerald-300 font-bold px-1.5 py-0.2 rounded">BTP</span>
               </div>
-              <p className="text-[10px] text-slate-400 font-medium">Législation & Paie CI</p>
+              <p className="text-[10px] text-slate-400 font-medium hidden sm:block">Législation & Paie CI</p>
             </div>
           </button>
         )}
@@ -139,7 +139,7 @@ const AiRhAssistant = () => {
 
       {/* Chat Window Drawer */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-full max-w-md bg-white rounded-[2rem] shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[600px] max-h-[85vh] animate-scaleIn">
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 w-[calc(100vw-2rem)] sm:w-full sm:max-w-md bg-white rounded-3xl sm:rounded-[2rem] shadow-2xl border border-slate-200 overflow-hidden flex flex-col h-[520px] sm:h-[600px] max-h-[85vh] animate-scaleIn">
           {/* Header */}
           <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-700">
             <div className="flex items-center gap-3">
