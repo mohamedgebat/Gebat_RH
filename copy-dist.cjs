@@ -13,5 +13,8 @@ if (!fs.existsSync(src)) {
 }
 
 console.log(`Copie de ${src} vers ${dest}...`);
+if (fs.existsSync(dest)) {
+  fs.rmSync(dest, { recursive: true, force: true });
+}
 fs.cpSync(src, dest, { recursive: true, force: true });
 console.log('✅ Copie réussie.');
