@@ -6,7 +6,7 @@ import {
   ExternalLink, Plus, Clock, X, CheckCircle2, Search, Filter, 
   Download, LogIn, LogOut, Smartphone, AlertCircle, Settings, 
   AlertTriangle, DollarSign, Calendar, Zap, UserCheck, ShieldAlert,
-  MapPin, Navigation, Users, CheckSquare, Square, Building
+  MapPin, Navigation, Users, CheckSquare, Square, Building, Maximize2
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -494,6 +494,15 @@ const Attendance = () => {
         >
             <Plus size={16} /> Nouveau Pointage
         </button>
+
+        <a 
+          href="/terminal"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bg-amber-500 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-amber-600 transition-all shadow-md shadow-amber-500/20 flex items-center gap-2"
+        >
+            <Maximize2 size={15} /> Plein Écran (/terminal)
+        </a>
       </div>
 
       {/* KPI Cards: Shift & Financial Analytics */}
