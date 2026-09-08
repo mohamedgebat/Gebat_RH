@@ -3530,9 +3530,12 @@ app.get('*', (req, res) => {
     if (req.path.startsWith('/api/')) {
         return res.status(404).json({ error: 'Endpoint introuvable', code: 'NOT_FOUND' });
     }
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     const fs = require('fs');
-    const distIndex = path.join(__dirname, '../dist/index.html');
     const frontendDistIndex = path.join(__dirname, '../frontend/dist/index.html');
+    const distIndex = path.join(__dirname, '../dist/index.html');
     if (fs.existsSync(frontendDistIndex)) {
         res.sendFile(frontendDistIndex);
     } else if (fs.existsSync(distIndex)) {
