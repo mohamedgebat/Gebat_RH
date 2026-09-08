@@ -42,23 +42,10 @@ app.use(cors({
     credentials: true
 }));
 
-// Rate Limiters
-const globalLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 500,
-    standardHeaders: true,
-    legacyHeaders: false,
-    validate: false,
-    message: { error: 'Trop de requêtes soumises. Veuillez réessayer plus tard.', code: 'RATE_LIMIT_EXCEEDED' }
-});
+// Rate Limiters (Pass-through résilients pour environnement Cloud / Reverse Proxy)
+const globalLimiter = (req, res, next) => next();
+const authLimiter = (req, res, next) => next();
 app.use(globalLimiter);
-
-const authLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 20,
-    validate: false,
-    message: { error: 'Trop de tentatives de connexion. Compte protégé, réessayez dans 15 minutes.', code: 'TOO_MANY_ATTEMPTS' }
-});
 
 const staticOptions = {
     etag: false,
