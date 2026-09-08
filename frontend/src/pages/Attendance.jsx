@@ -451,7 +451,10 @@ const Attendance = () => {
     <div className="animate-fadeIn space-y-8">
       {/* Dedicated Header Title & Subtitle Block - STRICT FULL WIDTH HORIZONTAL */}
       <div className="w-full block space-y-1 bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-slate-50 p-6 rounded-3xl border border-slate-200/80 shadow-sm">
-        <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase block w-full whitespace-normal leading-tight">
+        <h1 
+          style={{ writingMode: 'horizontal-tb', display: 'block', width: '100%', minWidth: '250px', whiteSpace: 'normal' }}
+          className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight uppercase block w-full whitespace-normal leading-tight"
+        >
           Pointage & Présence
         </h1>
         <p className="text-slate-600 text-xs sm:text-sm font-semibold max-w-3xl leading-relaxed block w-full mt-1">
