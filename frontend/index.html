@@ -12,13 +12,18 @@
     <meta http-equiv="Expires" content="0" />
     <title>Gebat RH - Solution de Gestion des Ressources Humaines</title>
     <script>
-      // Force unregister all service workers to clear potential cache issues
+      // Force unregister all service workers and clear cache storage to prevent stale bundles
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
           for(let registration of registrations) {
             registration.unregister();
             console.log('Gebat RH: Service Worker dé-enregistré pour nettoyer le cache');
           }
+        });
+      }
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (let name of names) caches.delete(name);
         });
       }
     </script>

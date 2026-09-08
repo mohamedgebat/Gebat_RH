@@ -12,7 +12,7 @@
     <meta http-equiv="Expires" content="0" />
     <title>Gebat RH - Solution de Gestion des Ressources Humaines</title>
     <script>
-      // Force unregister all service workers to clear potential cache issues
+      // Force unregister all service workers and clear cache storage to prevent stale bundles
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then(function(registrations) {
           for(let registration of registrations) {
@@ -21,9 +21,14 @@
           }
         });
       }
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (let name of names) caches.delete(name);
+        });
+      }
     </script>
-    <script type="module" crossorigin src="/assets/index-BdU0syx2-v1788900239166.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BNQV87ok-v1788900239166.css">
+    <script type="module" crossorigin src="/assets/index-CO2wzPep-v1788900959442.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BNQV87ok-v1788900959442.css">
   </head>
   <body>
     <div id="root"></div>
