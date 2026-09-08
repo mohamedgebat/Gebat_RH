@@ -48,6 +48,7 @@ const globalLimiter = rateLimit({
     max: 500,
     standardHeaders: true,
     legacyHeaders: false,
+    validate: false,
     message: { error: 'Trop de requêtes soumises. Veuillez réessayer plus tard.', code: 'RATE_LIMIT_EXCEEDED' }
 });
 app.use(globalLimiter);
@@ -55,6 +56,7 @@ app.use(globalLimiter);
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 20,
+    validate: false,
     message: { error: 'Trop de tentatives de connexion. Compte protégé, réessayez dans 15 minutes.', code: 'TOO_MANY_ATTEMPTS' }
 });
 
@@ -232,27 +234,32 @@ app.post('/api/auth/login', authLimiter, (req, res) => {
     }
 
     db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
-        if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
-        if (!user) return sendError(res, 401, 'Identifiants incorrects', 'INVALID_CREDENTIALS');
+        try {
+            if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+            if (!user) return sendError(res, 401, 'Identifiants incorrects', 'INVALID_CREDENTIALS');
 
-        const isMatch = await verifyPassword(password, user.password);
-        if (!isMatch) return sendError(res, 401, 'Identifiants incorrects', 'INVALID_CREDENTIALS');
+            const isMatch = await verifyPassword(password, user.password);
+            if (!isMatch) return sendError(res, 401, 'Identifiants incorrects', 'INVALID_CREDENTIALS');
 
-        if (!user.password.startsWith('$2a$') && !user.password.startsWith('$2b$')) {
-            const hashed = await bcrypt.hash(password, 10);
-            db.run("UPDATE users SET password = ? WHERE id = ?", [hashed, user.id]);
+            if (!user.password.startsWith('$2a$') && !user.password.startsWith('$2b$')) {
+                const hashed = await bcrypt.hash(password, 10);
+                db.run("UPDATE users SET password = ? WHERE id = ?", [hashed, user.id]);
+            }
+
+            const token = jwt.sign(
+                { id: user.id, name: user.name, email: user.email, role: user.role, empId: user.empId },
+                process.env.JWT_SECRET || 'sirh_civ_super_secret_key_2026_change_in_production',
+                { expiresIn: '24h' }
+            );
+
+            const { password: _, ...userData } = user;
+            const mustChangePassword = user.must_change_password === 1;
+            logAuditAction(req, 'CONNEXION_UTILISATEUR', `Connexion réussie de ${user.email}`);
+            res.json({ ...userData, token, mustChangePassword });
+        } catch (catchedErr) {
+            console.error('Erreur login:', catchedErr);
+            sendError(res, 500, catchedErr.message, 'LOGIN_INTERNAL_ERROR');
         }
-
-        const token = jwt.sign(
-            { id: user.id, name: user.name, email: user.email, role: user.role, empId: user.empId },
-            process.env.JWT_SECRET || 'sirh_civ_super_secret_key_2026_change_in_production',
-            { expiresIn: '24h' }
-        );
-
-        const { password: _, ...userData } = user;
-        const mustChangePassword = user.must_change_password === 1;
-        logAuditAction(req, 'CONNEXION_UTILISATEUR', `Connexion réussie de ${user.email}`);
-        res.json({ ...userData, token, mustChangePassword });
     });
 });
 
