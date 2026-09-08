@@ -47,6 +47,9 @@ const globalLimiter = (req, res, next) => next();
 const authLimiter = (req, res, next) => next();
 app.use(globalLimiter);
 
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
 const staticOptions = {
     etag: false,
     maxAge: 0,
@@ -212,7 +215,7 @@ function logAuditAction(req, action, details, module = 'Général', oldValue = n
 
 // Authentification Admin / Gestionnaire
 app.post('/api/auth/login', authLimiter, (req, res) => {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
     if (!email || !password) {
         return sendError(res, 400, 'Email et mot de passe requis', 'MISSING_FIELDS');
     }
