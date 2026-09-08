@@ -465,16 +465,6 @@ const Attendance = () => {
       {/* Quick Action Toolbar Card */}
       <div className="w-full bg-white p-4 rounded-3xl border border-slate-200/80 shadow-sm flex flex-wrap items-center gap-3">
         <button 
-          onClick={() => {
-            setShowGpsModal(true);
-            handleFetchGpsLocation();
-          }}
-          className="bg-blue-600 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-blue-700 transition-all shadow-md shadow-blue-500/20 flex items-center gap-2"
-        >
-            <MapPin size={15} /> Pointage GPS Mobile
-        </button>
-
-        <button 
           onClick={() => setShowChefModal(true)}
           className="bg-purple-700 text-white px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-purple-800 transition-all shadow-md shadow-purple-600/20 flex items-center gap-2"
         >
