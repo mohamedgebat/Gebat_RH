@@ -1,20 +1,9 @@
 {
   "version": 2,
-  "redirects": [
+  "routes": [
     {
-      "source": "/api/:path*",
-      "destination": "https://gebatrh-production.up.railway.app/api/:path*",
-      "permanent": false
-    },
-    {
-      "source": "/assets/:path*",
-      "destination": "https://gebatrh-production.up.railway.app/assets/:path*",
-      "permanent": false
-    },
-    {
-      "source": "/:path*",
-      "destination": "https://gebatrh-production.up.railway.app/:path*",
-      "permanent": false
+      "src": "/(.*)",
+      "dest": "https://gebatrh-production.up.railway.app/$1"
     }
   ]
 }
