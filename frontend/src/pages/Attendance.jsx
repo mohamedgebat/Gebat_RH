@@ -492,13 +492,6 @@ const Attendance = () => {
             <Plus size={16} /> Nouveau Pointage
         </button>
 
-        <button 
-          onClick={() => setShowKioskModal(true)}
-          className="bg-amber-500 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-amber-600 transition-all shadow-md shadow-amber-500/20 flex items-center gap-2"
-        >
-            <Smartphone size={16} /> Terminal Borne
-        </button>
-
         <a 
           href="/terminal" 
           target="_blank" 
