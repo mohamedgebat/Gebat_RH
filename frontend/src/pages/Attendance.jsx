@@ -485,6 +485,15 @@ const Attendance = () => {
             >
                 <Plus size={16} /> Nouveau Pointage
             </button>
+
+            <a 
+              href="/terminal" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="bg-slate-900 text-amber-400 border border-slate-700 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-black transition-all flex items-center gap-2 sm:ml-auto"
+            >
+                <ExternalLink size={14} /> Plein Écran (/terminal)
+            </a>
           </div>
         }
       />
