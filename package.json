@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "SIRH Côte d'Ivoire - Système d'Information des Ressources Humaines",
   "scripts": {
-    "build": "cd frontend && npm install && npm run build",
+    "build": "cd frontend && npm install && npm run build && node ../copy-dist.cjs",
     "start": "cd backend && node server.js",
     "backend": "cd backend && node server.js",
     "frontend": "cd frontend && npm run dev",

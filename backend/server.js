@@ -58,8 +58,8 @@ const authLimiter = rateLimit({
 });
 
 app.use(express.json({ limit: '50mb' }));
-app.use(express.static(path.join(__dirname, '../dist')));
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
+app.use(express.static(path.join(__dirname, '../dist')));
 app.use(express.static(path.join(__dirname, '../frontend/public')));
 
 
@@ -3533,10 +3533,10 @@ app.get('*', (req, res) => {
     const fs = require('fs');
     const distIndex = path.join(__dirname, '../dist/index.html');
     const frontendDistIndex = path.join(__dirname, '../frontend/dist/index.html');
-    if (fs.existsSync(distIndex)) {
-        res.sendFile(distIndex);
-    } else if (fs.existsSync(frontendDistIndex)) {
+    if (fs.existsSync(frontendDistIndex)) {
         res.sendFile(frontendDistIndex);
+    } else if (fs.existsSync(distIndex)) {
+        res.sendFile(distIndex);
     } else {
         res.sendFile(path.join(__dirname, '../frontend/index.html'));
     }
