@@ -11,6 +11,7 @@ const db = require('./database');
 const emailService = require('./emailService');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
 
 // En-têtes de sécurité HTTP
@@ -3552,6 +3553,15 @@ app.get('*', (req, res) => {
     } else {
         res.sendFile(path.join(__dirname, '../frontend/index.html'));
     }
+});
+
+// --- GESTIONNAIRE D'ERREURS GLOBAL (AVEC LOGGING DES LOGS D'ERREUR 500) ---
+app.use((err, req, res, next) => {
+    console.error(`❌ [SERVER ERROR 500] ${req.method} ${req.url}:`, err.stack || err);
+    if (res.headersSent) {
+        return next(err);
+    }
+    res.status(500).json({ error: err.message || 'Erreur interne du serveur', code: 'INTERNAL_SERVER_ERROR' });
 });
 
 // --- DEMARRAGE DU SERVEUR ---
