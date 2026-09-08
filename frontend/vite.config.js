@@ -5,7 +5,14 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: 'dist',
-    emptyOutDir: true
+    emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        entryFileNames: `assets/[name]-[hash]-v${Date.now()}.js`,
+        chunkFileNames: `assets/[name]-[hash]-v${Date.now()}.js`,
+        assetFileNames: `assets/[name]-[hash]-v${Date.now()}[extname]`
+      }
+    }
   },
   server: {
     port: 5173,
