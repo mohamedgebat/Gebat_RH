@@ -34,7 +34,6 @@ const Sidebar = ({ isOpen, onClose }) => {
         { icon: <LayoutDashboard size={16} />, label: 'Tableau de bord', path: '/' },
         { icon: <GitMerge size={16} />, label: 'Organigramme', path: '/org-chart' },
         { icon: <ShieldCheck size={16} />, label: 'Espace Manager (MSS)', path: '/manager-hub' },
-        { icon: <TrendingUp size={16} />, label: 'People Analytics (BI)', path: '/analytics' },
       ]
     },
     {
