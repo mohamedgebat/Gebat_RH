@@ -1352,13 +1352,19 @@ const Employees = () => {
     const s = (e.sexe || '').trim().toUpperCase();
     return s === 'M' || s === 'H' || s.startsWith('MAS') || s.startsWith('HOM');
   });
-  const cdiEmps = allEmps.filter(e => e.type === 'CDI');
+  const cdiEmps = allEmps.filter(e => (e.type || '').toUpperCase() === 'CDI');
+  const cddEmps = allEmps.filter(e => (e.type || '').toUpperCase() === 'CDD');
+  const stageEmps = allEmps.filter(e => (e.type || '').toLowerCase().includes('stage'));
+  const onSiteEmps = allEmps.filter(e => e.site && e.site.toLowerCase() !== 'siège' && e.site.toLowerCase() !== 'siege');
+  const siteRate = allEmps.length > 0 ? Math.round((onSiteEmps.length / allEmps.length) * 100) : 0;
+  const completeDossiers = allEmps.filter(e => e.cnps && e.telephone);
+  const complianceRate = allEmps.length > 0 ? Math.round((completeDossiers.length / allEmps.length) * 100) : 0;
   const avgSalary = activeEmps.length > 0 ? Math.round(activeEmps.reduce((sum, e) => sum + (e.salaireBase || 0), 0) / activeEmps.length) : 0;
 
   return (
     <div className="animate-fadeIn space-y-8">
       <PageHeader 
-        title="Base Collaborateurs" 
+        title="Base Collaborateurs & Capital Humain" 
         subtitle={`${filteredEmployees.length} employés affichés (${activeEmps.length} actifs)`}
         actions={
             <div className="flex flex-wrap items-center gap-3">
@@ -1368,28 +1374,34 @@ const Employees = () => {
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'table' ? 'bg-white text-[#2563EB] shadow-sm font-extrabold' : 'text-slate-500 hover:text-slate-900'}`}
                         title="Vue Tableau Détaillé"
                     >
-                        <List size={16} /> <span className="hidden sm:inline">Tableau</span>
+                        <List size={15} /> Tableau
                     </button>
                     <button
                         onClick={() => setViewMode('grid')}
                         className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${viewMode === 'grid' ? 'bg-white text-[#2563EB] shadow-sm font-extrabold' : 'text-slate-500 hover:text-slate-900'}`}
-                        title="Vue Trombinoscope Cartes"
+                        title="Vue Grille / Cartes"
                     >
-                        <LayoutGrid size={16} /> <span className="hidden sm:inline">Trombinoscope</span>
+                        <LayoutGrid size={15} /> Grille
                     </button>
                 </div>
-                <button 
+
+                <button
                     onClick={handleBulkExportCSV}
-                    className="bg-white border border-ci-border text-ci-text px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-ci-bg transition-all flex items-center gap-2"
+                    className="px-4 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-2xl hover:bg-slate-50 transition-all text-xs font-black flex items-center gap-2 shadow-sm"
                 >
-                    <Download size={14} /> Export CSV {selectedIds.length > 0 && `(${selectedIds.length})`}
+                    <Download size={16} className="text-emerald-600" /> Export CSV {selectedIds.length > 0 && `(${selectedIds.length})`}
                 </button>
-                <button onClick={() => setShowModal(true)} className="bg-ci-green text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-ci-greenDark transition-all shadow-lg shadow-ci-green/20 flex items-center gap-2">
-                    <UserPlus size={14} /> Nouveau
+
+                <button 
+                    onClick={() => setShowModal(true)}
+                    className="px-5 py-2.5 bg-[#2563EB] text-white rounded-2xl hover:bg-blue-700 transition-all text-xs font-black shadow-lg shadow-blue-600/30 flex items-center gap-2"
+                >
+                    <UserPlus size={16} /> Nouveau Collaborateur
                 </button>
             </div>
         }
       />
+
 
       {/* Stats Cards Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
