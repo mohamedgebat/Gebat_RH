@@ -515,6 +515,32 @@ function initSQLiteSchema(sDb) {
             FOREIGN KEY(company_id) REFERENCES companies(id)
         )`);
 
+        sDb.run(`CREATE TABLE IF NOT EXISTS payroll_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            history_id INTEGER,
+            periode TEXT,
+            empId INTEGER,
+            matricule TEXT,
+            nom TEXT,
+            departement TEXT,
+            poste TEXT,
+            baseSalary REAL DEFAULT 0,
+            transport REAL DEFAULT 0,
+            primeRendement REAL DEFAULT 0,
+            primeAnciennete REAL DEFAULT 0,
+            heuresSup REAL DEFAULT 0,
+            brutTotal REAL DEFAULT 0,
+            itsNet REAL DEFAULT 0,
+            cnpsSalarial REAL DEFAULT 0,
+            cmuSalarial REAL DEFAULT 0,
+            netAPayer REAL DEFAULT 0,
+            chargesPatronales REAL DEFAULT 0,
+            dateCloture TEXT,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        )`);
+
         sDb.run(`CREATE TABLE IF NOT EXISTS advances (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             company_id INTEGER DEFAULT 1,

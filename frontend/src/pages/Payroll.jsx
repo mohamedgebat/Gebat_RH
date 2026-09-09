@@ -29,23 +29,43 @@ const Payroll = () => {
     if (window.confirm(`Voulez-vous clôturer la paie pour ${selectedMonth} ? Cette action est irréversible.`)) {
         try {
             const activeEmps = (data?.employees || []).filter(e => e.statut === 'Actif');
-            const totals = activeEmps.reduce((acc, emp) => {
+            let totalMasseNette = 0;
+            let totalMasseBrute = 0;
+
+            const recordsToSave = activeEmps.map(emp => {
               const empAdvances = (data?.advances || []).filter(a => a.empId === emp.id && a.statut === 'Approuvé');
               const advanceTotal = empAdvances.reduce((sum, a) => sum + (a.montant || 0), 0);
               const p = calculateDetailedPaie(emp, advanceTotal);
-              return { masseNette: acc.masseNette + p.netAPayer, masseBrute: acc.masseBrute + p.brutTotal };
-            }, { masseNette: 0, masseBrute: 0 });
+              totalMasseNette += p.netAPayer;
+              totalMasseBrute += p.brutTotal;
+
+              return {
+                empId: emp.id,
+                matricule: emp.matricule,
+                nom: `${emp.prenoms || ''} ${emp.nom || ''}`.trim(),
+                departement: emp.departement,
+                poste: emp.poste,
+                baseSalary: emp.salaireBase || 0,
+                brutTotal: p.brutTotal,
+                itsNet: p.itsNet,
+                cnpsSalarial: p.cnpsSalarial,
+                cmuSalarial: p.cmuSalarial,
+                netAPayer: p.netAPayer,
+                chargesPatronales: p.taxesPatronalesDetails?.totalTaxesPatronales || 0
+              };
+            });
 
             const res = await axios.post('/api/payroll/close', {
               periode: selectedMonth,
-              masseNette: totals.masseNette,
-              masseBrute: totals.masseBrute,
-              nbEmployes: activeEmps.length
+              masseNette: totalMasseNette,
+              masseBrute: totalMasseBrute,
+              nbEmployes: activeEmps.length,
+              records: recordsToSave
             });
             alert(res.data.message);
-            refreshData();
+            await refreshData();
         } catch (err) {
-            alert('Erreur lors de la clôture');
+            alert('Erreur lors de la clôture: ' + (err.response?.data?.message || err.message));
         }
     }
   };

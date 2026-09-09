@@ -2209,16 +2209,36 @@ app.delete('/api/disciplinary/:id', authenticateToken, validateIdParam('id'), au
 // --- CLÔTURE DE PAIE ---
 app.post('/api/payroll/close', authenticateToken, authorizeRoles('admin'), async (req, res) => {
     try {
-        const { periode, masseNette, masseBrute, nbEmployes } = req.body;
+        const companyId = req.company_id || 1;
+        const { periode, masseNette, masseBrute, nbEmployes, records } = req.body;
         const now = new Date();
         const defaultPeriode = periode || now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
         
-        db.run(`INSERT INTO payroll_history (periode, dateCloture, masseNette, masseBrute, nbEmployes) VALUES (?,?,?,?,?)`,
-            [defaultPeriode, now.toISOString(), masseNette || 0, masseBrute || 0, nbEmployes || 0],
+        db.run(`INSERT INTO payroll_history (company_id, periode, dateCloture, masseNette, masseBrute, nbEmployes) VALUES (?,?,?,?,?,?)`,
+            [companyId, defaultPeriode, now.toISOString(), masseNette || 0, masseBrute || 0, nbEmployes || 0],
             function(err) {
                 if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
-                logAuditAction(req, 'CLOTURE_PAIE', `Clôture de paie enregistrée pour ${defaultPeriode}`);
-                res.json({ id: this.lastID, message: 'Mois de paie clôturé et archivé avec succès', periode: defaultPeriode });
+                const historyId = this.lastID;
+
+                if (Array.isArray(records) && records.length > 0) {
+                    const stmt = db.prepare(`INSERT INTO payroll_records 
+                        (company_id, history_id, periode, empId, matricule, nom, departement, poste, baseSalary, transport, primeRendement, primeAnciennete, heuresSup, brutTotal, itsNet, cnpsSalarial, cmuSalarial, netAPayer, chargesPatronales, dateCloture) 
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+                    
+                    records.forEach(r => {
+                        stmt.run([
+                            companyId, historyId, defaultPeriode, r.empId || r.id || null, r.matricule || '', r.nom || `${r.prenoms || ''} ${r.nom || ''}`.trim(),
+                            r.departement || '', r.poste || '', r.baseSalary || r.salaireBase || 0, r.transport || 0,
+                            r.primeRendement || 0, r.primeAnciennete || 0, r.heuresSup || 0, r.brutTotal || 0,
+                            r.itsNet || 0, r.cnpsSalarial || 0, r.cmuSalarial || 0, r.netAPayer || 0,
+                            r.chargesPatronales || 0, now.toISOString()
+                        ]);
+                    });
+                    stmt.finalize();
+                }
+
+                logAuditAction(req, 'CLOTURE_PAIE', `Clôture de paie enregistrée pour ${defaultPeriode} (${nbEmployes} salariés, Masse Nette: ${masseNette} FCFA)`);
+                res.json({ id: historyId, message: 'Mois de paie clôturé et archivé avec succès en base de données', periode: defaultPeriode });
             });
     } catch (error) {
         sendError(res, 500, 'Échec de la clôture de paie', 'SERVER_ERROR');

@@ -237,3 +237,5 @@ Pour toute demande d'assistance technique ou de déploiement d'une instance SaaS
 ---
 *© 2026 SIRH-CIV — Solution d'Excellence RH & Paie pour la Côte d'Ivoire et l'Afrique de l'Ouest.*
 "# Gebat_RH" 
+
+
