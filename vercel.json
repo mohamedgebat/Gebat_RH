@@ -1,5 +1,17 @@
 {
   "cleanUrls": true,
+  "redirects": [
+    {
+      "source": "/analytics",
+      "destination": "/",
+      "permanent": false
+    },
+    {
+      "source": "/analytics/(.*)",
+      "destination": "/",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
