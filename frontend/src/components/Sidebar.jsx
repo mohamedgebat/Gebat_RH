@@ -49,15 +49,6 @@ const Sidebar = ({ isOpen, onClose }) => {
       ]
     },
     {
-      id: 'projects',
-      title: 'GESTION DES PROJETS',
-      icon: <Building2 size={18} />,
-      items: [
-        { icon: <FolderKanban size={16} />, label: 'Liste des projets', path: '/projects' },
-        { icon: <BarChart3 size={16} />, label: 'Vue Projet 360°', path: '/analytics' },
-      ]
-    },
-    {
       id: 'payroll_time',
       title: 'PAIE & TEMPS DE TRAVAIL',
       icon: <Banknote size={18} />,
@@ -67,15 +58,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { icon: <Palmtree size={16} />, label: 'Congés & Absences', path: '/leaves' },
       ]
     },
-    {
-      id: 'btp',
-      title: 'GESTION GLOBALE BTP',
-      icon: <HardHat size={18} />,
-      items: [
-        { icon: <HardHat size={16} />, label: 'Suivi Chantiers BTP', path: '/projects' },
-        { icon: <Car size={16} />, label: 'Engins & Véhicules', path: '/missions-expenses' },
-      ]
-    },
+
     {
       id: 'talents',
       title: 'TALENTS & DÉVELOPPEMENT',
