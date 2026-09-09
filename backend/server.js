@@ -709,7 +709,7 @@ app.get('/api/attendance/settings', authenticateToken, (req, res) => {
     });
 });
 
-app.post('/api/attendance/settings', authenticateToken, authorizeRoles('admin', 'assistant'), (req, res) => {
+app.post('/api/attendance/settings', authenticateToken, authorizeRoles('admin', 'manager', 'assistant'), (req, res) => {
     const companyId = req.company_id || 1;
     const { 
         heure_arrivee_officielle, 
