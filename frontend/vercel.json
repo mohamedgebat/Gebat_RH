@@ -1,11 +1,12 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
+  "routes": [
+    { "src": "/assets/(.*)", "dest": "/assets/$1" },
+    { "src": "/gebat_logo.png", "dest": "/gebat_logo.png" },
+    { "src": "/favicon.png", "dest": "/favicon.png" },
+    { "src": "/favicon.ico", "dest": "/favicon.ico" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
 

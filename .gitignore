@@ -22,3 +22,7 @@ Thumbs.db
 *.db-shm
 *.db-wal
 
+# Vercel CLI metadata
+.vercel/
+**/ .vercel/
+
