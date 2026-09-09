@@ -462,7 +462,7 @@ app.get('/api/public/attendance/lookup/:matricule', (req, res) => {
                         prenoms: emp.prenoms,
                         poste: emp.poste || 'Salarié',
                         departement: emp.departement || 'SIRH-CIV',
-                        site: emp.site || 'Abidjan Plateau',
+                        site: emp.site || 'Abidjan Cocody 2 Plateaux',
                         photo: emp.photo || null,
                         hasInToday: !!inRecord,
                         hasOutToday: !!outRecord,
@@ -545,7 +545,7 @@ app.post('/api/public/attendance/terminal', (req, res) => {
 
                 const ts = new Date().toISOString();
                 db.run(`INSERT INTO attendance (company_id, empId, matricule, nom, type, timestamp, site) VALUES (?,?,?,?,?,?,?)`,
-                    [emp.company_id || 1, emp.id, emp.matricule, `${emp.nom} ${emp.prenoms}`, pointageType, ts, site || emp.site || 'Abidjan Plateau'],
+                    [emp.company_id || 1, emp.id, emp.matricule, `${emp.nom} ${emp.prenoms}`, pointageType, ts, site || emp.site || 'Abidjan Cocody 2 Plateaux'],
                     function(errInsert) {
                         if (errInsert) return sendError(res, 500, errInsert.message, 'DATABASE_ERROR');
                         res.json({ 

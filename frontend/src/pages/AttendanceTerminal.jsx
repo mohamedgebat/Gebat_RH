@@ -132,7 +132,7 @@ const AttendanceTerminal = () => {
       const res = await axios.post('/api/public/attendance/terminal', {
         matricule: val,
         type: actionType,
-        site: 'Abidjan Plateau'
+        site: 'Abidjan Cocody 2 Plateaux'
       });
       setIsProcessing(false);
       triggerOverlay(
@@ -177,7 +177,7 @@ const AttendanceTerminal = () => {
 
           <div className="hidden lg:block pt-12">
             <p className="text-white/20 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-              <MapPin className="w-4 h-4" /> Terminal Sécurisé - Zone : Abidjan Plateau
+              <MapPin className="w-4 h-4" /> Terminal Sécurisé - Zone : Abidjan Cocody 2 Plateaux
             </p>
           </div>
         </div>
