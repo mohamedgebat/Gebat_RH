@@ -171,14 +171,20 @@ const AttendanceTerminal = () => {
 
           <div className="space-y-2">
             <div className="text-7xl md:text-9xl font-black text-white tracking-tighter tabular-nums">{timeString}</div>
-            <div className="text-2xl font-bold text-[#009E49]/60 tabular-nums">{secondsString}</div>
-            <div className="text-xl font-medium text-white/40 uppercase tracking-widest pt-4 capitalize">{dateString}</div>
+            <div className="text-2xl font-bold text-[#009E49] tabular-nums flex items-center justify-center lg:justify-start gap-2">
+              <span className="inline-block w-2.5 h-2.5 rounded-full bg-[#009E49] animate-pulse"></span>
+              {secondsString}s
+            </div>
+            <div className="text-xl md:text-2xl font-black text-[#E5A110] uppercase tracking-wider pt-3 capitalize drop-shadow-md">
+              {dateString}
+            </div>
           </div>
 
-          <div className="hidden lg:block pt-12">
-            <p className="text-white/20 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-              <MapPin className="w-4 h-4" /> Terminal Sécurisé - Zone : Abidjan Cocody 2 Plateaux
-            </p>
+          <div className="pt-6">
+            <div className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 text-white font-bold text-xs md:text-sm shadow-xl">
+              <MapPin className="w-4 h-4 text-[#E5A110] shrink-0" />
+              <span className="text-white font-black tracking-wide">Terminal Sécurisé - Zone : Abidjan Cocody 2 Plateaux</span>
+            </div>
           </div>
         </div>
 

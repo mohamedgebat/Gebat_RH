@@ -1078,6 +1078,16 @@ const Attendance = () => {
               </button>
             </div>
 
+            <div className="bg-slate-900 text-white p-3.5 rounded-2xl flex flex-col gap-1 text-center shadow-md">
+              <span className="text-xs font-black text-[#E5A110] uppercase tracking-wider capitalize">
+                {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </span>
+              <span className="text-[11px] font-bold text-white/90 flex items-center justify-center gap-1.5">
+                <MapPin size={12} className="text-[#E5A110] shrink-0" />
+                Terminal Sécurisé - Zone : Abidjan Cocody 2 Plateaux
+              </span>
+            </div>
+
             <div className="space-y-2 text-center">
               <h2 className="text-xl font-black text-ci-text uppercase">IDENTIFICATION</h2>
               <p className="text-[10px] font-bold text-ci-muted uppercase tracking-wider">Saisissez votre matricule (ex: 001 ou 002)</p>
