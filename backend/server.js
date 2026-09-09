@@ -1378,6 +1378,30 @@ app.put('/api/users/:id', authenticateToken, validateIdParam('id'), authorizeRol
         });
 });
 
+app.put('/api/users/:id/reset-password', authenticateToken, validateIdParam('id'), authorizeRoles('admin'), async (req, res) => {
+    const { newPassword } = req.body;
+    if (!newPassword || newPassword.length < 6) {
+        return sendError(res, 400, 'Le nouveau mot de passe doit contenir au moins 6 caractères', 'WEAK_PASSWORD');
+    }
+    try {
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        db.get("SELECT empId FROM users WHERE id = ?", [req.params.id], (err, u) => {
+            if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
+            db.run("UPDATE users SET password = ?, must_change_password = 0 WHERE id = ?", [hashedPassword, req.params.id], (err2) => {
+                if (err2) return sendError(res, 500, err2.message, 'DATABASE_ERROR');
+                if (u && u.empId) {
+                    db.run("UPDATE employees SET password = ? WHERE id = ?", [hashedPassword, u.empId]);
+                }
+                logAuditAction(req, 'REINITIALISATION_MOT_DE_PASSE_ADMIN', `Réinitialisation mot de passe utilisateur #${req.params.id}`);
+                res.json({ success: true, message: 'Mot de passe réinitialisé avec succès par l\'administrateur' });
+            });
+        });
+    } catch (err) {
+        sendError(res, 500, err.message, 'SERVER_ERROR');
+    }
+});
+
+
 app.get('/api/admin/audit-logs', authenticateToken, authorizeRoles('admin'), (req, res) => {
     db.all("SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 200", [], (err, rows) => {
         if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
