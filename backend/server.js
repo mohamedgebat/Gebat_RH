@@ -64,6 +64,17 @@ app.use(express.static(path.join(__dirname, '../frontend/dist'), staticOptions))
 app.use(express.static(path.join(__dirname, '../dist'), staticOptions));
 app.use(express.static(path.join(__dirname, '../frontend/public'), staticOptions));
 
+// Explicit Favicon & Branding Icons Handler (no 404)
+app.get(['/favicon.ico', '/favicon.png', '/gebat_logo.png'], (req, res) => {
+    const fs = require('fs');
+    const filename = path.basename(req.path);
+    const p1 = path.join(__dirname, '../frontend/dist', filename);
+    const p2 = path.join(__dirname, '../frontend/public', filename);
+    if (fs.existsSync(p1)) return res.sendFile(p1);
+    if (fs.existsSync(p2)) return res.sendFile(p2);
+    res.status(204).end();
+});
+
 
 // --- UTILS & REPONSES NORMALISÉES ---
 function sendError(res, statusCode, message, code = "BAD_REQUEST") {
