@@ -36,26 +36,33 @@ const ManagerHub = () => {
   }, []);
 
   const handleDecision = async () => {
-    const { type, id, action, comment } = commentModal;
+    const { type, id, action, currentStatut, comment } = commentModal;
     if (!id || !type || !action) return;
 
     setActionLoading(true);
     try {
+      const isStep2 = currentStatut === 'Validée N+1' || currentStatut === 'En attente RH';
       if (type === 'leave') {
-        const statut = action === 'approve' ? 'Approuvé' : 'Refusé';
+        const statut = action === 'approve' ? (isStep2 ? 'Approuvé' : 'Validée N+1') : 'Refusé';
         await axios.patch(`/api/leaves/${id}`, { statut, commentaire: comment });
       } else if (type === 'advance') {
-        const statut = action === 'approve' ? 'Accordée' : 'Refusée';
+        const statut = action === 'approve' ? (isStep2 ? 'Accordée' : 'Validée N+1') : 'Refusée';
         await axios.patch(`/api/advances/${id}`, { statut, commentaire: comment });
       } else if (type === 'mission') {
-        const statut = action === 'approve' ? 'Validée N+1' : 'Refusée';
-        await axios.patch(`/api/missions/${id}`, { statut, validation_n1: user?.name || 'Manager N+1', commentaires: comment });
+        const statut = action === 'approve' ? (isStep2 ? 'Approuvée' : 'Validée N+1') : 'Refusée';
+        const payload = isStep2 
+          ? { statut, validation_rh: user?.name || 'Direction RH', commentaires: comment }
+          : { statut, validation_n1: user?.name || 'Manager N+1', commentaires: comment };
+        await axios.patch(`/api/missions/${id}`, payload);
       } else if (type === 'expense') {
-        const statut = action === 'approve' ? 'Validée N+1' : 'Refusée';
-        await axios.patch(`/api/expenses/${id}`, { statut, validation_n1: user?.name || 'Manager N+1' });
+        const statut = action === 'approve' ? (isStep2 ? 'Approuvée' : 'Validée N+1') : 'Refusée';
+        const payload = isStep2 
+          ? { statut, validation_rh: user?.name || 'Direction RH' }
+          : { statut, validation_n1: user?.name || 'Manager N+1' };
+        await axios.patch(`/api/expenses/${id}`, payload);
       }
 
-      setCommentModal({ open: false, type: '', id: '', action: '', comment: '' });
+      setCommentModal({ open: false, type: '', id: '', action: '', currentStatut: '', comment: '' });
       await fetchManagerOverview();
       if (refreshData) refreshData();
     } catch (err) {
@@ -70,6 +77,8 @@ const ManagerHub = () => {
   const pendingAdvances = managerData?.pendingAdvances || [];
   const pendingMissions = managerData?.pendingMissions || [];
   const pendingExpenses = managerData?.pendingExpenses || [];
+  const historyMissions = managerData?.historyMissions || [];
+  const historyExpenses = managerData?.historyExpenses || [];
   const team = managerData?.team || [];
   const totalPending = pendingLeaves.length + pendingAdvances.length + pendingMissions.length + pendingExpenses.length;
 
@@ -87,7 +96,7 @@ const ManagerHub = () => {
                 Espace Manager (MSS) & Hub d'Approbation
               </h1>
               <p className="text-xs font-bold text-slate-400">
-                Pilotage d'équipe • Workflows de validation multi-niveaux N+1 • Standard SAP HCM & Odoo
+                Pilotage d'équipe • Workflows de validation multi-niveaux N+1 & RH • Standard SAP HCM & Odoo
               </p>
             </div>
           </div>
@@ -111,6 +120,7 @@ const ManagerHub = () => {
       <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto custom-scrollbar">
         {[
           { id: 'approvals', label: `Hub Approbations (${totalPending})`, icon: <CheckCircle2 size={16} /> },
+          { id: 'history', label: `Historique Validés & Clôturés (${historyMissions.length + historyExpenses.length})`, icon: <ShieldCheck size={16} /> },
           { id: 'team', label: `Mon Équipe (${team.length})`, icon: <Users size={16} /> },
           { id: 'attendances', label: 'Présences du Jour', icon: <Calendar size={16} /> },
         ].map(tab => (
@@ -161,189 +171,259 @@ const ManagerHub = () => {
               </div>
               <h3 className="text-base font-black text-slate-900">Toutes les demandes sont à jour !</h3>
               <p className="text-xs text-slate-400 max-w-md mx-auto">
-                Aucune demande de congé, avance, mission ou note de frais en attente de votre validation N+1.
+                Aucune demande en attente de votre validation. Les dossiers clôturés sont conservés dans l'Historique Validés.
               </p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* 1. Congés */}
-              {(approvalType === 'all' || approvalType === 'leaves') && pendingLeaves.map(leave => (
-                <div key={`leave-${leave.id}`} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 hover:border-amber-400 transition-all flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className="px-2.5 py-1 bg-amber-50 text-amber-800 text-[10px] font-black uppercase rounded-lg flex items-center gap-1.5 border border-amber-200">
-                        <Palmtree size={12} /> Congé ({leave.type})
-                      </span>
-                      <span className="text-[10px] font-bold text-slate-400">
-                        {leave.duree || 1} jour(s)
-                      </span>
-                    </div>
+              {(approvalType === 'all' || approvalType === 'leaves') && pendingLeaves.map(leave => {
+                const isStep2 = leave.statut === 'Validée N+1' || leave.statut === 'En attente RH';
+                return (
+                  <div key={`leave-${leave.id}`} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 hover:border-amber-400 transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-lg flex items-center gap-1.5 border ${
+                          isStep2 ? 'bg-indigo-50 text-indigo-800 border-indigo-200' : 'bg-amber-50 text-amber-800 border-amber-200'
+                        }`}>
+                          <Palmtree size={12} /> Congé {isStep2 ? '(Étape 2 : RH)' : '(Étape 1 : N+1)'}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {leave.duree || 1} jour(s)
+                        </span>
+                      </div>
 
-                    <div className="flex items-center gap-3 mb-3">
-                      <EmployeeAvatar src={leave.photo} nom={leave.nom} prenoms={leave.prenoms} size="md" />
-                      <div>
-                        <h4 className="text-xs font-black text-slate-900">{leave.nom} {leave.prenoms}</h4>
-                        <p className="text-[10px] text-slate-500 font-bold">{leave.poste} • {leave.departement}</p>
+                      <div className="flex items-center gap-3 mb-3">
+                        <EmployeeAvatar src={leave.photo} nom={leave.nom} prenoms={leave.prenoms} size="md" />
+                        <div>
+                          <h4 className="text-xs font-black text-slate-900">{leave.nom} {leave.prenoms}</h4>
+                          <p className="text-[10px] text-slate-500 font-bold">{leave.poste} • {leave.departement}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-50 p-3 rounded-2xl text-xs space-y-1 text-slate-700 font-medium">
+                        <p><strong>Période :</strong> Du {new Date(leave.debut).toLocaleDateString('fr-FR')} au {new Date(leave.fin).toLocaleDateString('fr-FR')}</p>
+                        {leave.motif && <p className="italic text-slate-500 font-normal">"{leave.motif}"</p>}
+                        {leave.validation_n1 && <p className="text-[10px] text-emerald-700 font-bold">✓ Étape 1 Validée par : {leave.validation_n1}</p>}
                       </div>
                     </div>
 
-                    <div className="bg-slate-50 p-3 rounded-2xl text-xs space-y-1 text-slate-700 font-medium">
-                      <p><strong>Période :</strong> Du {new Date(leave.debut).toLocaleDateString('fr-FR')} au {new Date(leave.fin).toLocaleDateString('fr-FR')}</p>
-                      {leave.motif && <p className="italic text-slate-500 font-normal">"{leave.motif}"</p>}
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => setCommentModal({ open: true, type: 'leave', id: leave.id, action: 'reject', currentStatut: leave.statut, comment: '' })}
+                        className="px-3 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-black transition-colors"
+                      >
+                        Refuser
+                      </button>
+                      <button
+                        onClick={() => setCommentModal({ open: true, type: 'leave', id: leave.id, action: 'approve', currentStatut: leave.statut, comment: '' })}
+                        className={`px-4 py-2 text-white rounded-xl text-xs font-black shadow-sm transition-all flex items-center gap-1.5 ${
+                          isStep2 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                        }`}
+                      >
+                        <CheckCircle2 size={14} /> {isStep2 ? 'Valider Étape 2 (RH)' : 'Approuver (N+1)'}
+                      </button>
                     </div>
                   </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => setCommentModal({ open: true, type: 'leave', id: leave.id, action: 'reject', comment: '' })}
-                      className="px-3 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-black transition-colors"
-                    >
-                      Refuser
-                    </button>
-                    <button
-                      onClick={() => setCommentModal({ open: true, type: 'leave', id: leave.id, action: 'approve', comment: '' })}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-sm transition-all flex items-center gap-1.5"
-                    >
-                      <CheckCircle2 size={14} /> Approuver (N+1)
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               {/* 2. Avances */}
-              {(approvalType === 'all' || approvalType === 'advances') && pendingAdvances.map(adv => (
-                <div key={`adv-${adv.id}`} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 hover:border-amber-400 transition-all flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className="px-2.5 py-1 bg-blue-50 text-blue-800 text-[10px] font-black uppercase rounded-lg flex items-center gap-1.5 border border-blue-200">
-                        <DollarSign size={12} /> Avance sur Salaire
-                      </span>
-                      <span className="text-xs font-mono font-black text-slate-900">
-                        {new Intl.NumberFormat('fr-CI').format(adv.montant)} FCFA
-                      </span>
-                    </div>
+              {(approvalType === 'all' || approvalType === 'advances') && pendingAdvances.map(adv => {
+                const isStep2 = adv.statut === 'Validée N+1' || adv.statut === 'En attente RH';
+                return (
+                  <div key={`adv-${adv.id}`} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 hover:border-amber-400 transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-lg flex items-center gap-1.5 border ${
+                          isStep2 ? 'bg-indigo-50 text-indigo-800 border-indigo-200' : 'bg-blue-50 text-blue-800 border-blue-200'
+                        }`}>
+                          <DollarSign size={12} /> Avance {isStep2 ? '(Étape 2 : RH)' : '(Étape 1 : N+1)'}
+                        </span>
+                        <span className="text-xs font-mono font-black text-slate-900">
+                          {new Intl.NumberFormat('fr-CI').format(adv.montant)} FCFA
+                        </span>
+                      </div>
 
-                    <div className="flex items-center gap-3 mb-3">
-                      <EmployeeAvatar src={adv.photo} nom={adv.nom} prenoms={adv.prenoms} size="md" />
-                      <div>
-                        <h4 className="text-xs font-black text-slate-900">{adv.nom} {adv.prenoms}</h4>
-                        <p className="text-[10px] text-slate-500 font-bold">{adv.poste} • {adv.departement}</p>
+                      <div className="flex items-center gap-3 mb-3">
+                        <EmployeeAvatar src={adv.photo} nom={adv.nom} prenoms={adv.prenoms} size="md" />
+                        <div>
+                          <h4 className="text-xs font-black text-slate-900">{adv.nom} {adv.prenoms}</h4>
+                          <p className="text-[10px] text-slate-500 font-bold">{adv.poste} • {adv.departement}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-50 p-3 rounded-2xl text-xs space-y-1 text-slate-700 font-medium">
+                        <p><strong>Mois de Remboursement :</strong> {adv.moisRemboursement}</p>
+                        {adv.motif && <p className="italic text-slate-500 font-normal">"{adv.motif}"</p>}
+                        {adv.validation_n1 && <p className="text-[10px] text-emerald-700 font-bold">✓ Étape 1 Validée par : {adv.validation_n1}</p>}
                       </div>
                     </div>
 
-                    <div className="bg-slate-50 p-3 rounded-2xl text-xs space-y-1 text-slate-700 font-medium">
-                      <p><strong>Mois de Remboursement :</strong> {adv.moisRemboursement}</p>
-                      {adv.motif && <p className="italic text-slate-500 font-normal">"{adv.motif}"</p>}
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => setCommentModal({ open: true, type: 'advance', id: adv.id, action: 'reject', currentStatut: adv.statut, comment: '' })}
+                        className="px-3 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-black transition-colors"
+                      >
+                        Refuser
+                      </button>
+                      <button
+                        onClick={() => setCommentModal({ open: true, type: 'advance', id: adv.id, action: 'approve', currentStatut: adv.statut, comment: '' })}
+                        className={`px-4 py-2 text-white rounded-xl text-xs font-black shadow-sm transition-all flex items-center gap-1.5 ${
+                          isStep2 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                        }`}
+                      >
+                        <CheckCircle2 size={14} /> {isStep2 ? 'Valider Étape 2 (RH)' : 'Valider Avance (N+1)'}
+                      </button>
                     </div>
                   </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => setCommentModal({ open: true, type: 'advance', id: adv.id, action: 'reject', comment: '' })}
-                      className="px-3 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-black transition-colors"
-                    >
-                      Refuser
-                    </button>
-                    <button
-                      onClick={() => setCommentModal({ open: true, type: 'advance', id: adv.id, action: 'approve', comment: '' })}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-sm transition-all flex items-center gap-1.5"
-                    >
-                      <CheckCircle2 size={14} /> Valider Avance
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               {/* 3. Missions */}
-              {(approvalType === 'all' || approvalType === 'missions') && pendingMissions.map(m => (
-                <div key={`mission-${m.id}`} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 hover:border-amber-400 transition-all flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className="px-2.5 py-1 bg-indigo-50 text-indigo-800 text-[10px] font-black uppercase rounded-lg flex items-center gap-1.5 border border-indigo-200">
-                        <Car size={12} /> Ordre de Mission
-                      </span>
-                      <span className="text-[10px] font-bold text-indigo-600">
-                        {m.destination}
-                      </span>
-                    </div>
+              {(approvalType === 'all' || approvalType === 'missions') && pendingMissions.map(m => {
+                const isStep2 = m.statut === 'Validée N+1' || m.statut === 'En attente RH';
+                return (
+                  <div key={`mission-${m.id}`} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 hover:border-indigo-400 transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-lg flex items-center gap-1.5 border ${
+                          isStep2 ? 'bg-indigo-100 text-indigo-900 border-indigo-300' : 'bg-indigo-50 text-indigo-800 border-indigo-200'
+                        }`}>
+                          <Car size={12} /> Mission {isStep2 ? '(Étape 2 : RH / Direction)' : '(Étape 1 : Manager N+1)'}
+                        </span>
+                        <span className="text-[10px] font-bold text-indigo-600">
+                          {m.destination}
+                        </span>
+                      </div>
 
-                    <div className="flex items-center gap-3 mb-3">
-                      <EmployeeAvatar src={m.photo} nom={m.nom} prenoms={m.prenoms} size="md" />
-                      <div>
-                        <h4 className="text-xs font-black text-slate-900">{m.nom} {m.prenoms}</h4>
-                        <p className="text-[10px] text-slate-500 font-bold">{m.titre}</p>
+                      <div className="flex items-center gap-3 mb-3">
+                        <EmployeeAvatar src={m.photo} nom={m.nom} prenoms={m.prenoms} size="md" />
+                        <div>
+                          <h4 className="text-xs font-black text-slate-900">{m.nom} {m.prenoms}</h4>
+                          <p className="text-[10px] text-slate-500 font-bold">{m.titre}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-50 p-3 rounded-2xl text-xs space-y-1 text-slate-700 font-medium">
+                        <p><strong>Dates :</strong> Du {new Date(m.date_debut).toLocaleDateString('fr-FR')} au {new Date(m.date_fin).toLocaleDateString('fr-FR')}</p>
+                        <p><strong>Moyen :</strong> {m.moyen_transport} {m.vehicule && `(${m.vehicule})`}</p>
+                        {m.avance_frais > 0 && <p><strong>Avance sollicitée :</strong> {new Intl.NumberFormat('fr-CI').format(m.avance_frais)} F CFA</p>}
+                        {m.validation_n1 && <p className="text-[10px] text-indigo-700 font-bold">✓ Étape 1 Validée par N+1 : {m.validation_n1}</p>}
                       </div>
                     </div>
 
-                    <div className="bg-slate-50 p-3 rounded-2xl text-xs space-y-1 text-slate-700 font-medium">
-                      <p><strong>Dates :</strong> Du {new Date(m.date_debut).toLocaleDateString('fr-FR')} au {new Date(m.date_fin).toLocaleDateString('fr-FR')}</p>
-                      <p><strong>Moyen :</strong> {m.moyen_transport} {m.vehicule && `(${m.vehicule})`}</p>
-                      {m.avance_frais > 0 && <p><strong>Avance sollicitée :</strong> {new Intl.NumberFormat('fr-CI').format(m.avance_frais)} F CFA</p>}
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => setCommentModal({ open: true, type: 'mission', id: m.id, action: 'reject', currentStatut: m.statut, comment: '' })}
+                        className="px-3 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-black transition-colors"
+                      >
+                        Refuser
+                      </button>
+                      <button
+                        onClick={() => setCommentModal({ open: true, type: 'mission', id: m.id, action: 'approve', currentStatut: m.statut, comment: '' })}
+                        className={`px-4 py-2 text-white rounded-xl text-xs font-black shadow-sm transition-all flex items-center gap-1.5 ${
+                          isStep2 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                        }`}
+                      >
+                        <CheckCircle2 size={14} /> {isStep2 ? 'Valider Étape 2 (RH)' : 'Valider Étape 1 (N+1)'}
+                      </button>
                     </div>
                   </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => setCommentModal({ open: true, type: 'mission', id: m.id, action: 'reject', comment: '' })}
-                      className="px-3 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-black transition-colors"
-                    >
-                      Refuser
-                    </button>
-                    <button
-                      onClick={() => setCommentModal({ open: true, type: 'mission', id: m.id, action: 'approve', comment: '' })}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-sm transition-all flex items-center gap-1.5"
-                    >
-                      <CheckCircle2 size={14} /> Valider Mission
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
 
               {/* 4. Notes de Frais */}
-              {(approvalType === 'all' || approvalType === 'expenses') && pendingExpenses.map(exp => (
-                <div key={`exp-${exp.id}`} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 hover:border-amber-400 transition-all flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <span className="px-2.5 py-1 bg-purple-50 text-purple-800 text-[10px] font-black uppercase rounded-lg flex items-center gap-1.5 border border-purple-200">
-                        <Receipt size={12} /> Note de Frais ({exp.categorie})
-                      </span>
-                      <span className="text-xs font-mono font-black text-purple-900">
-                        {new Intl.NumberFormat('fr-CI').format(exp.montant)} FCFA
-                      </span>
-                    </div>
+              {(approvalType === 'all' || approvalType === 'expenses') && pendingExpenses.map(exp => {
+                const isStep2 = exp.statut === 'Validée N+1' || exp.statut === 'En attente RH';
+                return (
+                  <div key={`exp-${exp.id}`} className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 hover:border-purple-400 transition-all flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className={`px-2.5 py-1 text-[10px] font-black uppercase rounded-lg flex items-center gap-1.5 border ${
+                          isStep2 ? 'bg-purple-100 text-purple-900 border-purple-300' : 'bg-purple-50 text-purple-800 border-purple-200'
+                        }`}>
+                          <Receipt size={12} /> Note de Frais {isStep2 ? '(Étape 2 : RH / Compta)' : '(Étape 1 : Manager N+1)'}
+                        </span>
+                        <span className="text-xs font-mono font-black text-purple-900">
+                          {new Intl.NumberFormat('fr-CI').format(exp.montant)} FCFA
+                        </span>
+                      </div>
 
-                    <div className="flex items-center gap-3 mb-3">
-                      <EmployeeAvatar src={exp.photo} nom={exp.nom} prenoms={exp.prenoms} size="md" />
-                      <div>
-                        <h4 className="text-xs font-black text-slate-900">{exp.nom} {exp.prenoms}</h4>
-                        <p className="text-[10px] text-slate-500 font-bold">{exp.poste} • {exp.departement}</p>
+                      <div className="flex items-center gap-3 mb-3">
+                        <EmployeeAvatar src={exp.photo} nom={exp.nom} prenoms={exp.prenoms} size="md" />
+                        <div>
+                          <h4 className="text-xs font-black text-slate-900">{exp.nom} {exp.prenoms}</h4>
+                          <p className="text-[10px] text-slate-500 font-bold">{exp.poste} • {exp.departement}</p>
+                        </div>
+                      </div>
+
+                      <div className="bg-slate-50 p-3 rounded-2xl text-xs space-y-1 text-slate-700 font-medium">
+                        <p><strong>Catégorie :</strong> {exp.categorie}</p>
+                        <p><strong>Date Dépense :</strong> {new Date(exp.date_depense).toLocaleDateString('fr-FR')}</p>
+                        {exp.description && <p className="italic text-slate-500">"{exp.description}"</p>}
+                        {exp.validation_n1 && <p className="text-[10px] text-purple-700 font-bold">✓ Étape 1 Validée par N+1 : {exp.validation_n1}</p>}
                       </div>
                     </div>
 
-                    <div className="bg-slate-50 p-3 rounded-2xl text-xs space-y-1 text-slate-700 font-medium">
-                      <p><strong>Date Dépense :</strong> {new Date(exp.date_depense).toLocaleDateString('fr-FR')}</p>
-                      {exp.description && <p className="italic text-slate-500">"{exp.description}"</p>}
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => setCommentModal({ open: true, type: 'expense', id: exp.id, action: 'reject', currentStatut: exp.statut, comment: '' })}
+                        className="px-3 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-black transition-colors"
+                      >
+                        Refuser
+                      </button>
+                      <button
+                        onClick={() => setCommentModal({ open: true, type: 'expense', id: exp.id, action: 'approve', currentStatut: exp.statut, comment: '' })}
+                        className={`px-4 py-2 text-white rounded-xl text-xs font-black shadow-sm transition-all flex items-center gap-1.5 ${
+                          isStep2 ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                        }`}
+                      >
+                        <CheckCircle2 size={14} /> {isStep2 ? 'Valider Étape 2 (RH)' : 'Valider Étape 1 (N+1)'}
+                      </button>
                     </div>
                   </div>
-
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-                    <button
-                      onClick={() => setCommentModal({ open: true, type: 'expense', id: exp.id, action: 'reject', comment: '' })}
-                      className="px-3 py-2 bg-rose-50 text-rose-700 hover:bg-rose-100 rounded-xl text-xs font-black transition-colors"
-                    >
-                      Refuser
-                    </button>
-                    <button
-                      onClick={() => setCommentModal({ open: true, type: 'expense', id: exp.id, action: 'approve', comment: '' })}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-sm transition-all flex items-center gap-1.5"
-                    >
-                      <CheckCircle2 size={14} /> Valider Frais
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* CONTENU ONGLET HISTORIQUE : DOSSIERS VALIDÉS & CLÔTURÉS */}
+      {activeTab === 'history' && (
+        <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+            <div>
+              <h3 className="text-sm font-black text-slate-900 uppercase">Historique des Rapports & Demandes Validés</h3>
+              <p className="text-xs font-medium text-slate-400">Tous les dossiers ayant passé avec succès les étapes de validation N+1 et RH.</p>
+            </div>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {historyMissions.concat(historyExpenses).length === 0 ? (
+              <div className="text-center py-10 text-slate-400 text-xs font-bold">
+                Aucun dossier validé archivé pour le moment.
+              </div>
+            ) : (
+              historyMissions.concat(historyExpenses).map(item => (
+                <div key={`hist-${item.id}`} className="py-3 flex items-center justify-between hover:bg-slate-50 p-2 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <EmployeeAvatar src={item.photo} nom={item.nom} size="sm" />
+                    <div>
+                      <h4 className="text-xs font-bold text-slate-900">{item.nom} {item.prenoms}</h4>
+                      <p className="text-[10px] text-slate-500 font-medium">{item.titre || item.categorie || 'Dossier Validé'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-800 text-[10px] font-black uppercase rounded-lg border border-emerald-200">
+                      ✓ Clôturé ({item.statut})
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
 

@@ -3428,7 +3428,7 @@ app.get('/api/manager/overview', authenticateToken, async (req, res) => {
         const pendingLeaves = teamIds.length > 0 ? await queryAll(
             `SELECT l.*, e.nom, e.prenoms, e.matricule, e.poste, e.departement, e.photo
              FROM leaves l JOIN employees e ON l.empId = e.id
-             WHERE l.empId IN (${teamPlaceholders}) AND l.statut = 'En attente'
+             WHERE l.empId IN (${teamPlaceholders}) AND l.statut NOT IN ('Approuvé', 'Refusé')
              ORDER BY l.debut ASC`,
             teamIds
         ) : [];
@@ -3436,7 +3436,7 @@ app.get('/api/manager/overview', authenticateToken, async (req, res) => {
         const pendingAdvances = teamIds.length > 0 ? await queryAll(
             `SELECT a.*, e.nom, e.prenoms, e.matricule, e.poste, e.departement, e.photo
              FROM advances a JOIN employees e ON a.empId = e.id
-             WHERE a.empId IN (${teamPlaceholders}) AND a.statut = 'En attente'
+             WHERE a.empId IN (${teamPlaceholders}) AND a.statut NOT IN ('Accordée', 'Refusée')
              ORDER BY a.dateDemande DESC`,
             teamIds
         ) : [];
@@ -3444,7 +3444,7 @@ app.get('/api/manager/overview', authenticateToken, async (req, res) => {
         const pendingMissions = teamIds.length > 0 ? await queryAll(
             `SELECT m.*, e.nom, e.prenoms, e.matricule, e.poste, e.departement, e.photo
              FROM missions m JOIN employees e ON m.empId = e.id
-             WHERE m.empId IN (${teamPlaceholders}) AND m.statut LIKE '%attente%'
+             WHERE m.empId IN (${teamPlaceholders}) AND m.statut NOT IN ('Approuvée', 'Refusée')
              ORDER BY m.date_debut ASC`,
             teamIds
         ) : [];
@@ -3452,8 +3452,24 @@ app.get('/api/manager/overview', authenticateToken, async (req, res) => {
         const pendingExpenses = teamIds.length > 0 ? await queryAll(
             `SELECT exp.*, e.nom, e.prenoms, e.matricule, e.poste, e.departement, exp.montant
              FROM expense_reports exp JOIN employees e ON exp.empId = e.id
-             WHERE exp.empId IN (${teamPlaceholders}) AND exp.statut = 'Soumis'
+             WHERE exp.empId IN (${teamPlaceholders}) AND exp.statut NOT IN ('Approuvée', 'Refusée', 'Remboursée')
              ORDER BY exp.date_depense DESC`,
+            teamIds
+        ) : [];
+
+        const historyMissions = teamIds.length > 0 ? await queryAll(
+            `SELECT m.*, e.nom, e.prenoms, e.matricule, e.poste, e.departement, e.photo
+             FROM missions m JOIN employees e ON m.empId = e.id
+             WHERE m.empId IN (${teamPlaceholders}) AND m.statut IN ('Approuvée', 'Refusée')
+             ORDER BY m.date_debut DESC LIMIT 20`,
+            teamIds
+        ) : [];
+
+        const historyExpenses = teamIds.length > 0 ? await queryAll(
+            `SELECT exp.*, e.nom, e.prenoms, e.matricule, e.poste, e.departement, exp.montant
+             FROM expense_reports exp JOIN employees e ON exp.empId = e.id
+             WHERE exp.empId IN (${teamPlaceholders}) AND exp.statut IN ('Approuvée', 'Refusée', 'Remboursée')
+             ORDER BY exp.date_depense DESC LIMIT 20`,
             teamIds
         ) : [];
 
@@ -3473,6 +3489,8 @@ app.get('/api/manager/overview', authenticateToken, async (req, res) => {
             pendingAdvances,
             pendingMissions,
             pendingExpenses,
+            historyMissions,
+            historyExpenses,
             todayAttendances
         });
     } catch (err) {

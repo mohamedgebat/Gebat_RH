@@ -115,18 +115,26 @@ const MissionsExpenses = () => {
     }
   };
 
-  const handleApproveMission = async (id) => {
+  const handleApproveMission = async (m) => {
     try {
-      await axios.patch(`/api/missions/${id}`, { statut: 'Approuvée' });
+      const isStep2 = m.statut === 'Validée N+1' || m.statut === 'En attente RH';
+      const payload = isStep2 
+        ? { statut: 'Approuvée', validation_rh: user?.name || 'Direction RH' }
+        : { statut: 'Validée N+1', validation_n1: user?.name || 'Manager N+1' };
+      await axios.patch(`/api/missions/${m.id}`, payload);
       fetchData();
     } catch (err) {
       console.error('Erreur approbation mission:', err);
     }
   };
 
-  const handleApproveExpense = async (id) => {
+  const handleApproveExpense = async (exp) => {
     try {
-      await axios.patch(`/api/expenses/${id}`, { statut: 'Approuvée' });
+      const isStep2 = exp.statut === 'Validée N+1' || exp.statut === 'En attente RH';
+      const payload = isStep2 
+        ? { statut: 'Approuvée', validation_rh: user?.name || 'Direction RH' }
+        : { statut: 'Validée N+1', validation_n1: user?.name || 'Manager N+1' };
+      await axios.patch(`/api/expenses/${exp.id}`, payload);
       fetchData();
     } catch (err) {
       console.error('Erreur approbation frais:', err);
@@ -240,9 +248,13 @@ const MissionsExpenses = () => {
                       <div className="flex items-center gap-2">
                         <h4 className="text-xs font-black text-slate-900">{m.nom} {m.prenoms}</h4>
                         <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase ${
-                          m.statut === 'Approuvée' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
+                          m.statut === 'Approuvée' 
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                            : (m.statut === 'Validée N+1' || m.statut === 'En attente RH')
+                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
                         }`}>
-                          {m.statut}
+                          {m.statut === 'Validée N+1' ? 'Validée Étape 1 (N+1)' : m.statut}
                         </span>
                       </div>
                       <p className="text-xs font-bold text-[#2563EB] mt-0.5">{m.titre} &bull; Destination : {m.destination}</p>
@@ -270,10 +282,14 @@ const MissionsExpenses = () => {
 
                     {m.statut !== 'Approuvée' && (
                       <button
-                        onClick={() => handleApproveMission(m.id)}
-                        className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 shadow-sm"
+                        onClick={() => handleApproveMission(m)}
+                        className={`px-3.5 py-2 text-white rounded-xl text-xs font-black uppercase transition-all flex items-center gap-1.5 shadow-sm ${
+                          m.statut === 'Validée N+1' || m.statut === 'En attente RH'
+                            ? 'bg-indigo-600 hover:bg-indigo-700'
+                            : 'bg-emerald-600 hover:bg-emerald-700'
+                        }`}
                       >
-                        <CheckCircle2 size={13} /> Valider
+                        <CheckCircle2 size={13} /> {m.statut === 'Validée N+1' || m.statut === 'En attente RH' ? 'Valider Étape 2 (RH)' : 'Valider Étape 1'}
                       </button>
                     )}
                   </div>
@@ -333,12 +349,16 @@ const MissionsExpenses = () => {
                       {exp.inclus_paie === 1 ? '✓ Imputé Paie' : '+ Imputer Paie'}
                     </button>
 
-                    {exp.statut !== 'Approuvée' && (
+                    {exp.statut !== 'Approuvée' && exp.statut !== 'Remboursée' && (
                       <button
-                        onClick={() => handleApproveExpense(exp.id)}
-                        className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase transition-all"
+                        onClick={() => handleApproveExpense(exp)}
+                        className={`px-3 py-2 text-white rounded-xl text-xs font-black uppercase transition-all ${
+                          exp.statut === 'Validée N+1' || exp.statut === 'En attente RH'
+                            ? 'bg-indigo-600 hover:bg-indigo-700'
+                            : 'bg-emerald-600 hover:bg-emerald-700'
+                        }`}
                       >
-                        Valider
+                        {exp.statut === 'Validée N+1' || exp.statut === 'En attente RH' ? 'Valider Étape 2 (RH)' : 'Valider Étape 1'}
                       </button>
                     )}
                   </div>
