@@ -45,6 +45,17 @@ const EmployeePortal = () => {
   const [profileSuccessMsg, setProfileSuccessMsg] = useState('');
   const [profileErrorMsg, setProfileErrorMsg] = useState('');
 
+  // Missions & Expenses State (Must be declared before any conditional return)
+  const [missionForm, setMissionForm] = useState({
+    titre: '', destination: '', site: '', date_debut: '', date_fin: '', moyen_transport: 'Véhicule de Société', avance_frais: 0, commentaires: ''
+  });
+  const [missionSubmitting, setMissionSubmitting] = useState(false);
+  const [expenseForm, setExpenseForm] = useState({
+    mission_id: '', date_depense: new Date().toISOString().split('T')[0], categorie: 'Carburant', montant: '', description: ''
+  });
+  const [expenseSubmitting, setExpenseSubmitting] = useState(false);
+  const [clockSubmitting, setClockSubmitting] = useState(false);
+
   const employee = (data?.employees || []).find(e => e.id === (user?.empId || user?.id || 1));
 
   // Sync profile form when employee data is loaded
@@ -227,17 +238,6 @@ const EmployeePortal = () => {
 
   const myMissions = (data?.missions || []).filter(m => m.empId === employee?.id);
   const myExpenses = (data?.expenses || []).filter(exp => exp.empId === employee?.id);
-
-  const [missionForm, setMissionForm] = useState({
-    titre: '', destination: '', site: '', date_debut: '', date_fin: '', moyen_transport: 'Véhicule de Société', avance_frais: 0, commentaires: ''
-  });
-  const [missionSubmitting, setMissionSubmitting] = useState(false);
-
-  const [expenseForm, setExpenseForm] = useState({
-    mission_id: '', date_depense: new Date().toISOString().split('T')[0], categorie: 'Carburant', montant: '', description: ''
-  });
-  const [expenseSubmitting, setExpenseSubmitting] = useState(false);
-  const [clockSubmitting, setClockSubmitting] = useState(false);
 
   const handleMissionSubmit = async (e) => {
     e.preventDefault();
