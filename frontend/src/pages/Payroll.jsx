@@ -353,6 +353,28 @@ const Payroll = () => {
         subtitle={`Conformité DGI, DISA CNPS, SYSCOHADA & Mobile Money • ${selectedMonth}`}
         actions={
           <div className="flex gap-3">
+            <select
+              value={selectedMonth}
+              onChange={(e) => {
+                setSelectedMonth(e.target.value);
+                setNewAdvance(prev => ({ ...prev, moisRemboursement: e.target.value }));
+                setNewAllocation(prev => ({ ...prev, mois: e.target.value }));
+              }}
+              className="bg-white border border-slate-300 text-slate-800 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+            >
+              <option value="Janvier 2026">Janvier 2026</option>
+              <option value="Février 2026">Février 2026</option>
+              <option value="Mars 2026">Mars 2026</option>
+              <option value="Avril 2026">Avril 2026</option>
+              <option value="Mai 2026">Mai 2026</option>
+              <option value="Juin 2026">Juin 2026</option>
+              <option value="Juillet 2026">Juillet 2026</option>
+              <option value="Août 2026">Août 2026</option>
+              <option value="Septembre 2026">Septembre 2026</option>
+              <option value="Octobre 2026">Octobre 2026</option>
+              <option value="Novembre 2026">Novembre 2026</option>
+              <option value="Décembre 2026">Décembre 2026</option>
+            </select>
             <button 
                 onClick={handleCloseMonth}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-2xl text-[11px] font-bold uppercase tracking-wider transition-all shadow-lg flex items-center gap-2"
@@ -450,7 +472,14 @@ const Payroll = () => {
                       </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs font-medium">
-                      {activeEmps.map((emp) => {
+                      {activeEmps.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="text-center py-8 text-slate-400 font-bold uppercase text-xs">
+                            Aucun salarié actif trouvé en base de données pour cette période
+                          </td>
+                        </tr>
+                      ) : (
+                        activeEmps.map((emp) => {
                           const paie = calculatePaie(emp);
                           return (
                               <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
@@ -496,7 +525,8 @@ const Payroll = () => {
                                   </td>
                               </tr>
                           );
-                      })}
+                      })
+                    )}
                   </tbody>
               </table>
           </div>
