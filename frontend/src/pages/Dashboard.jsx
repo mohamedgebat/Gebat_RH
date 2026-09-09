@@ -79,9 +79,17 @@ const Dashboard = () => {
   const evaluations = data?.evaluations || [];
   const recruitment = data?.recruitment || [];
 
-  const employees = selectedSite === 'Tous' 
-    ? rawEmployees 
-    : rawEmployees.filter(e => (e.site || '').toLowerCase() === selectedSite.toLowerCase());
+  const availableDepts = Array.from(new Set([
+    ...(data?.departments || []).map(d => d.nom),
+    ...rawEmployees.map(e => e.departement).filter(Boolean)
+  ]));
+
+  const employees = rawEmployees.filter(e => {
+    const matchesSite = selectedSite === 'Tous' || (e.site || '').toLowerCase().includes(selectedSite.toLowerCase());
+    const matchesDept = selectedDept === 'all' || (e.departement || '').toLowerCase() === selectedDept.toLowerCase();
+    const matchesContract = selectedContractType === 'all' || (e.type || 'CDI').toLowerCase() === selectedContractType.toLowerCase();
+    return matchesSite && matchesDept && matchesContract;
+  });
 
   const activeEmployees = employees.filter(e => e.statut === 'Actif' && !e.is_deleted);
   const inactiveEmployees = employees.filter(e => e.statut !== 'Actif' || e.is_deleted);
@@ -266,13 +274,9 @@ const Dashboard = () => {
               className="bg-transparent text-xs font-bold text-slate-700 outline-none cursor-pointer uppercase"
             >
               <option value="all">Tous départements</option>
-              <option value="Comptabilité">Comptabilité</option>
-              <option value="Sécurité">Sécurité</option>
-              <option value="Pédagogie">Pédagogie</option>
-              <option value="Ressources Humaines">Ressources Humaines</option>
-              <option value="BTP & Travaux">BTP & Travaux</option>
-              <option value="Direction Général">Direction Générale</option>
-              <option value="Logistique">Logistique</option>
+              {availableDepts.map((d, idx) => (
+                <option key={idx} value={d}>{d}</option>
+              ))}
             </select>
           </div>
 
