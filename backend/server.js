@@ -916,7 +916,7 @@ app.get('/api/dashboard/payroll', authenticateToken, async (req, res) => {
         });
 
         const recordsCount = await queryGet(`SELECT COUNT(*) as total FROM payroll_records WHERE (company_id = ? OR company_id = 1)`, [companyId]);
-        const periodsRows = await queryAll(`SELECT * FROM payroll_periods WHERE (company_id = ? OR company_id = 1) ORDER BY id DESC LIMIT 12`, [companyId]);
+        const periodsRows = await queryAll(`SELECT * FROM payroll_history WHERE (company_id = ? OR company_id = 1) ORDER BY id DESC LIMIT 12`, [companyId]);
 
         res.json({
             masseSalariale: Math.round(masseSalarialeBrute),
@@ -924,9 +924,9 @@ app.get('/api/dashboard/payroll', authenticateToken, async (req, res) => {
             chargesPatronales: Math.round(chargesPatronales),
             coutEmployeurTotal: Math.round(coutEmployeurTotal),
             nbBulletins: activeEmployees.length,
-            paieValidee: periodsRows.filter(p => p.statut === 'Clôturé' || p.statut === 'Validé').length,
-            paieBrouillon: periodsRows.filter(p => p.statut === 'Brouillon').length,
-            monthlyEvolution: periodsRows.map(p => ({ period: p.periode, masseBrute: p.masseBrute, masseNette: p.masseNette }))
+            paieValidee: (periodsRows || []).length,
+            paieBrouillon: activeEmployees.length > 0 ? 1 : 0,
+            monthlyEvolution: (periodsRows || []).map(p => ({ period: p.periode, masseBrute: p.masseBrute, masseNette: p.masseNette }))
         });
     } catch (err) {
         sendError(res, 500, err.message, 'DATABASE_ERROR');
@@ -938,7 +938,7 @@ app.get('/api/dashboard/leaves', authenticateToken, async (req, res) => {
         const companyId = req.company_id || 1;
         const { department } = req.query;
 
-        let leaveWhere = "WHERE l.is_deleted = 0 AND (l.company_id = ? OR l.company_id = 1)";
+        let leaveWhere = "WHERE (l.company_id = ? OR l.company_id = 1)";
         let params = [companyId];
 
         if (department && department !== 'all') {
