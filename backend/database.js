@@ -778,6 +778,17 @@ function initSQLiteSchema(sDb) {
                 `);
             }
         });
+
+        // Seed default documents if table is empty
+        sDb.get("SELECT COUNT(*) as count FROM documents", (err, row) => {
+            if (!err && (!row || row.count === 0)) {
+                sDb.run(`INSERT INTO documents (nom, type, taille, dossier, date) VALUES
+                    ('TABLEAU COTISATION CNPS.PDF', 'PDF', '850 KB', 'COMPTABILITÉ', '2024-05-20'),
+                    ('MODÈLE CONTRAT STAGE.DOCX', 'DOCX', '1.1 MB', 'MODÈLES', '2024-03-15'),
+                    ('RÈGLEMENT INTÉRIEUR 2024.PDF', 'PDF', '2.4 MB', 'RESSOURCES HUMAINES', '2024-01-10')
+                `);
+            }
+        });
     });
 }
 

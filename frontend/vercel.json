@@ -4,6 +4,8 @@
   "routes": [
     { "src": "/assets/(.*)", "dest": "/assets/$1" },
     { "src": "/gebat_logo.png", "dest": "/gebat_logo.png" },
+    { "src": "/gebat_hero_bg.jpg", "dest": "/gebat_hero_bg.jpg" },
+    { "src": "/gebat_bg_original.png", "dest": "/gebat_bg_original.png" },
     { "src": "/favicon.png", "dest": "/favicon.png" },
     { "src": "/favicon.ico", "dest": "/favicon.ico" },
     { "src": "/(.*)", "dest": "/index.html" }
