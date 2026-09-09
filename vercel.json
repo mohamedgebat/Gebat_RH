@@ -2,10 +2,7 @@
   "buildCommand": "cd frontend && npm install && npm run build && node ../copy-dist.cjs",
   "outputDirectory": "dist",
   "routes": [
-    { "src": "/assets/(.*)", "dest": "/assets/$1" },
-    { "src": "/gebat_logo.png", "dest": "/gebat_logo.png" },
-    { "src": "/favicon.png", "dest": "/favicon.png" },
-    { "src": "/favicon.ico", "dest": "/favicon.ico" },
+    { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
