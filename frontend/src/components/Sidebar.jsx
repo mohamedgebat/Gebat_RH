@@ -116,20 +116,14 @@ const Sidebar = ({ isOpen, onClose }) => {
     return 'dashboard';
   };
 
-  const [openCategories, setOpenCategories] = useState({
-    [getActiveCategoryId()]: true
-  });
+  const [openCategoryId, setOpenCategoryId] = useState(getActiveCategoryId());
 
   useEffect(() => {
-    const activeCat = getActiveCategoryId();
-    setOpenCategories(prev => ({ ...prev, [activeCat]: true }));
+    setOpenCategoryId(getActiveCategoryId());
   }, [location.pathname]);
 
   const toggleCategory = (id) => {
-    setOpenCategories(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
+    setOpenCategoryId(prev => prev === id ? null : id);
   };
 
   const handleNavClick = () => {
@@ -165,10 +159,11 @@ const Sidebar = ({ isOpen, onClose }) => {
       {/* Main Collapsible Navigation Items */}
       <nav className="flex-1 overflow-y-auto p-3.5 space-y-3 custom-scrollbar">
         {navCategories.map((cat) => {
-          const isOpenCat = !!openCategories[cat.id];
+          const isOpenCat = openCategoryId === cat.id;
           const isCategoryActive = cat.items.some(item => 
             item.path === location.pathname || (item.path !== '/' && location.pathname.startsWith(item.path))
           );
+
 
           return (
             <div key={cat.id} className="space-y-2">
