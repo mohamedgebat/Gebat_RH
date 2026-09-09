@@ -65,6 +65,7 @@ function App() {
               <Route path="manager-hub" element={<ManagerHub />} />
               <Route path="lifecycle" element={<Lifecycle />} />
               <Route path="missions-expenses" element={<MissionsExpenses />} />
+              <Route path="analytics" element={<Navigate to="/" replace />} />
               <Route path="leaves" element={<Leaves />} />
               <Route path="payroll" element={<Payroll />} />
               <Route path="attendance" element={<Attendance />} />

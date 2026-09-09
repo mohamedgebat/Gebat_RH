@@ -3606,6 +3606,8 @@ app.get(['/health', '/api/health'], (req, res) => {
     });
 });
 
+app.get(['/analytics', '/analytics/*'], (req, res) => res.redirect('/'));
+
 // --- ROUTAGE SPA REACT (FALLBACK POUR TOUTES LES PAGES CLIENT) ---
 app.get('*', (req, res) => {
     if (req.path.startsWith('/api/')) {
