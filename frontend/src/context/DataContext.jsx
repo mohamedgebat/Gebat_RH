@@ -27,7 +27,9 @@ export const DataProvider = ({ children }) => {
     leaveBalances: [],
     notifications: [],
     projects: [],
-    projectAllocations: []
+    projectAllocations: [],
+    missions: [],
+    expenses: []
   });
   const [loading, setLoading] = useState(true);
 
@@ -63,7 +65,9 @@ export const DataProvider = ({ children }) => {
         leaveBalances: incoming.leaveBalances || [],
         notifications: incoming.notifications || [],
         projects: incoming.projects || [],
-        projectAllocations: incoming.projectAllocations || []
+        projectAllocations: incoming.projectAllocations || [],
+        missions: incoming.missions || [],
+        expenses: incoming.expenses || []
       });
     } catch (error) {
       console.error('Error fetching SIRH data:', error);

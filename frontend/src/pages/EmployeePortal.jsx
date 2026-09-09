@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import EmployeeAvatar from '../components/EmployeeAvatar';
 import { compressImage } from '../utils/imageCompressor';
-import { LogOut, Palmtree, FileText, Settings, LayoutGrid, Calendar, Bell, ChevronRight, CheckCircle2, Printer, Download, Info, User, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon, Shield, Lock, Eye, EyeOff, Save, GraduationCap, AlertTriangle, DollarSign, Plus, Camera, UploadCloud, Trash2 } from 'lucide-react';
+import { LogOut, Palmtree, FileText, Settings, LayoutGrid, Calendar, Bell, ChevronRight, CheckCircle2, Printer, Download, Info, User, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon, Shield, Lock, Eye, EyeOff, Save, GraduationCap, AlertTriangle, DollarSign, Plus, Camera, UploadCloud, Trash2, Car, Receipt, Clock, LogIn, XCircle, CheckCircle } from 'lucide-react';
 import { calculateDetailedPaie } from '../utils/payrollCalc';
 import { generateAttestationTravail, generateCertificatTravail, generateAttestationSalaire } from '../utils/documentGenerator';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -68,7 +68,7 @@ const EmployeePortal = () => {
   // Handle URL tab parameter
   useEffect(() => {
     const tabParam = searchParams.get('tab');
-    if (tabParam && ['dashboard', 'leaves', 'payroll', 'advances', 'certificates', 'settings'].includes(tabParam)) {
+    if (tabParam && ['dashboard', 'leaves', 'payroll', 'advances', 'missions', 'attendance', 'certificates', 'settings'].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -222,6 +222,82 @@ const EmployeePortal = () => {
       alert('Erreur lors de la soumission de l\'avance');
     } finally {
       setAdvanceSubmitting(false);
+    }
+  };
+
+  const myMissions = (data?.missions || []).filter(m => m.empId === employee?.id);
+  const myExpenses = (data?.expenses || []).filter(exp => exp.empId === employee?.id);
+
+  const [missionForm, setMissionForm] = useState({
+    titre: '', destination: '', site: '', date_debut: '', date_fin: '', moyen_transport: 'Véhicule de Société', avance_frais: 0, commentaires: ''
+  });
+  const [missionSubmitting, setMissionSubmitting] = useState(false);
+
+  const [expenseForm, setExpenseForm] = useState({
+    mission_id: '', date_depense: new Date().toISOString().split('T')[0], categorie: 'Carburant', montant: '', description: ''
+  });
+  const [expenseSubmitting, setExpenseSubmitting] = useState(false);
+  const [clockSubmitting, setClockSubmitting] = useState(false);
+
+  const handleMissionSubmit = async (e) => {
+    e.preventDefault();
+    if (!employee) return;
+    setMissionSubmitting(true);
+    try {
+      await axios.post('/api/missions', {
+        empId: employee.id,
+        ...missionForm,
+        avance_frais: parseFloat(missionForm.avance_frais) || 0
+      });
+      alert('Votre ordre de mission a été soumis avec succès.');
+      setMissionForm({ titre: '', destination: '', site: '', date_debut: '', date_fin: '', moyen_transport: 'Véhicule de Société', avance_frais: 0, commentaires: '' });
+      refreshData();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erreur lors de la soumission de la mission');
+    } finally {
+      setMissionSubmitting(false);
+    }
+  };
+
+  const handleExpenseSubmit = async (e) => {
+    e.preventDefault();
+    if (!employee) return;
+    setExpenseSubmitting(true);
+    try {
+      await axios.post('/api/expenses', {
+        empId: employee.id,
+        ...expenseForm,
+        montant: parseFloat(expenseForm.montant) || 0,
+        mission_id: expenseForm.mission_id ? parseInt(expenseForm.mission_id, 10) : null
+      });
+      alert('Votre note de frais a été soumise avec succès.');
+      setExpenseForm({ mission_id: '', date_depense: new Date().toISOString().split('T')[0], categorie: 'Carburant', montant: '', description: '' });
+      refreshData();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erreur lors de la soumission de la note de frais');
+    } finally {
+      setExpenseSubmitting(false);
+    }
+  };
+
+  const handleClockInOut = async (type) => {
+    if (!employee) return;
+    setClockSubmitting(true);
+    try {
+      await axios.post('/api/attendance', {
+        empId: employee.id,
+        matricule: employee.matricule,
+        nom: `${employee.nom} ${employee.prenoms}`,
+        type,
+        timestamp: new Date().toISOString(),
+        site: employee.site || 'Abidjan'
+      });
+      alert(`Pointage ${type === 'IN' ? 'Entrée' : 'Sortie'} enregistré avec succès.`);
+      refreshData();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Erreur lors du pointage.');
+    } finally {
+      setClockSubmitting(false);
     }
   };
 
@@ -1341,8 +1417,10 @@ const EmployeePortal = () => {
                     {[
                         { id: 'dashboard', label: 'Dashboard', icon: <LayoutGrid size={17} /> },
                         { id: 'leaves', label: 'Mes Congés', icon: <Palmtree size={17} /> },
-                        { id: 'payroll', label: 'Ma Paie', icon: <FileText size={17} /> },
+                        { id: 'attendance', label: 'Mon Pointage', icon: <Clock size={17} /> },
+                        { id: 'missions', label: 'Missions & Frais', icon: <Car size={17} /> },
                         { id: 'advances', label: 'Mes Avances', icon: <DollarSign size={17} /> },
+                        { id: 'payroll', label: 'Ma Paie', icon: <FileText size={17} /> },
                         { id: 'certificates', label: 'Attestations', icon: <Printer size={17} /> },
                         { id: 'settings', label: 'Mon Profil', icon: <Settings size={17} /> },
                     ].map(tab => (
@@ -1494,6 +1572,298 @@ const EmployeePortal = () => {
                                     </button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* ONGLET 3 : MON POINTAGE & PRESENCE */}
+                {activeTab === 'attendance' && (
+                    <div className="space-y-8">
+                        {/* Carte Action Pointage Rapide */}
+                        <div className="bg-white rounded-[3rem] p-8 shadow-xl border border-ci-border flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="p-3 bg-blue-50 text-[#2563EB] rounded-2xl">
+                                        <Clock size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Pointage de Présence Temps Réel</h3>
+                                        <p className="text-xs font-bold text-slate-400">Enregistrez votre arrivée ou votre départ en un clic</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-4 w-full md:w-auto">
+                                <button
+                                    onClick={() => handleClockInOut('IN')}
+                                    disabled={clockSubmitting}
+                                    className="flex-1 md:flex-none px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all"
+                                >
+                                    <LogIn size={18} /> Pointage Entrée (IN)
+                                </button>
+                                <button
+                                    onClick={() => handleClockInOut('OUT')}
+                                    disabled={clockSubmitting}
+                                    className="flex-1 md:flex-none px-6 py-4 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all"
+                                >
+                                    <LogOut size={18} /> Pointage Sortie (OUT)
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Historique des pointages */}
+                        <div className="bg-white rounded-[3rem] p-8 shadow-xl border border-ci-border space-y-6">
+                            <h4 className="text-lg font-black text-slate-900 uppercase">Mon Historique de Pointage</h4>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs">
+                                    <thead className="bg-slate-100 text-slate-500 uppercase font-black tracking-widest text-[9px] border-b border-slate-200">
+                                        <tr>
+                                            <th className="p-4">Type</th>
+                                            <th className="p-4">Date & Heure</th>
+                                            <th className="p-4">Site / Chantier</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {myAttendance.slice(-10).reverse().map(a => (
+                                            <tr key={a.id} className="hover:bg-slate-50">
+                                                <td className="p-4">
+                                                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${
+                                                        a.type === 'IN' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                                                    }`}>
+                                                        {a.type === 'IN' ? 'Arrivée (IN)' : 'Départ (OUT)'}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4 font-bold text-slate-800">
+                                                    {new Date(a.timestamp).toLocaleString('fr-FR')}
+                                                </td>
+                                                <td className="p-4 font-medium text-slate-600">{a.site || 'Abidjan'}</td>
+                                            </tr>
+                                        ))}
+                                        {myAttendance.length === 0 && (
+                                            <tr>
+                                                <td colSpan="3" className="p-6 text-center text-slate-400 font-bold italic">Aucun pointage enregistré.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ONGLET 4 : MISSIONS & NOTES DE FRAIS */}
+                {activeTab === 'missions' && (
+                    <div className="space-y-8">
+                        {/* Demande de Mission & Note de Frais Forms */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Formulaire 1 : Ordre de Mission */}
+                            <div className="bg-white rounded-[3rem] p-8 shadow-xl border border-ci-border space-y-6">
+                                <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                                    <div className="p-2.5 bg-blue-50 text-[#2563EB] rounded-2xl">
+                                        <Car size={22} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Nouvel Ordre de Mission</h3>
+                                        <p className="text-xs text-slate-400 font-bold">Soumettre une demande de déplacement professionnel</p>
+                                    </div>
+                                </div>
+                                <form onSubmit={handleMissionSubmit} className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-slate-500">Titre de la mission *</label>
+                                        <input
+                                            type="text" required placeholder="Ex: Inspection Chantier Yamoussoukro"
+                                            value={missionForm.titre}
+                                            onChange={e => setMissionForm({...missionForm, titre: e.target.value})}
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Destination *</label>
+                                            <input
+                                                type="text" required placeholder="Ex: Yamoussoukro"
+                                                value={missionForm.destination}
+                                                onChange={e => setMissionForm({...missionForm, destination: e.target.value})}
+                                                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Site / Chantier</label>
+                                            <input
+                                                type="text" placeholder="Ex: Chantier CHU"
+                                                value={missionForm.site}
+                                                onChange={e => setMissionForm({...missionForm, site: e.target.value})}
+                                                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Date Début *</label>
+                                            <input
+                                                type="date" required
+                                                value={missionForm.date_debut}
+                                                onChange={e => setMissionForm({...missionForm, date_debut: e.target.value})}
+                                                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none"
+                                            />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Date Fin *</label>
+                                            <input
+                                                type="date" required
+                                                value={missionForm.date_fin}
+                                                onChange={e => setMissionForm({...missionForm, date_fin: e.target.value})}
+                                                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Transport</label>
+                                            <select
+                                                value={missionForm.moyen_transport}
+                                                onChange={e => setMissionForm({...missionForm, moyen_transport: e.target.value})}
+                                                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none"
+                                            >
+                                                <option>Véhicule de Société</option>
+                                                <option>Transport en Commun / Car</option>
+                                                <option>Véhicule Personnel</option>
+                                                <option>Avion / Vol Régulier</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Avance de Frais (FCFA)</label>
+                                            <input
+                                                type="number" placeholder="0"
+                                                value={missionForm.avance_frais}
+                                                onChange={e => setMissionForm({...missionForm, avance_frais: e.target.value})}
+                                                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none font-mono"
+                                            />
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="submit" disabled={missionSubmitting}
+                                        className="w-full py-4 bg-[#2563EB] hover:bg-blue-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all"
+                                    >
+                                        {missionSubmitting ? 'Envoi...' : 'Soumettre l\'Ordre de Mission'}
+                                    </button>
+                                </form>
+                            </div>
+
+                            {/* Formulaire 2 : Note de Frais */}
+                            <div className="bg-white rounded-[3rem] p-8 shadow-xl border border-ci-border space-y-6">
+                                <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                                    <div className="p-2.5 bg-amber-50 text-amber-600 rounded-2xl">
+                                        <Receipt size={22} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Déclaration de Note de Frais</h3>
+                                        <p className="text-xs text-slate-400 font-bold">Demander le remboursement d'une dépense engagée</p>
+                                    </div>
+                                </div>
+                                <form onSubmit={handleExpenseSubmit} className="space-y-4">
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-slate-500">Mission Associée (Optionnel)</label>
+                                        <select
+                                            value={expenseForm.mission_id}
+                                            onChange={e => setExpenseForm({...expenseForm, mission_id: e.target.value})}
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none"
+                                        >
+                                            <option value="">Mission Générale / Hors Mission</option>
+                                            {myMissions.map(m => (
+                                                <option key={m.id} value={m.id}>{m.titre} ({m.destination})</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Catégorie *</label>
+                                            <select
+                                                value={expenseForm.categorie}
+                                                onChange={e => setExpenseForm({...expenseForm, categorie: e.target.value})}
+                                                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none"
+                                            >
+                                                <option>Carburant</option>
+                                                <option>Hébergement / Hôtel</option>
+                                                <option>Restauration / Repas</option>
+                                                <option>Péage / Transport</option>
+                                                <option>Achat Matériel Chantier</option>
+                                                <option>Autre</option>
+                                            </select>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-slate-500">Montant (FCFA) *</label>
+                                            <input
+                                                type="number" required placeholder="Ex: 25000"
+                                                value={expenseForm.montant}
+                                                onChange={e => setExpenseForm({...expenseForm, montant: e.target.value})}
+                                                className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none font-mono"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase text-slate-500">Description / Justificatif</label>
+                                        <input
+                                            type="text" placeholder="Ex: Carburant trajet Abidjan-Yamoussoukro"
+                                            value={expenseForm.description}
+                                            onChange={e => setExpenseForm({...expenseForm, description: e.target.value})}
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 focus:outline-none"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit" disabled={expenseSubmitting}
+                                        className="w-full py-4 bg-amber-600 hover:bg-amber-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg transition-all"
+                                    >
+                                        {expenseSubmitting ? 'Envoi...' : 'Soumettre la Note de Frais'}
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        {/* Listes synthétiques Mes Missions et Mes Notes de Frais */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {/* Mes Missions */}
+                            <div className="bg-white rounded-[3rem] p-8 shadow-xl border border-ci-border space-y-4">
+                                <h4 className="text-lg font-black text-slate-900 uppercase">Mes Ordres de Mission</h4>
+                                <div className="space-y-3">
+                                    {myMissions.map(m => (
+                                        <div key={m.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+                                            <div>
+                                                <p className="font-bold text-slate-900 text-xs">{m.titre}</p>
+                                                <p className="text-[10px] text-slate-500 font-medium">Vers {m.destination} ({m.date_debut} au {m.date_fin})</p>
+                                            </div>
+                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${
+                                                m.statut?.includes('Validée') || m.statut?.includes('Approuvée') ? 'bg-emerald-100 text-emerald-800' :
+                                                m.statut === 'Refusée' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
+                                            }`}>
+                                                {m.statut || 'En attente N+1'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    {myMissions.length === 0 && <p className="text-center py-4 text-slate-400 font-bold italic text-xs">Aucune mission enregistrée.</p>}
+                                </div>
+                            </div>
+
+                            {/* Mes Notes de Frais */}
+                            <div className="bg-white rounded-[3rem] p-8 shadow-xl border border-ci-border space-y-4">
+                                <h4 className="text-lg font-black text-slate-900 uppercase">Mes Notes de Frais</h4>
+                                <div className="space-y-3">
+                                    {myExpenses.map(exp => (
+                                        <div key={exp.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+                                            <div>
+                                                <p className="font-bold text-slate-900 text-xs">{exp.categorie} - {new Intl.NumberFormat('fr-CI').format(exp.montant)} FCFA</p>
+                                                <p className="text-[10px] text-slate-500 font-medium">{exp.date_depense} • {exp.description || 'Sans description'}</p>
+                                            </div>
+                                            <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase ${
+                                                exp.statut?.includes('Validée') || exp.statut?.includes('Remboursée') ? 'bg-emerald-100 text-emerald-800' :
+                                                exp.statut === 'Refusée' ? 'bg-red-100 text-red-800' : 'bg-amber-100 text-amber-800'
+                                            }`}>
+                                                {exp.statut || 'Soumis'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    {myExpenses.length === 0 && <p className="text-center py-4 text-slate-400 font-bold italic text-xs">Aucune note de frais enregistrée.</p>}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}

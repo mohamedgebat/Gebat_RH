@@ -598,7 +598,7 @@ app.get('/api/sirh-data', authenticateToken, async (req, res) => {
             allAttendance, allEvaluations, allContracts, allUsers, trainings, 
             allDocuments, payrollHistory, allAdvances, allDisciplinary,
             departments, positions, leaveBalances, notifications, payrollRecords,
-            attendanceSettings, allProjects, allProjectAllocations
+            attendanceSettings, allProjects, allProjectAllocations, allMissions, allExpenses
         ] = await Promise.all([
             queryAll("SELECT * FROM settings WHERE id = 1 OR company_id = ?", [companyId]),
             queryAll("SELECT * FROM employees WHERE is_deleted = 0 AND (company_id = ? OR company_id = 1)", [companyId]),
@@ -621,7 +621,9 @@ app.get('/api/sirh-data', authenticateToken, async (req, res) => {
             queryAll("SELECT * FROM payroll_records WHERE (company_id = ? OR company_id = 1) ORDER BY created_at DESC", [companyId]),
             queryAll("SELECT * FROM attendance_settings WHERE company_id = ?", [companyId]),
             queryAll("SELECT * FROM projects WHERE (company_id = ? OR company_id = 1) ORDER BY id DESC", [companyId]),
-            queryAll("SELECT * FROM project_allocations WHERE (company_id = ? OR company_id = 1)", [companyId])
+            queryAll("SELECT * FROM project_allocations WHERE (company_id = ? OR company_id = 1)", [companyId]),
+            queryAll("SELECT * FROM missions WHERE (company_id = ? OR company_id = 1) ORDER BY id DESC", [companyId]),
+            queryAll("SELECT * FROM expense_reports WHERE (company_id = ? OR company_id = 1) ORDER BY id DESC", [companyId])
         ]);
 
         const userRole = req.user?.role;
@@ -636,6 +638,8 @@ app.get('/api/sirh-data', authenticateToken, async (req, res) => {
         let evaluations = allEvaluations;
         let attendance = allAttendance;
         let userNotifications = notifications;
+        let missions = allMissions;
+        let expenses = allExpenses;
 
         if (userRole === 'employee' && userEmpId) {
             employees = allEmployees.filter(e => e.id === userEmpId);
@@ -646,6 +650,8 @@ app.get('/api/sirh-data', authenticateToken, async (req, res) => {
             evaluations = allEvaluations.filter(ev => ev.empId === userEmpId);
             attendance = allAttendance.filter(at => at.empId === userEmpId);
             userNotifications = notifications.filter(n => n.empId === userEmpId || n.user_id === req.user.id);
+            missions = allMissions.filter(m => m.empId === userEmpId);
+            expenses = allExpenses.filter(exp => exp.empId === userEmpId);
             logAuditAction(req, 'CONSULTATION_ESPACE_EMPLOYE', `Accès isolé au profil employé #${userEmpId}`);
         } else {
             logAuditAction(req, 'CONSULTATION_MODULES_RH', `Accès global aux modules par ${req.user?.email || 'Admin'}`);
@@ -685,7 +691,9 @@ app.get('/api/sirh-data', authenticateToken, async (req, res) => {
             leaveBalances,
             notifications: userNotifications,
             projects: allProjects || [],
-            projectAllocations: allProjectAllocations || []
+            projectAllocations: allProjectAllocations || [],
+            missions: missions || [],
+            expenses: expenses || []
         });
     } catch (error) {
         sendError(res, 500, error.message, 'DATABASE_ERROR');
