@@ -1417,7 +1417,6 @@ const EmployeePortal = () => {
                     {[
                         { id: 'dashboard', label: 'Dashboard', icon: <LayoutGrid size={17} /> },
                         { id: 'leaves', label: 'Mes Congés', icon: <Palmtree size={17} /> },
-                        { id: 'attendance', label: 'Mon Pointage', icon: <Clock size={17} /> },
                         { id: 'missions', label: 'Missions & Frais', icon: <Car size={17} /> },
                         { id: 'advances', label: 'Mes Avances', icon: <DollarSign size={17} /> },
                         { id: 'payroll', label: 'Ma Paie', icon: <FileText size={17} /> },
