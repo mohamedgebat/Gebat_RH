@@ -1921,7 +1921,7 @@ app.patch('/api/leaves/:id', authenticateToken, validateIdParam('id'), (req, res
     db.get("SELECT * FROM leaves WHERE id = ?", [leaveId], (err, leave) => {
         if (err || !leave) return sendError(res, 500, err ? err.message : 'Congé non trouvé', 'NOT_FOUND');
 
-        db.run("UPDATE leaves SET statut = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", [statut, leaveId], function(err) {
+        db.run("UPDATE leaves SET statut = ? WHERE id = ?", [statut, leaveId], function(err) {
             if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
             
             db.get("SELECT * FROM employees WHERE id = ?", [leave.empId], (errEmp, employee) => {
@@ -2114,8 +2114,8 @@ app.post('/api/advances', authenticateToken, (req, res) => {
                 if (!errEmp && employee) {
                     const empName = `${employee.nom} ${employee.prenoms}`;
                     const formattedMontant = new Intl.NumberFormat('fr-CI').format(montant);
-                    db.run(`INSERT INTO notifications (company_id, title, message, type) VALUES (1, '💰 Demande d\\'Avance', ?, 'importante')`,
-                        [`${empName} sollicite une avance de ${formattedMontant} F CFA.`]);
+                    db.run("INSERT INTO notifications (company_id, title, message, type) VALUES (1, ?, ?, 'importante')",
+                        ["💰 Demande d'Avance", `${empName} sollicite une avance de ${formattedMontant} F CFA.`]);
 
                     emailService.sendAdvanceRequestEmail({
                         advance: { id: newAdvId, montant, moisRemboursement, motif },
@@ -3387,9 +3387,16 @@ app.get('/api/manager/overview', authenticateToken, async (req, res) => {
         
         let team = allEmployees;
         if (currentUserRole === 'employee' && currentEmpId) {
-            const myEmp = allEmployees.find(e => e.id === currentEmpId);
-            const myFullName = myEmp ? `${myEmp.nom} ${myEmp.prenoms}`.trim() : '';
-            team = allEmployees.filter(e => e.id === currentEmpId || (myFullName && e.responsable && e.responsable.toLowerCase().includes(myFullName.toLowerCase())));
+            const myEmp = allEmployees.find(e => Number(e.id) === Number(currentEmpId));
+            const myFullName = myEmp ? `${myEmp.nom} ${myEmp.prenoms}`.trim().toLowerCase() : '';
+            const myFullNameAlt = myEmp ? `${myEmp.prenoms} ${myEmp.nom}`.trim().toLowerCase() : '';
+            team = allEmployees.filter(e => {
+                if (Number(e.id) === Number(currentEmpId)) return true;
+                if (!e.responsable) return false;
+                const resp = e.responsable.toLowerCase();
+                return (myFullName && resp.includes(myFullName)) || (myFullNameAlt && resp.includes(myFullNameAlt));
+            });
+            if (team.length === 0) team = allEmployees;
         }
 
         const teamIds = team.map(t => t.id);
@@ -3430,15 +3437,15 @@ app.get('/api/manager/overview', authenticateToken, async (req, res) => {
         const today = new Date().toISOString().split('T')[0];
         const todayAttendances = teamIds.length > 0 ? await queryAll(
             `SELECT a.*, e.nom, e.prenoms, e.matricule
-             FROM attendances a JOIN employees e ON a.empId = e.id
-             WHERE a.date = ? AND a.empId IN (${teamPlaceholders})`,
-            [today, ...teamIds]
+             FROM attendance a JOIN employees e ON a.empId = e.id
+             WHERE a.timestamp LIKE ? AND a.empId IN (${teamPlaceholders})`,
+            [`${today}%`, ...teamIds]
         ) : [];
 
         res.json({
             team,
             teamCount: team.length,
-            presentCount: todayAttendances.filter(a => a.statut === 'Présent' || a.heureArrivee).length,
+            presentCount: todayAttendances.length,
             pendingLeaves,
             pendingAdvances,
             pendingMissions,

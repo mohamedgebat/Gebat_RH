@@ -2,3 +2,9 @@
   Rappel des accès :
    * Email : admin@sirh.ci
    * Mot de passe : admin123
+
+
+Voici les identifiants de connexion configurés pour Mohamed Koné :
+
+Identifiant (Email) : mohamed.kone@gebat-sa.ci
+Mot de passe : Gebat2026!
