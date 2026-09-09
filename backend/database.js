@@ -444,8 +444,13 @@ function initSQLiteSchema(sDb) {
             taux_horaire_base REAL DEFAULT 2500,
             taux_journalier_base REAL DEFAULT 20000,
             taux_majoration_heures_sup REAL DEFAULT 25,
+            sites_travail TEXT DEFAULT 'Abidjan - Siège, Chantier Bouaké, San Pedro, Yamoussoukro',
             FOREIGN KEY(company_id) REFERENCES companies(id)
         )`);
+
+        sDb.run(`ALTER TABLE attendance_settings ADD COLUMN sites_travail TEXT DEFAULT 'Abidjan - Siège, Chantier Bouaké, San Pedro, Yamoussoukro'`, (err) => {
+            // Ignorer si la colonne existe déjà
+        });
 
         sDb.run(`CREATE TABLE IF NOT EXISTS evaluations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

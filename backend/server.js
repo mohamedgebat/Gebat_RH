@@ -712,7 +712,8 @@ app.get('/api/attendance/settings', authenticateToken, (req, res) => {
             marge_tolerance_minutes: 15,
             taux_horaire_base: 2500,
             taux_journalier_base: 20000,
-            taux_majoration_heures_sup: 25
+            taux_majoration_heures_sup: 25,
+            sites_travail: 'Abidjan - Siège, Chantier Bouaké, San Pedro, Yamoussoukro'
         });
     });
 });
@@ -725,7 +726,8 @@ app.post('/api/attendance/settings', authenticateToken, authorizeRoles('admin', 
         marge_tolerance_minutes, 
         taux_horaire_base, 
         taux_journalier_base, 
-        taux_majoration_heures_sup 
+        taux_majoration_heures_sup,
+        sites_travail
     } = req.body;
 
     const arrivee = heure_arrivee_officielle || '08:00';
@@ -734,10 +736,11 @@ app.post('/api/attendance/settings', authenticateToken, authorizeRoles('admin', 
     const tauxHoraire = parseFloat(taux_horaire_base || 2500);
     const tauxJournalier = parseFloat(taux_journalier_base || 20000);
     const majoration = parseFloat(taux_majoration_heures_sup || 25);
+    const sites = sites_travail || 'Abidjan - Siège, Chantier Bouaké, San Pedro, Yamoussoukro';
 
     db.run(`INSERT INTO attendance_settings 
-            (company_id, heure_arrivee_officielle, heure_depart_officiel, marge_tolerance_minutes, taux_horaire_base, taux_journalier_base, taux_majoration_heures_sup, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            (company_id, heure_arrivee_officielle, heure_depart_officiel, marge_tolerance_minutes, taux_horaire_base, taux_journalier_base, taux_majoration_heures_sup, sites_travail, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             ON CONFLICT(company_id) DO UPDATE SET
             heure_arrivee_officielle = excluded.heure_arrivee_officielle,
             heure_depart_officiel = excluded.heure_depart_officiel,
@@ -745,11 +748,12 @@ app.post('/api/attendance/settings', authenticateToken, authorizeRoles('admin', 
             taux_horaire_base = excluded.taux_horaire_base,
             taux_journalier_base = excluded.taux_journalier_base,
             taux_majoration_heures_sup = excluded.taux_majoration_heures_sup,
+            sites_travail = excluded.sites_travail,
             updated_at = CURRENT_TIMESTAMP`,
-        [companyId, arrivee, depart, tolerance, tauxHoraire, tauxJournalier, majoration],
+        [companyId, arrivee, depart, tolerance, tauxHoraire, tauxJournalier, majoration, sites],
         function(err) {
             if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
-            logAuditAction(req, 'MODIFICATION_PARAMETRES_POINTAGE', `Horaires officiels (${arrivee}-${depart}), tolérance (${tolerance}m), taux (${tauxHoraire} FCFA/h)`);
+            logAuditAction(req, 'MODIFICATION_PARAMETRES_POINTAGE', `Horaires officiels (${arrivee}-${depart}), tolérance (${tolerance}m), taux (${tauxHoraire} FCFA/h), sites (${sites})`);
             res.json({ message: 'Paramètres d\'horaires et barèmes mis à jour avec succès' });
         }
     );

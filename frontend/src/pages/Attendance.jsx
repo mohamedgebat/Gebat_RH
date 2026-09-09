@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useData } from '../context/DataContext';
 import PageHeader from '../components/PageHeader';
 import EmployeeAvatar from '../components/EmployeeAvatar';
@@ -62,18 +62,46 @@ const Attendance = () => {
   const [kioskInput, setKioskInput] = useState('');
   const [kioskFeedback, setKioskFeedback] = useState(null);
 
-  // Shift & Rates Settings State
+  // Shift, Sites & Rates Settings State
   const [attSettings, setAttSettings] = useState({
     heure_arrivee_officielle: '08:00',
     heure_depart_officiel: '17:00',
     marge_tolerance_minutes: 15,
     taux_horaire_base: 2500,
     taux_journalier_base: 20000,
-    taux_majoration_heures_sup: 25
+    taux_majoration_heures_sup: 25,
+    sites_travail: 'Abidjan - Siège, Chantier Bouaké, San Pedro, Yamoussoukro'
   });
 
+  const [newSiteInput, setNewSiteInput] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
   const [settingsSavedMessage, setSettingsSavedMessage] = useState('');
+
+  const configuredSites = useMemo(() => {
+    const raw = attSettings.sites_travail || 'Abidjan - Siège, Chantier Bouaké, San Pedro, Yamoussoukro';
+    return raw.split(',').map(s => s.trim()).filter(Boolean);
+  }, [attSettings.sites_travail]);
+
+  const handleAddSite = () => {
+    const trimmed = newSiteInput.trim();
+    if (!trimmed) return;
+    if (configuredSites.some(s => s.toLowerCase() === trimmed.toLowerCase())) {
+      alert('Ce site existe déjà dans la liste des lieux de travail.');
+      return;
+    }
+    const updated = [...configuredSites, trimmed].join(', ');
+    setAttSettings(prev => ({ ...prev, sites_travail: updated }));
+    setNewSiteInput('');
+  };
+
+  const handleRemoveSite = (siteToRemove) => {
+    if (configuredSites.length <= 1) {
+      alert('Vous devez conserver au moins un site de travail.');
+      return;
+    }
+    const updated = configuredSites.filter(s => s !== siteToRemove).join(', ');
+    setAttSettings(prev => ({ ...prev, sites_travail: updated }));
+  };
 
   // Load attendance settings from backend or context
   useEffect(() => {
@@ -596,10 +624,9 @@ const Attendance = () => {
                 className="bg-transparent py-2 pr-3 text-xs font-bold text-ci-text outline-none"
               >
                 <option value="ALL">Tous les Sites</option>
-                <option value="Abidjan">Abidjan Plateau</option>
-                <option value="San-Pédro">San-Pédro</option>
-                <option value="Bouaké">Bouaké</option>
-                <option value="Yamoussoukro">Yamoussoukro</option>
+                {configuredSites.map((sName, sIdx) => (
+                  <option key={sIdx} value={sName}>{sName}</option>
+                ))}
               </select>
             </div>
 
@@ -887,6 +914,57 @@ const Attendance = () => {
                 </div>
               </div>
 
+              {/* Section 3: Sites & Lieux de Travail Autorisés */}
+              <div className="bg-blue-50/40 border border-blue-100 p-5 rounded-3xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-blue-900 flex items-center gap-2">
+                    <MapPin size={15} className="text-blue-600" /> 3. Lieux de Travail & Sites Autorisés
+                  </h4>
+                  <span className="text-[9px] font-bold uppercase tracking-widest text-blue-700 bg-blue-100/60 px-2.5 py-1 rounded-md border border-blue-200">Localisations</span>
+                </div>
+
+                <p className="text-[10px] text-slate-500 font-medium">
+                  Gérez les sites de travail (sièges, agences, chantiers, usines) pour le pointage des employés et les filtres.
+                </p>
+
+                {/* Champ d'ajout rapide */}
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Siège Abidjan, Chantier Akwaba..."
+                    value={newSiteInput}
+                    onChange={e => setNewSiteInput(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddSite(); } }}
+                    className="flex-1 px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={handleAddSite}
+                    className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-md transition-all flex items-center gap-1 shrink-0 active:scale-95"
+                  >
+                    <Plus size={14} /> Ajouter
+                  </button>
+                </div>
+
+                {/* Liste dynamique des sites */}
+                <div className="flex flex-wrap gap-2 pt-1 max-h-36 overflow-y-auto">
+                  {configuredSites.map((siteName, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-blue-200 text-blue-900 text-xs font-bold rounded-xl shadow-xs">
+                      <Building size={12} className="text-blue-600" />
+                      {siteName}
+                      <button 
+                        type="button" 
+                        onClick={() => handleRemoveSite(siteName)}
+                        title={`Supprimer le site ${siteName}`}
+                        className="text-slate-400 hover:text-red-600 hover:bg-red-50 p-0.5 rounded-full transition-colors ml-1"
+                      >
+                        <X size={13} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
               {/* Action Buttons */}
               <div className="pt-2 flex items-center justify-end gap-3 border-t border-slate-100">
                 <button 
@@ -954,10 +1032,9 @@ const Attendance = () => {
                     onChange={e => setNewAttendance({ ...newAttendance, site: e.target.value })}
                     className="w-full px-5 py-4 bg-ci-bg rounded-2xl text-xs font-bold outline-none"
                   >
-                    <option value="Abidjan">Abidjan</option>
-                    <option value="San-Pédro">San-Pédro</option>
-                    <option value="Bouaké">Bouaké</option>
-                    <option value="Yamoussoukro">Yamoussoukro</option>
+                    {configuredSites.map((sName, sIdx) => (
+                      <option key={sIdx} value={sName}>{sName}</option>
+                    ))}
                   </select>
                 </div>
               </div>
