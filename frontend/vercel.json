@@ -1,16 +1,12 @@
 {
-  "version": 2,
-  "routes": [
+  "rewrites": [
     {
-      "src": "/api/(.*)",
-      "dest": "https://gebatrh-production.up.railway.app/api/$1"
+      "source": "/api/:path*",
+      "destination": "https://gebatrh-production.up.railway.app/api/:path*"
     },
     {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/.*",
-      "dest": "/index.html"
+      "source": "/:path*",
+      "destination": "/index.html"
     }
   ]
 }
