@@ -771,10 +771,10 @@ function initSQLiteSchema(sDb) {
         sDb.get("SELECT COUNT(*) as count FROM projects", (err, row) => {
             if (!err && (!row || row.count === 0)) {
                 sDb.run(`INSERT INTO projects (code, nom, client, site, budget_mo, cout_actuel_mo, date_debut, date_fin, chef_chantier, latitude, longitude, rayon_geofence, statut) VALUES
-                    ('CH-2026-01', 'Tour F Plateau - Travaux Finitions', 'Gouvernement CI / Ministère Construction', 'Plateau, Abidjan', 45000000, 18500000, '2026-01-10', '2026-12-31', 'M. Kouamé Adjoumani', 5.3245, -4.0189, 200, 'En cours'),
-                    ('CH-2026-02', 'Résidence Akwaba Golf - Gros Œuvre', 'Groupe Immobilier Palmeraie', 'Cocody Riviera, Abidjan', 28000000, 12400000, '2026-02-01', '2026-10-30', 'Ing. Soro Brahima', 5.3612, -3.9520, 300, 'En cours'),
-                    ('CH-2026-03', 'Échangeur Voie Y4 - Voirie & Réseaux', 'AGEROUTE Côte d''Ivoire', 'Abobo - Anyama', 62000000, 24800000, '2025-11-15', '2026-08-31', 'Chef Konan Jean', 5.4310, -4.0321, 500, 'En cours'),
-                    ('CH-2026-04', 'Terminal Minéralier San-Pedro', 'Port Autonome de San-Pedro', 'San-Pedro Port', 85000000, 31200000, '2026-03-01', '2027-02-28', 'Ing. Bakayoko Moussa', 4.7521, -6.6432, 400, 'En cours')
+                    ('CH-2026-01', 'Tour F Plateau - Travaux Finitions', 'Gouvernement CI / Ministère Construction', 'Plateau, Abidjan', 45000000, 0, '2026-01-10', '2026-12-31', 'M. Kouamé Adjoumani', 5.3245, -4.0189, 200, 'En cours'),
+                    ('CH-2026-02', 'Résidence Akwaba Golf - Gros Œuvre', 'Groupe Immobilier Palmeraie', 'Cocody Riviera, Abidjan', 28000000, 0, '2026-02-01', '2026-10-30', 'Ing. Soro Brahima', 5.3612, -3.9520, 300, 'En cours'),
+                    ('CH-2026-03', 'Échangeur Voie Y4 - Voirie & Réseaux', 'AGEROUTE Côte d''Ivoire', 'Abobo - Anyama', 62000000, 0, '2025-11-15', '2026-08-31', 'Chef Konan Jean', 5.4310, -4.0321, 500, 'En cours'),
+                    ('CH-2026-04', 'Terminal Minéralier San-Pedro', 'Port Autonome de San-Pedro', 'San-Pedro Port', 85000000, 0, '2026-03-01', '2027-02-28', 'Ing. Bakayoko Moussa', 4.7521, -6.6432, 400, 'En cours')
                 `);
             }
         });

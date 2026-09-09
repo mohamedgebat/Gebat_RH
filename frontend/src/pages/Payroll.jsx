@@ -529,10 +529,12 @@ const Payroll = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {projects.map((proj) => {
-              const budget = proj.budget_mo || 1;
-              const cout = proj.cout_actuel_mo || 0;
-              const pct = Math.min(100, Math.round((cout / budget) * 100));
-              const isOver = cout > budget;
+              const projAllocations = (projectAllocations || []).filter(a => Number(a.project_id) === Number(proj.id) || Number(a.projectId) === Number(proj.id));
+              const allocatedCostSum = projAllocations.reduce((sum, a) => sum + (parseFloat(a.cout_impute) || 0), 0);
+              const cout = allocatedCostSum > 0 ? allocatedCostSum : (proj.cout_actuel_mo || 0);
+              const budget = proj.budget_mo || 0;
+              const pct = budget > 0 ? Math.min(100, Math.round((cout / budget) * 100)) : 0;
+              const isOver = cout > budget && budget > 0;
 
               return (
                 <div key={proj.id} className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-md space-y-4 hover:shadow-xl transition-all">
@@ -568,6 +570,61 @@ const Payroll = () => {
                 </div>
               );
             })}
+          </div>
+
+          {/* Table des Imputations Analytiques Réelles */}
+          <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-200 overflow-hidden">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h4 className="font-black text-slate-900 uppercase text-xs tracking-wider">Historique des Imputations de Main-d'Œuvre</h4>
+                <p className="text-[10px] text-slate-500 font-bold mt-0.5">Détail des heures et coûts salariaux imputés par chantier</p>
+              </div>
+              <span className="text-xs font-bold bg-slate-100 px-3 py-1 rounded-full text-slate-600 font-mono">
+                {projectAllocations.length} Imputations
+              </span>
+            </div>
+            <table className="w-full text-xs font-medium">
+              <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-500 border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-4 text-left">Chantier</th>
+                  <th className="px-6 py-4 text-left">Salarié / Ouvrier</th>
+                  <th className="px-6 py-4 text-center">Période</th>
+                  <th className="px-6 py-4 text-right">Heures Allouées</th>
+                  <th className="px-6 py-4 text-right">Coût Imputé (FCFA)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {projectAllocations.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="text-center py-8 text-slate-400 font-bold uppercase text-xs">
+                      Aucune imputation d'heures enregistrée en base de données pour le moment
+                    </td>
+                  </tr>
+                ) : (
+                  projectAllocations.map((alloc) => {
+                    const emp = (data?.employees || []).find(e => e.id === alloc.emp_id);
+                    const proj = (data?.projects || []).find(p => p.id === alloc.project_id);
+                    return (
+                      <tr key={alloc.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <p className="font-black text-slate-800 uppercase">{alloc.project_nom || proj?.nom || `Chantier #${alloc.project_id}`}</p>
+                          <p className="text-[10px] font-bold text-amber-600 font-mono">{alloc.project_code || proj?.code || ''}</p>
+                        </td>
+                        <td className="px-6 py-4 font-bold text-slate-800">
+                          {alloc.emp_nom ? `${alloc.emp_nom} ${alloc.emp_prenoms || ''}` : (emp ? `${emp.nom} ${emp.prenoms}` : `Salarié #${alloc.emp_id}`)}
+                          <p className="text-[10px] text-slate-400 font-normal">{alloc.poste || emp?.poste || ''}</p>
+                        </td>
+                        <td className="px-6 py-4 text-center font-bold text-slate-600">{alloc.mois || selectedMonth}</td>
+                        <td className="px-6 py-4 text-right font-mono font-bold text-slate-700">{alloc.heures_allouees} h</td>
+                        <td className="px-6 py-4 text-right font-mono font-black text-emerald-700">
+                          {new Intl.NumberFormat('fr-FR').format(alloc.cout_impute)} F
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
