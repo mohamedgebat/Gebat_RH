@@ -564,7 +564,12 @@ const Payroll = () => {
                               <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
                                   <td className="px-6 py-4">
                                       <p className="font-black text-slate-800 uppercase">{emp.nom} {emp.prenoms}</p>
-                                      <p className="text-[10px] font-bold text-slate-400 uppercase">{emp.matricule} • {emp.poste} ({emp.nationalite || 'Ivoirienne'})</p>
+                                      <p className="text-[10px] font-bold text-slate-400 uppercase">
+                                        {emp.matricule} • {emp.poste} ({emp.nationalite || 'Ivoirienne'})
+                                      </p>
+                                      <p className="text-[10px] font-bold text-emerald-700">
+                                        💍 {emp.situationMatrimoniale || 'Célibataire'} • 👶 {emp.nbEnfants || 0} enfant(s) ({paie.details.parts} part{paie.details.parts > 1 ? 's' : ''})
+                                      </p>
                                   </td>
                                   <td className="px-6 py-4 text-right font-bold font-mono">{new Intl.NumberFormat('fr-FR').format(paie.brut)} F</td>
                                   <td className="px-6 py-4 text-right text-red-500 font-bold font-mono">-{new Intl.NumberFormat('fr-FR').format(paie.cnpsSalarial)} F</td>
@@ -659,6 +664,9 @@ const Payroll = () => {
                         <td className="px-4 py-3 border-r border-slate-200">
                           <p className="font-black text-slate-900 uppercase">{emp.nom} {emp.prenoms}</p>
                           <p className="text-[10px] font-bold text-slate-400 font-mono">{emp.matricule} • {emp.poste}</p>
+                          <p className="text-[9px] font-bold text-emerald-600">
+                            {emp.situationMatrimoniale || 'Célibataire'} • {emp.nbEnfants || 0} enf. ({paie.details.parts} p.)
+                          </p>
                         </td>
                         <td className="px-4 py-3 text-right font-mono font-bold text-slate-700 border-r border-slate-200">
                           {new Intl.NumberFormat('fr-FR').format(emp.salaireBase || 0)}

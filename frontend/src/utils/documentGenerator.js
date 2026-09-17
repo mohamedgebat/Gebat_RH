@@ -1466,16 +1466,15 @@ export const generateOfficialCIVBulletin = (emp, payslipDetails, company, select
           <div class="detail-line"><span class="detail-label">Téléphone :</span> <span class="detail-val">${emp.telephone || '0205196033'}</span></div>
           <div class="detail-line"><span class="detail-label">Email :</span> <span class="detail-val">${emp.email || 'collaborateur@entreprise.ci'}</span></div>
           <div class="detail-line"><span class="detail-label">Nationalité :</span> <span class="detail-val">${emp.nationalite || 'IVOIRIENNE'}</span></div>
+          <div class="detail-line"><span class="detail-label">Situation Famille :</span> <span class="detail-val" style="font-weight: 800; color: #111827;">${(emp.situationMatrimoniale || 'CÉLIBATAIRE').toUpperCase()}</span></div>
+          <div class="detail-line"><span class="detail-label">Nombre d'enfants :</span> <span class="detail-val" style="font-weight: 800; color: #111827;">${emp.nbEnfants || 0} enfant(s)</span></div>
+          <div class="detail-line"><span class="detail-label">Parts Fiscales DGI :</span> <span class="detail-val" style="color: #065f46; font-weight: 900;">${payslipDetails.parts || 1} Part(s)</span></div>
           <div class="detail-line"><span class="detail-label">Adresse :</span> <span class="detail-val">${emp.site || 'ABOBO RUE MAIRIE'}</span></div>
-          <div class="detail-line"><span class="detail-label">Pays d'origine :</span> <span class="detail-val">CÔTE D'IVOIRE</span></div>
           <div class="detail-line"><span class="detail-label">Sexe :</span> <span class="detail-val">${emp.sexe === 'M' ? 'Masculin' : 'Féminin'}</span></div>
-          <div class="detail-line"><span class="detail-label">Nombre d'enfant :</span> <span class="detail-val">${emp.nbEnfants || 0}</span></div>
           <div class="detail-line"><span class="detail-label">Date entrée :</span> <span class="detail-val">${emp.dateEmbauche || '10/01/2026'}</span></div>
           <div class="detail-line"><span class="detail-label">Date sortie :</span> <span class="detail-val">—</span></div>
           <div class="detail-line"><span class="detail-label">Banque :</span> <span class="detail-val">${emp.modePaiement || 'SOCIETE IVOIRIENNE BANQUE'}</span></div>
-          <div class="detail-line"><span class="detail-label">N°Guichet :</span> <span class="detail-val">12546</span></div>
           <div class="detail-line"><span class="detail-label">N°compte :</span> <span class="detail-val">${emp.rib || emp.numeroMobileMoney || '00001256895'}</span></div>
-          <div class="detail-line"><span class="detail-label">Code banque :</span> <span class="detail-val">00000</span></div>
         </div>
       </div>
     </div>
