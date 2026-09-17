@@ -424,6 +424,77 @@ export const calculateLegalLeaveDays = (seniorityYears = 0, sexe = 'M', nbEnfant
 };
 
 /**
+ * Calcule dynamiquement l'acquisition et la décrémentation des droits à congés payés d'un employé.
+ * - Incrémentation : 2.2 jours ouvrables par mois de travail effectif depuis dateEmbauche (Art. 25.1 Code du Travail CI).
+ * - Majorations : Ancienneté (+1j à +6j) + Maternité (+2j par enfant < 14ans pour les femmes).
+ * - Décrémentation : Congés approuvés (exclus les dimanches et jours fériés Ivoiriens).
+ * 
+ * @param {object} emp - Données de l'employé (dateEmbauche, sexe, nbEnfants, etc.)
+ * @param {array} leavesList - Liste des congés de l'employé
+ * @returns {object} { acquis, pris, solde, moisTravailles, bonusAnciennete, bonusMaternite }
+ */
+export const calculateEmployeeLeaveBalance = (emp, leavesList = []) => {
+  if (!emp) return { acquis: 26.4, pris: 0, solde: 26.4, moisTravailles: 12, bonusAnciennete: 0, bonusMaternite: 0 };
+
+  const embauche = emp.dateEmbauche ? new Date(emp.dateEmbauche) : new Date();
+  const now = new Date();
+  
+  // Calcul du nombre de mois révolus de travail effectif
+  let moisTravailles = 0;
+  if (!isNaN(embauche.getTime())) {
+    const diffYears = now.getFullYear() - embauche.getFullYear();
+    const diffMonths = now.getMonth() - embauche.getMonth();
+    moisTravailles = Math.max(1, (diffYears * 12) + diffMonths);
+  } else {
+    moisTravailles = 12; // Valeur par défaut 1 an (26.4 jours)
+  }
+
+  // Acquisition mensuelle de base (2.2j ouvrables / mois)
+  const baseAcquis = Math.round(moisTravailles * 2.2 * 10) / 10;
+
+  // Ancienneté en années
+  const seniorityYears = calculateSeniority(emp.dateEmbauche);
+
+  // Majoration Ancienneté (Code du Travail CI Art 25.1)
+  let bonusAnciennete = 0;
+  if (seniorityYears >= 30) bonusAnciennete = 6;
+  else if (seniorityYears >= 25) bonusAnciennete = 3;
+  else if (seniorityYears >= 20) bonusAnciennete = 2;
+  else if (seniorityYears >= 15) bonusAnciennete = 1;
+
+  // Majoration Mère de famille (2j / enfant < 14 ans)
+  let bonusMaternite = 0;
+  if ((emp.sexe === 'F' || emp.sexe === 'Femme') && emp.nbEnfants > 0) {
+    bonusMaternite = (parseInt(emp.nbEnfants) || 0) * 2;
+  }
+
+  const acquis = Math.round((baseAcquis + bonusAnciennete + bonusMaternite) * 10) / 10;
+
+  // Décrémentation : Somme des jours de congés approuvés
+  const empLeaves = Array.isArray(leavesList) ? leavesList.filter(l => (l.empId === emp.id || l.emp_id === emp.id)) : [];
+  const approvedLeaves = empLeaves.filter(l => l.statut === 'Approuvé' || l.statut === 'Validé');
+
+  let pris = 0;
+  approvedLeaves.forEach(l => {
+    const duree = parseFloat(l.duree) || 0;
+    pris += duree;
+  });
+  pris = Math.round(pris * 10) / 10;
+
+  const solde = Math.max(0, Math.round((acquis - pris) * 10) / 10);
+
+  return {
+    moisTravailles,
+    baseAcquis,
+    bonusAnciennete,
+    bonusMaternite,
+    acquis,
+    pris,
+    solde
+  };
+};
+
+/**
  * Calcule l'indemnité légale de licenciement selon la Convention Collective Interprofessionnelle de Côte d'Ivoire (CCI CI).
  * - 1 à 5 ans : 30% du salaire moyen mensuel par année
  * - 6 à 10 ans : 35% du salaire moyen mensuel par année

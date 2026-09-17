@@ -5,7 +5,7 @@ import { useData } from '../context/DataContext';
 import EmployeeAvatar from '../components/EmployeeAvatar';
 import { compressImage } from '../utils/imageCompressor';
 import { LogOut, Palmtree, FileText, Settings, LayoutGrid, Calendar, Bell, ChevronRight, CheckCircle2, Printer, Download, Info, User, Mail, Phone, MapPin, Briefcase, Calendar as CalendarIcon, Shield, Lock, Eye, EyeOff, Save, GraduationCap, AlertTriangle, DollarSign, Plus, Camera, UploadCloud, Trash2, Car, Receipt, Clock, LogIn, XCircle, CheckCircle } from 'lucide-react';
-import { calculateDetailedPaie } from '../utils/payrollCalc';
+import { calculateDetailedPaie, calculateEmployeeLeaveBalance } from '../utils/payrollCalc';
 import { generateAttestationTravail, generateCertificatTravail, generateAttestationSalaire } from '../utils/documentGenerator';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { calculateRealLeaveDays } from '../utils/holidays';
@@ -171,12 +171,11 @@ const EmployeePortal = () => {
   const myLeaves = (data?.leaves || []).filter(l => l.empId === employee?.id);
   const myAttendance = (data?.attendance || []).filter(a => a.empId === employee?.id);
 
-  // Calcul du solde de congés (base: 30 jours annuels - congés pris approuvés)
-  const annualLeaveAllowance = 30;
-  const approvedLeaveDays = myLeaves
-    .filter(l => l.statut === 'Approuvé')
-    .reduce((total, leave) => total + (leave.duree || 0), 0);
-  const leaveBalance = annualLeaveAllowance - approvedLeaveDays;
+  // Calcul du solde de congés (Art. 25.1 Code du Travail CI : 2.2j/mois + bonus - congés pris approuvés)
+  const empLeaveDetails = calculateEmployeeLeaveBalance(employee, myLeaves);
+  const annualLeaveAllowance = empLeaveDetails.acquis;
+  const approvedLeaveDays = empLeaveDetails.pris;
+  const leaveBalance = empLeaveDetails.solde;
 
   // Calcul du taux d'assiduité
   const calculateAttendanceRate = () => {

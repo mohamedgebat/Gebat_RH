@@ -1905,7 +1905,135 @@ app.patch('/api/employees/:id/certificates', authenticateToken, validateIdParam(
         });
 });
 
-// --- GESTION DES CONGÉS ---
+// --- GESTION DES CONGÉS & CALCUL DES SOLDES (INC. & DÉCRÉMENTATION) ---
+
+async function recalculateEmployeeLeaveBalanceDB(empId, companyId = 1) {
+    try {
+        const emp = await queryGet("SELECT * FROM employees WHERE id = ?", [empId]);
+        if (!emp) return;
+
+        const approvedLeaves = await queryAll("SELECT * FROM leaves WHERE empId = ? AND (statut = 'Approuvé' OR statut = 'Validé')", [empId]);
+        
+        const embauche = emp.dateEmbauche ? new Date(emp.dateEmbauche) : new Date();
+        const now = new Date();
+        let moisTravailles = 12;
+        if (!isNaN(embauche.getTime())) {
+            const diffYears = now.getFullYear() - embauche.getFullYear();
+            const diffMonths = now.getMonth() - embauche.getMonth();
+            moisTravailles = Math.max(1, (diffYears * 12) + diffMonths);
+        }
+        const baseAcquis = Math.round(moisTravailles * 2.2 * 10) / 10;
+        
+        let seniorityYears = 0;
+        if (!isNaN(embauche.getTime())) {
+            seniorityYears = now.getFullYear() - embauche.getFullYear();
+            if (now.getMonth() < embauche.getMonth() || (now.getMonth() === embauche.getMonth() && now.getDate() < embauche.getDate())) {
+                seniorityYears--;
+            }
+            seniorityYears = Math.max(0, seniorityYears);
+        }
+
+        let bonusAnciennete = 0;
+        if (seniorityYears >= 30) bonusAnciennete = 6;
+        else if (seniorityYears >= 25) bonusAnciennete = 3;
+        else if (seniorityYears >= 20) bonusAnciennete = 2;
+        else if (seniorityYears >= 15) bonusAnciennete = 1;
+
+        let bonusMaternite = 0;
+        if ((emp.sexe === 'F' || emp.sexe === 'Femme') && emp.nbEnfants > 0) {
+            bonusMaternite = (parseInt(emp.nbEnfants) || 0) * 2;
+        }
+
+        const acquis = Math.round((baseAcquis + bonusAnciennete + bonusMaternite) * 10) / 10;
+
+        let pris = 0;
+        approvedLeaves.forEach(l => {
+            pris += parseFloat(l.duree) || 0;
+        });
+        pris = Math.round(pris * 10) / 10;
+        const solde = Math.max(0, Math.round((acquis - pris) * 10) / 10);
+
+        const year = now.getFullYear();
+        db.run(`INSERT INTO leave_balances (company_id, empId, annee, acquis, pris, solde, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(company_id, empId, annee) DO UPDATE SET
+                acquis = excluded.acquis,
+                pris = excluded.pris,
+                solde = excluded.solde,
+                updated_at = CURRENT_TIMESTAMP`,
+                [companyId, empId, year, acquis, pris, solde]);
+    } catch (err) {
+        console.error('Erreur recalcul des soldes de congés:', err.message);
+    }
+}
+
+app.get('/api/leave-balances', authenticateToken, async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const employees = await queryAll("SELECT * FROM employees WHERE company_id = ? OR company_id = 1", [companyId]);
+        const leaves = await queryAll("SELECT * FROM leaves WHERE (company_id = ? OR company_id = 1) AND (statut = 'Approuvé' OR statut = 'Validé')", [companyId]);
+        
+        const balances = employees.map(emp => {
+            const empLeaves = leaves.filter(l => l.empId === emp.id);
+            
+            const embauche = emp.dateEmbauche ? new Date(emp.dateEmbauche) : new Date();
+            const now = new Date();
+            let moisTravailles = 12;
+            if (!isNaN(embauche.getTime())) {
+                const diffYears = now.getFullYear() - embauche.getFullYear();
+                const diffMonths = now.getMonth() - embauche.getMonth();
+                moisTravailles = Math.max(1, (diffYears * 12) + diffMonths);
+            }
+            const baseAcquis = Math.round(moisTravailles * 2.2 * 10) / 10;
+            
+            let seniorityYears = 0;
+            if (!isNaN(embauche.getTime())) {
+                seniorityYears = now.getFullYear() - embauche.getFullYear();
+                if (now.getMonth() < embauche.getMonth() || (now.getMonth() === embauche.getMonth() && now.getDate() < embauche.getDate())) {
+                    seniorityYears--;
+                }
+                seniorityYears = Math.max(0, seniorityYears);
+            }
+
+            let bonusAnciennete = 0;
+            if (seniorityYears >= 30) bonusAnciennete = 6;
+            else if (seniorityYears >= 25) bonusAnciennete = 3;
+            else if (seniorityYears >= 20) bonusAnciennete = 2;
+            else if (seniorityYears >= 15) bonusAnciennete = 1;
+
+            let bonusMaternite = 0;
+            if ((emp.sexe === 'F' || emp.sexe === 'Femme') && emp.nbEnfants > 0) {
+                bonusMaternite = (parseInt(emp.nbEnfants) || 0) * 2;
+            }
+
+            const acquis = Math.round((baseAcquis + bonusAnciennete + bonusMaternite) * 10) / 10;
+            let pris = 0;
+            empLeaves.forEach(l => { pris += parseFloat(l.duree) || 0; });
+            pris = Math.round(pris * 10) / 10;
+            const solde = Math.max(0, Math.round((acquis - pris) * 10) / 10);
+
+            return {
+                empId: emp.id,
+                matricule: emp.matricule,
+                nom: `${emp.nom} ${emp.prenoms}`,
+                departement: emp.departement,
+                dateEmbauche: emp.dateEmbauche,
+                moisTravailles,
+                baseAcquis,
+                bonusAnciennete,
+                bonusMaternite,
+                acquis,
+                pris,
+                solde
+            };
+        });
+
+        res.json(balances);
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
 app.post('/api/leaves', authenticateToken, (req, res) => {
     const { empId, type, debut, fin, duree, statut, motif } = req.body;
     if (!empId || !type || !debut || !fin) {
@@ -1944,26 +2072,21 @@ app.patch('/api/leaves/:id', authenticateToken, validateIdParam('id'), (req, res
     db.get("SELECT * FROM leaves WHERE id = ?", [leaveId], (err, leave) => {
         if (err || !leave) return sendError(res, 500, err ? err.message : 'Congé non trouvé', 'NOT_FOUND');
 
-        db.run("UPDATE leaves SET statut = ? WHERE id = ?", [statut, leaveId], function(err) {
+        db.run("UPDATE leaves SET statut = ? WHERE id = ?", [statut, leaveId], async function(err) {
             if (err) return sendError(res, 500, err.message, 'DATABASE_ERROR');
             
-            db.get("SELECT * FROM employees WHERE id = ?", [leave.empId], (errEmp, employee) => {
+            db.get("SELECT * FROM employees WHERE id = ?", [leave.empId], async (errEmp, employee) => {
                 if (statut === 'Approuvé') {
                     db.run("UPDATE employees SET statut = 'En congé' WHERE id = ?", [leave.empId]);
-                    // Update leave balance
-                    const year = new Date().getFullYear();
-                    db.run(`INSERT INTO leave_balances (company_id, empId, annee, acquis, pris, solde)
-                            VALUES (?, ?, ?, 26.4, ?, 26.4 - ?)
-                            ON CONFLICT(company_id, empId, annee) DO UPDATE SET
-                            pris = pris + excluded.pris,
-                            solde = solde - excluded.pris,
-                            updated_at = CURRENT_TIMESTAMP`,
-                            [companyId, leave.empId, year, leave.duree || 0, leave.duree || 0]);
+                    await recalculateEmployeeLeaveBalanceDB(leave.empId, companyId);
                     
                     // Notification In-App
                     db.run("INSERT INTO notifications (company_id, empId, title, message, type) VALUES (?, ?, ?, ?, 'success')",
                         [companyId, leave.empId, 'Congé Approuvé', `Votre demande de congé de ${leave.duree} jour(s) a été approuvée.`]);
                 } else if (statut === 'Refusé') {
+                    db.run("UPDATE employees SET statut = 'Actif' WHERE id = ? AND statut = 'En congé'", [leave.empId]);
+                    await recalculateEmployeeLeaveBalanceDB(leave.empId, companyId);
+
                     db.run("INSERT INTO notifications (company_id, empId, title, message, type) VALUES (?, ?, ?, ?, 'warning')",
                         [companyId, leave.empId, 'Congé Refusé', `Votre demande de congé a été refusée par la Direction RH.`]);
                 }

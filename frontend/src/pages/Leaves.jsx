@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useData } from '../context/DataContext';
 import PageHeader from '../components/PageHeader';
-import { Palmtree, Clock, CheckCircle, XCircle, Calendar, AlertTriangle, ListChecks, Filter, Eye, X } from 'lucide-react';
+import { Palmtree, Clock, CheckCircle, XCircle, Calendar, AlertTriangle, ListChecks, Filter, Eye, X, Award, Percent } from 'lucide-react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
+import { calculateEmployeeLeaveBalance } from '../utils/payrollCalc';
 
 const Leaves = () => {
   const { data, loading, refreshData } = useData();
@@ -101,15 +102,18 @@ const Leaves = () => {
       {/* Main Container */}
       <div className="bg-white rounded-[3rem] shadow-2xl border border-ci-border overflow-hidden">
         <div className="px-8 py-6 bg-ci-bg/30 border-b border-ci-border flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div className="flex items-center gap-2">
-                {['En attente', 'Approuvé', 'Refusé', 'Tous'].map(tab => (
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0">
+                {['En attente', 'Approuvé', 'Refusé', 'Soldes Congés', 'Tous'].map(tab => (
                     <button 
                         key={tab}
                         onClick={() => setActiveTab(tab)}
-                        className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                            activeTab === tab ? 'bg-ci-text text-white shadow-lg' : 'bg-white text-ci-muted hover:bg-ci-bg border border-ci-border'
+                        className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 whitespace-nowrap ${
+                            activeTab === tab 
+                              ? (tab === 'Soldes Congés' ? 'bg-amber-500 text-slate-950 shadow-lg font-extrabold' : 'bg-ci-text text-white shadow-lg')
+                              : 'bg-white text-ci-muted hover:bg-ci-bg border border-ci-border'
                         }`}
                     >
+                        {tab === 'Soldes Congés' && <Palmtree size={14} />}
                         {tab}
                     </button>
                 ))}
@@ -123,6 +127,70 @@ const Leaves = () => {
             </button>
         </div>
 
+        {activeTab === 'Soldes Congés' ? (
+          <div className="overflow-x-auto p-4">
+            <div className="mb-6 p-6 bg-amber-50 border border-amber-200 rounded-3xl flex items-center gap-4">
+              <span className="p-3 bg-amber-500 text-slate-950 rounded-2xl"><Palmtree size={24}/></span>
+              <div>
+                <h4 className="font-black text-slate-900 text-sm uppercase">Moteur de Calcul & Soldes des Congés (Code du Travail CI Art 25.1)</h4>
+                <p className="text-xs text-slate-600 font-medium">Incrémentation automatique de 2,2 jours ouvrables par mois effectif + Majorations d'ancienneté & de maternité. Décrémentation en jours ouvrables réels (hors dimanches & jours fériés).</p>
+              </div>
+            </div>
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-slate-50 text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-200">
+                <tr>
+                  <th className="px-6 py-4">Salarié / Matricule</th>
+                  <th className="px-6 py-4">Département</th>
+                  <th className="px-6 py-4">Date Embauche</th>
+                  <th className="px-6 py-4">Ancienneté / Mois</th>
+                  <th className="px-6 py-4 text-center">Jours Acquis (2.2j/m + Bonus)</th>
+                  <th className="px-6 py-4 text-center">Jours Pris (Décomptés)</th>
+                  <th className="px-6 py-4 text-center">Solde Restant</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs font-medium">
+                {(data?.employees || []).filter(e => e.statut !== 'Inactif').map(emp => {
+                  const balance = calculateEmployeeLeaveBalance(emp, data?.leaves || []);
+                  return (
+                    <tr key={emp.id} className="hover:bg-slate-50/80 transition-all">
+                      <td className="px-6 py-4">
+                        <p className="font-black text-slate-900">{emp.nom} {emp.prenoms}</p>
+                        <p className="text-[10px] font-mono text-slate-400">{emp.matricule}</p>
+                      </td>
+                      <td className="px-6 py-4 font-bold text-slate-600">{emp.departement || '-'}</td>
+                      <td className="px-6 py-4 font-mono text-slate-600">{emp.dateEmbauche || '-'}</td>
+                      <td className="px-6 py-4 font-mono text-slate-700 font-bold">{balance.moisTravailles} mois</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-mono font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-xl">
+                          +{balance.acquis} j
+                        </span>
+                        {(balance.bonusAnciennete > 0 || balance.bonusMaternite > 0) && (
+                          <span className="block text-[9px] text-emerald-700 font-bold mt-1">
+                            (incl. {balance.bonusAnciennete > 0 ? `+${balance.bonusAnciennete}j anc.` : ''} {balance.bonusMaternite > 0 ? `+${balance.bonusMaternite}j mat.` : ''})
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="font-mono font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-xl">
+                          -{balance.pris} j
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className={`font-mono font-black px-4 py-1.5 rounded-2xl text-xs ${
+                          balance.solde > 10 ? 'bg-emerald-500 text-white shadow-sm' :
+                          balance.solde > 0 ? 'bg-amber-500 text-slate-950 font-bold' :
+                          'bg-rose-500 text-white'
+                        }`}>
+                          {balance.solde} jours
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
         <div className="overflow-x-auto">
             <table className="w-full">
                 <thead className="bg-ci-bg/50 text-[10px] font-black uppercase tracking-widest text-ci-muted">
@@ -215,6 +283,7 @@ const Leaves = () => {
                 </div>
             )}
         </div>
+        )}
       </div>
 
       {/* Modal Détails Congé */}
