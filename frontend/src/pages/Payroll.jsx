@@ -16,7 +16,7 @@ const Payroll = () => {
   const { data, loading, refreshData } = useData();
   const [selectedMonth, setSelectedMonth] = useState('Juin 2026');
   const [selectedEmpForPayslip, setSelectedEmpForPayslip] = useState(null);
-  const [activeTab, setActiveTab] = useState('journal'); // 'journal', 'sev', 'projects', 'advances', 'declarations', 'export'
+  const [activeTab, setActiveTab] = useState('journal'); // 'journal', 'sev', 'projects', 'advances', 'declarations', 'export', 'settings'
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showAllocationModal, setShowAllocationModal] = useState(false);
@@ -29,9 +29,74 @@ const Payroll = () => {
   const [monthlyVariables, setMonthlyVariables] = useState({});
   const [isSavingVariables, setIsSavingVariables] = useState(false);
 
+  // Paramétrage SaaS & Moteur de Rubriques Sage 100c
+  const [payrollSettings, setPayrollSettings] = useState({
+    sector_activity: 'BTP',
+    transport_exonere: 30000,
+    logement_pct: 15,
+    seniority_threshold_years: 2,
+    seniority_pct_per_year: 1.0,
+    cmu_salarial: 1000,
+    cmu_patronal: 1000,
+    cnps_sal_rate: 6.30,
+    cnps_sal_cap: 3375000,
+    cnps_pat_retraite_rate: 7.70,
+    cnps_pat_pf_rate: 5.75,
+    cnps_pat_am_rate: 0.75,
+    cnps_pat_at_rate: 3.00,
+    cnps_pat_cap_pf: 70000,
+    its_patronal_rate: 1.20,
+    its_patronal_expat_rate: 12.00,
+    ta_rate: 0.40,
+    fdfp_rate: 0.60
+  });
+  const [rubriquesConfigList, setRubriquesConfigList] = useState([]);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
   useEffect(() => {
     fetchMonthlyVariables();
+    fetchPayrollSettings();
   }, [selectedMonth]);
+
+  const fetchPayrollSettings = async () => {
+    try {
+      const [setsRes, rubsRes] = await Promise.all([
+        axios.get('/api/payroll/settings'),
+        axios.get('/api/payroll/rubriques-config')
+      ]);
+      if (setsRes.data && Object.keys(setsRes.data).length > 0) {
+        setPayrollSettings(setsRes.data);
+      }
+      if (rubsRes.data && Array.isArray(rubsRes.data)) {
+        setRubriquesConfigList(rubsRes.data);
+      }
+    } catch (err) {
+      console.warn("Impossible de charger les paramètres de paie:", err.message);
+    }
+  };
+
+  const handleSavePayrollSettings = async () => {
+    setIsSavingSettings(true);
+    try {
+      await Promise.all([
+        axios.put('/api/payroll/settings', payrollSettings),
+        axios.put('/api/payroll/rubriques-config', { rubriques: rubriquesConfigList })
+      ]);
+      alert("✅ Paramétrage du Plan de Paie & Rubriques Sage enregistré avec succès !");
+    } catch (err) {
+      alert("Erreur lors de l'enregistrement du paramétrage : " + (err.response?.data?.message || err.message));
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const handleToggleRubrique = (code) => {
+    setRubriquesConfigList(prev => prev.map(r => r.code === code ? { ...r, enabled: r.enabled === 1 || r.enabled === true ? 0 : 1 } : r));
+  };
+
+  const handleRubriqueDesignationChange = (code, designation) => {
+    setRubriquesConfigList(prev => prev.map(r => r.code === code ? { ...r, designation } : r));
+  };
 
   const fetchMonthlyVariables = async () => {
     try {
@@ -107,7 +172,7 @@ const Payroll = () => {
               const empAdvances = (data?.advances || []).filter(a => a.empId === emp.id && a.statut === 'Approuvé');
               const advanceTotal = empAdvances.reduce((sum, a) => sum + (a.montant || 0), 0);
               const empVars = monthlyVariables[emp.id] || {};
-              const p = calculateDetailedPaie(emp, advanceTotal, empVars);
+              const p = calculateDetailedPaie(emp, advanceTotal, empVars, payrollSettings, rubriquesConfigList);
               totalMasseNette += p.netAPayer;
               totalMasseBrute += p.brutTotal;
 
@@ -150,7 +215,7 @@ const Payroll = () => {
   const calculatePaie = (emp) => {
     const advanceDeduction = getEmpAdvanceDeduction(emp.id);
     const empVars = monthlyVariables[emp.id] || {};
-    const details = calculateDetailedPaie(emp, advanceDeduction, empVars);
+    const details = calculateDetailedPaie(emp, advanceDeduction, empVars, payrollSettings, rubriquesConfigList);
     return { 
       brut: details.brutTotal, 
       cnpsSalarial: details.cnpsSalarial, 
@@ -495,6 +560,12 @@ const Payroll = () => {
           className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'export' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-900'}`}
         >
           <FileSpreadsheet size={15} /> Exports DISA, Sage & MoMo
+        </button>
+        <button 
+          onClick={() => setActiveTab('settings')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'settings' ? 'bg-amber-500 text-slate-950 shadow-md font-bold' : 'text-slate-500 hover:text-slate-900'}`}
+        >
+          <Sliders size={15} /> ⚙️ Paramétrage Plan de Paie
         </button>
       </div>
 
@@ -1190,6 +1261,298 @@ const Payroll = () => {
                 </p>
                 <p className="text-[10px] text-sky-700 font-bold uppercase">Wave Bulk Payout API</p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: PARAMÉTRAGE DU PLAN DE PAIE & SAAS (SAGE 100c / DGI CI) */}
+      {activeTab === 'settings' && (
+        <div className="space-y-8">
+          {/* Header & Save Action */}
+          <div className="bg-slate-900 text-white p-8 rounded-[2.5rem] shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <div className="flex items-center gap-3">
+                <span className="p-3 bg-amber-500/20 text-amber-400 rounded-2xl"><Sliders size={24} /></span>
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-wider">Paramétrage du Plan de Paie & Rubriques</h3>
+                  <p className="text-xs text-slate-400 font-medium mt-1">Personnalisez les règles de calcul, cotisations sociales, exonérations et rubriques Sage par entreprise.</p>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={handleSavePayrollSettings}
+              disabled={isSavingSettings}
+              className="bg-amber-500 hover:bg-amber-400 text-slate-950 px-6 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg flex items-center gap-2 disabled:opacity-50"
+            >
+              <Save size={16} /> {isSavingSettings ? 'Enregistrement...' : 'Enregistrer la Configuration'}
+            </button>
+          </div>
+
+          {/* Secteur d'activité Selector Cards */}
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-xl space-y-6">
+            <h4 className="font-black text-slate-900 uppercase text-sm tracking-wider">1. Secteur d'Activité de l'Entreprise (Profil Paie)</h4>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+              {[
+                { id: 'BTP', icon: '🏗️', title: 'BTP & Construction', at: 3.0, desc: 'Indemnités chantier, transport 30k, AT 3.0%' },
+                { id: 'SERVICES', icon: '🏢', title: 'Services & Tertiaire', at: 1.5, desc: 'Bureaux, banques, conseil, AT 1.5%' },
+                { id: 'COMMERCE', icon: '🛍️', title: 'Commerce Général', at: 2.0, desc: 'Grande distribution, vente, AT 2.0%' },
+                { id: 'INDUSTRIE', icon: '🏭', title: 'Industrie & Usines', at: 3.5, desc: 'Pénibilité, hygiène, AT 3.5%' },
+                { id: 'TRANSPORT', icon: '🚚', title: 'Transport & Fret', at: 4.0, desc: 'Logistique, risque routier, AT 4.0%' }
+              ].map(sec => (
+                <div
+                  key={sec.id}
+                  onClick={() => setPayrollSettings(prev => ({ ...prev, sector_activity: sec.id, cnps_pat_at_rate: sec.at }))}
+                  className={`p-5 rounded-3xl border-2 cursor-pointer transition-all flex flex-col justify-between space-y-3 ${
+                    payrollSettings.sector_activity === sec.id 
+                      ? 'border-amber-500 bg-amber-50/50 shadow-md ring-2 ring-amber-500/20' 
+                      : 'border-slate-200 bg-slate-50/50 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="text-2xl">{sec.icon}</span>
+                    {payrollSettings.sector_activity === sec.id && (
+                      <span className="p-1 bg-amber-500 text-slate-950 rounded-full"><Check size={12}/></span>
+                    )}
+                  </div>
+                  <div>
+                    <h5 className="font-black text-slate-900 text-xs uppercase">{sec.title}</h5>
+                    <p className="text-[10px] text-slate-500 font-medium mt-1">{sec.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Form Controls for Rates & Exemption Caps */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Indemnités & Exonérations */}
+            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-xl space-y-4">
+              <h4 className="font-black text-slate-900 uppercase text-xs tracking-wider flex items-center gap-2">
+                <Wallet size={16} className="text-amber-500"/> Exonérations & Primes
+              </h4>
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Plafond Exonération Transport (FCFA)</label>
+                  <input
+                    type="number"
+                    value={payrollSettings.transport_exonere}
+                    onChange={e => setPayrollSettings({...payrollSettings, transport_exonere: parseFloat(e.target.value) || 0})}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold outline-none focus:ring-2 focus:ring-amber-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Taux Indemnité Logement (%)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={payrollSettings.logement_pct}
+                    onChange={e => setPayrollSettings({...payrollSettings, logement_pct: parseFloat(e.target.value) || 0})}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold outline-none focus:ring-2 focus:ring-amber-500/20"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Seuil Ancienneté (ans)</label>
+                    <input
+                      type="number"
+                      value={payrollSettings.seniority_threshold_years}
+                      onChange={e => setPayrollSettings({...payrollSettings, seniority_threshold_years: parseInt(e.target.value) || 0})}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold outline-none focus:ring-2 focus:ring-amber-500/20"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Taux Ancienneté / an (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={payrollSettings.seniority_pct_per_year}
+                      onChange={e => setPayrollSettings({...payrollSettings, seniority_pct_per_year: parseFloat(e.target.value) || 0})}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold outline-none focus:ring-2 focus:ring-amber-500/20"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* CNPS & CMU */}
+            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-xl space-y-4">
+              <h4 className="font-black text-slate-900 uppercase text-xs tracking-wider flex items-center gap-2">
+                <ShieldCheck size={16} className="text-emerald-500"/> CNPS & CMU (Côte d'Ivoire)
+              </h4>
+              <div className="space-y-3 text-xs">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">CNPS Salarial (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={payrollSettings.cnps_sal_rate}
+                      onChange={e => setPayrollSettings({...payrollSettings, cnps_sal_rate: parseFloat(e.target.value) || 0})}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">CNPS Patronal (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={payrollSettings.cnps_pat_retraite_rate}
+                      onChange={e => setPayrollSettings({...payrollSettings, cnps_pat_retraite_rate: parseFloat(e.target.value) || 0})}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">CMU Salarial (FCFA)</label>
+                    <input
+                      type="number"
+                      value={payrollSettings.cmu_salarial}
+                      onChange={e => setPayrollSettings({...payrollSettings, cmu_salarial: parseFloat(e.target.value) || 0})}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">CMU Patronal (FCFA)</label>
+                    <input
+                      type="number"
+                      value={payrollSettings.cmu_patronal}
+                      onChange={e => setPayrollSettings({...payrollSettings, cmu_patronal: parseFloat(e.target.value) || 0})}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold outline-none"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">CNPS Accident du Travail AT (%)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={payrollSettings.cnps_pat_at_rate}
+                    onChange={e => setPayrollSettings({...payrollSettings, cnps_pat_at_rate: parseFloat(e.target.value) || 0})}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Impôts DGI Directs */}
+            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-xl space-y-4">
+              <h4 className="font-black text-slate-900 uppercase text-xs tracking-wider flex items-center gap-2">
+                <Building size={16} className="text-orange-500"/> Taxes Patronales DGI
+              </h4>
+              <div className="space-y-3 text-xs">
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">ITS Patronal (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={payrollSettings.its_patronal_rate}
+                      onChange={e => setPayrollSettings({...payrollSettings, its_patronal_rate: parseFloat(e.target.value) || 0})}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">ITS Expat (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={payrollSettings.its_patronal_expat_rate}
+                      onChange={e => setPayrollSettings({...payrollSettings, its_patronal_expat_rate: parseFloat(e.target.value) || 0})}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Taxe Apprentissage TA (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={payrollSettings.ta_rate}
+                      onChange={e => setPayrollSettings({...payrollSettings, ta_rate: parseFloat(e.target.value) || 0})}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">Formation FDFP (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={payrollSettings.fdfp_rate}
+                      onChange={e => setPayrollSettings({...payrollSettings, fdfp_rate: parseFloat(e.target.value) || 0})}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-mono font-bold outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Grille des Rubriques Sage 100c */}
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-xl space-y-6">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+              <div>
+                <h4 className="font-black text-slate-900 uppercase text-base">Catalogue des Rubriques Numérotées (Standard Sage / DGI)</h4>
+                <p className="text-xs text-slate-500 font-medium">Activer, désactiver ou renommer les rubriques sur le bulletin de paie de l'entreprise.</p>
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-200 text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-50/50">
+                    <th className="p-4">Code Sage</th>
+                    <th className="p-4">Intitulé Officiel / Personnalisé</th>
+                    <th className="p-4">Catégorie</th>
+                    <th className="p-4">Assiette / Taux Paramétré</th>
+                    <th className="p-4 text-center">Statut Rubrique</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs font-medium">
+                  {rubriquesConfigList.map((rub) => {
+                    const isEnabled = rub.enabled === 1 || rub.enabled === true;
+                    return (
+                      <tr key={rub.code} className={`hover:bg-slate-50/80 transition-all ${!isEnabled ? 'opacity-50 bg-slate-50/40' : ''}`}>
+                        <td className="p-4 font-mono font-black text-amber-600">{rub.code}</td>
+                        <td className="p-4">
+                          <input
+                            type="text"
+                            value={rub.designation}
+                            onChange={(e) => handleRubriqueDesignationChange(rub.code, e.target.value)}
+                            className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg font-bold text-slate-800 outline-none focus:bg-white focus:ring-2 focus:ring-amber-500/20"
+                          />
+                        </td>
+                        <td className="p-4">
+                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${
+                            rub.category === 'Brut' ? 'bg-emerald-100 text-emerald-800' :
+                            rub.category === 'Cotisation Salariale' ? 'bg-rose-100 text-rose-800' :
+                            rub.category === 'Cotisation Patronale' ? 'bg-sky-100 text-sky-800' :
+                            'bg-slate-100 text-slate-800'
+                          }`}>
+                            {rub.category}
+                          </span>
+                        </td>
+                        <td className="p-4 font-mono text-slate-600">{rub.rate || '-'}</td>
+                        <td className="p-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleToggleRubrique(rub.code)}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all ${
+                              isEnabled 
+                                ? 'bg-emerald-500 text-white shadow-sm' 
+                                : 'bg-slate-200 text-slate-600'
+                            }`}
+                          >
+                            {isEnabled ? 'Actif' : 'Inactif'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

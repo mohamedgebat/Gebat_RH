@@ -2799,8 +2799,138 @@ app.post('/api/attendance/bulk', authenticateToken, async (req, res) => {
 });
 
 // ==========================================
-// API PAIE & VARIABLES SAGE (SEV)
+// API PAIE & PARAMÉTRAGE PLAN DE PAIE SAAS
 // ==========================================
+app.get('/api/payroll/settings', authenticateToken, async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        let row = await queryGet("SELECT * FROM payroll_settings WHERE (company_id = ? OR company_id = 1) ORDER BY company_id DESC LIMIT 1", [companyId]);
+        if (!row) {
+            row = {
+                secteur_activite: 'BTP / Construction',
+                transport_exonere: 30000,
+                logement_pct: 15.0,
+                seniority_threshold: 2,
+                seniority_rate_per_year: 1.0,
+                cmu_salarial: 1000,
+                cmu_patronal: 1000,
+                cnps_sal_rate: 6.30,
+                cnps_pat_retraite_rate: 7.70,
+                cnps_pat_pf_rate: 5.75,
+                cnps_pat_am_rate: 0.75,
+                cnps_pat_at_rate: 3.00,
+                its_pat_rate: 1.20,
+                ta_rate: 0.40,
+                fdfp_rate: 0.60
+            };
+        }
+        res.json(row);
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.put('/api/payroll/settings', authenticateToken, authorizeRoles('admin', 'assistant'), async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const s = req.body;
+
+        await queryRun(`
+            INSERT INTO payroll_settings (
+                company_id, secteur_activite, transport_exonere, logement_pct,
+                seniority_threshold, seniority_rate_per_year, cmu_salarial, cmu_patronal,
+                cnps_sal_rate, cnps_pat_retraite_rate, cnps_pat_pf_rate, cnps_pat_am_rate, cnps_pat_at_rate,
+                its_pat_rate, ta_rate, fdfp_rate, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(company_id) DO UPDATE SET
+                secteur_activite = excluded.secteur_activite,
+                transport_exonere = excluded.transport_exonere,
+                logement_pct = excluded.logement_pct,
+                seniority_threshold = excluded.seniority_threshold,
+                seniority_rate_per_year = excluded.seniority_rate_per_year,
+                cmu_salarial = excluded.cmu_salarial,
+                cmu_patronal = excluded.cmu_patronal,
+                cnps_sal_rate = excluded.cnps_sal_rate,
+                cnps_pat_retraite_rate = excluded.cnps_pat_retraite_rate,
+                cnps_pat_pf_rate = excluded.cnps_pat_pf_rate,
+                cnps_pat_am_rate = excluded.cnps_pat_am_rate,
+                cnps_pat_at_rate = excluded.cnps_pat_at_rate,
+                its_pat_rate = excluded.its_pat_rate,
+                ta_rate = excluded.ta_rate,
+                fdfp_rate = excluded.fdfp_rate,
+                updated_at = CURRENT_TIMESTAMP
+        `, [
+            companyId,
+            s.secteur_activite || 'BTP / Construction',
+            s.transport_exonere !== undefined ? parseFloat(s.transport_exonere) : 30000,
+            s.logement_pct !== undefined ? parseFloat(s.logement_pct) : 15.0,
+            s.seniority_threshold !== undefined ? parseInt(s.seniority_threshold, 10) : 2,
+            s.seniority_rate_per_year !== undefined ? parseFloat(s.seniority_rate_per_year) : 1.0,
+            s.cmu_salarial !== undefined ? parseFloat(s.cmu_salarial) : 1000,
+            s.cmu_patronal !== undefined ? parseFloat(s.cmu_patronal) : 1000,
+            s.cnps_sal_rate !== undefined ? parseFloat(s.cnps_sal_rate) : 6.30,
+            s.cnps_pat_retraite_rate !== undefined ? parseFloat(s.cnps_pat_retraite_rate) : 7.70,
+            s.cnps_pat_pf_rate !== undefined ? parseFloat(s.cnps_pat_pf_rate) : 5.75,
+            s.cnps_pat_am_rate !== undefined ? parseFloat(s.cnps_pat_am_rate) : 0.75,
+            s.cnps_pat_at_rate !== undefined ? parseFloat(s.cnps_pat_at_rate) : 3.00,
+            s.its_pat_rate !== undefined ? parseFloat(s.its_pat_rate) : 1.20,
+            s.ta_rate !== undefined ? parseFloat(s.ta_rate) : 0.40,
+            s.fdfp_rate !== undefined ? parseFloat(s.fdfp_rate) : 0.60
+        ]);
+
+        logAuditAction(req, 'MAJ_PARAMETRES_PAIE', `Mise à jour des paramètres du plan de paie SaaS (${s.secteur_activite})`);
+        res.json({ message: 'Paramètres du plan de paie enregistrés avec succès' });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.get('/api/payroll/rubriques-config', authenticateToken, async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const rows = await queryAll("SELECT * FROM payroll_rubriques_config WHERE (company_id = ? OR company_id = 1) ORDER BY code ASC", [companyId]);
+        res.json(rows);
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.put('/api/payroll/rubriques-config', authenticateToken, authorizeRoles('admin', 'assistant'), async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const { rubriques } = req.body; // Array of rubriques config
+
+        if (!rubriques || !Array.isArray(rubriques)) {
+            return sendError(res, 400, 'Liste des rubriques invalide', 'INVALID_DATA');
+        }
+
+        for (const r of rubriques) {
+            await queryRun(`
+                INSERT INTO payroll_rubriques_config (company_id, code, designation, categorie, is_taxable, is_social, default_rate, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(company_id, code) DO UPDATE SET
+                    designation = excluded.designation,
+                    categorie = excluded.categorie,
+                    is_taxable = excluded.is_taxable,
+                    is_social = excluded.is_social,
+                    default_rate = excluded.default_rate,
+                    is_active = excluded.is_active
+            `, [
+                companyId, r.code, r.designation, r.categorie || 'Gain',
+                r.is_taxable !== undefined ? (r.is_taxable ? 1 : 0) : 1,
+                r.is_social !== undefined ? (r.is_social ? 1 : 0) : 1,
+                r.default_rate !== undefined ? parseFloat(r.default_rate) : null,
+                r.is_active !== undefined ? (r.is_active ? 1 : 0) : 1
+            ]);
+        }
+
+        logAuditAction(req, 'MAJ_RUBRIQUES_PAIE', `Mise à jour de ${rubriques.length} rubriques de paie`);
+        res.json({ message: 'Configuration des rubriques enregistrée avec succès' });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
 app.get('/api/payroll/variables', authenticateToken, async (req, res) => {
     try {
         const companyId = req.company_id || 1;

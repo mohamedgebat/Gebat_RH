@@ -695,6 +695,77 @@ function initSQLiteSchema(sDb) {
             UNIQUE(company_id, emp_id, mois)
         )`);
 
+        sDb.run(`CREATE TABLE IF NOT EXISTS payroll_settings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1 UNIQUE,
+            secteur_activite TEXT DEFAULT 'BTP / Construction',
+            transport_exonere REAL DEFAULT 30000,
+            logement_pct REAL DEFAULT 15.0,
+            seniority_threshold INTEGER DEFAULT 2,
+            seniority_rate_per_year REAL DEFAULT 1.0,
+            cmu_salarial REAL DEFAULT 1000,
+            cmu_patronal REAL DEFAULT 1000,
+            cnps_sal_rate REAL DEFAULT 6.30,
+            cnps_pat_retraite_rate REAL DEFAULT 7.70,
+            cnps_pat_pf_rate REAL DEFAULT 5.75,
+            cnps_pat_am_rate REAL DEFAULT 0.75,
+            cnps_pat_at_rate REAL DEFAULT 3.00,
+            its_pat_rate REAL DEFAULT 1.20,
+            ta_rate REAL DEFAULT 0.40,
+            fdfp_rate REAL DEFAULT 0.60,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id)
+        )`);
+
+        sDb.run(`CREATE TABLE IF NOT EXISTS payroll_rubriques_config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            code TEXT NOT NULL,
+            designation TEXT NOT NULL,
+            categorie TEXT NOT NULL,
+            is_taxable INTEGER DEFAULT 1,
+            is_social INTEGER DEFAULT 1,
+            default_rate REAL,
+            is_active INTEGER DEFAULT 1,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            UNIQUE(company_id, code)
+        )`);
+
+        // Seed default payroll_settings if empty
+        sDb.get("SELECT COUNT(*) as count FROM payroll_settings", (err, row) => {
+            if (!err && (!row || row.count === 0)) {
+                sDb.run(`INSERT INTO payroll_settings (company_id, secteur_activite, transport_exonere, logement_pct, seniority_threshold, seniority_rate_per_year, cmu_salarial, cmu_patronal, cnps_sal_rate, cnps_pat_retraite_rate, cnps_pat_pf_rate, cnps_pat_am_rate, cnps_pat_at_rate, its_pat_rate, ta_rate, fdfp_rate) VALUES (1, 'BTP / Construction', 30000, 15.0, 2, 1.0, 1000, 1000, 6.30, 7.70, 5.75, 0.75, 3.00, 1.20, 0.40, 0.60)`);
+            }
+        });
+
+        // Seed default rubriques in payroll_rubriques_config if empty
+        sDb.get("SELECT COUNT(*) as count FROM payroll_rubriques_config", (err, row) => {
+            if (!err && (!row || row.count === 0)) {
+                sDb.run(`INSERT INTO payroll_rubriques_config (company_id, code, designation, categorie, is_taxable, is_social, default_rate, is_active) VALUES
+                    (1, 'R100', 'SALAIRE DE BASE', 'Gain', 1, 1, NULL, 1),
+                    (1, 'R105', 'ABSENCES NON PAYÉES', 'Retenue', 1, 1, NULL, 1),
+                    (1, 'R120', 'PRIME D''ANCIENNETÉ', 'Gain', 1, 1, 1.0, 1),
+                    (1, 'R130', 'PRIMES SPÉCIFIQUES / SECTEUR', 'Gain', 1, 1, NULL, 1),
+                    (1, 'R135', 'INDEMNITÉ DE RISQUE / TECHNICITÉ', 'Gain', 1, 1, NULL, 1),
+                    (1, 'R140', 'HEURES SUPPLÉMENTAIRES', 'Gain', 1, 1, NULL, 1),
+                    (1, 'R200', 'INDEMNITÉ DE TRANSPORT (EXONÉRÉE)', 'Gain', 0, 0, NULL, 1),
+                    (1, 'R210', 'INDEMNITÉ DE LOGEMENT (15%)', 'Gain', 1, 1, 15.0, 1),
+                    (1, 'R414', 'IMPÔT SALARIAL (ITS NET DGI)', 'Retenue', 0, 0, NULL, 1),
+                    (1, 'R415', 'CMU (COUVERTURE MALADIE UNIVERSELLE)', 'Retenue', 0, 0, NULL, 1),
+                    (1, 'R452', 'CNPS RETRAITE SALARIÉ', 'Retenue', 0, 0, 6.30, 1),
+                    (1, 'R470', 'CNPS RETRAITE PATRONALE', 'Charges Patronales', 0, 0, 7.70, 1),
+                    (1, 'R480', 'CNPS PRESTATIONS FAMILIALES (PF)', 'Charges Patronales', 0, 0, 5.75, 1),
+                    (1, 'R481', 'CNPS ASSURANCE MATERNITÉ', 'Charges Patronales', 0, 0, 0.75, 1),
+                    (1, 'R490', 'CNPS ACCIDENT DU TRAVAIL (AT)', 'Charges Patronales', 0, 0, 3.00, 1),
+                    (1, 'R500', 'ITS PATRONAL DGI', 'Charges Patronales', 0, 0, 1.20, 1),
+                    (1, 'R520', 'TAXE D''APPRENTISSAGE (TA DGI)', 'Charges Patronales', 0, 0, 0.40, 1),
+                    (1, 'R530', 'TAXE FORMATION CONTINUE (FDFP)', 'Charges Patronales', 0, 0, 0.60, 1),
+                    (1, 'R750', 'RETENUE AVANCE SUR SALAIRE', 'Retenue', 0, 0, NULL, 1)
+                `);
+            }
+        });
+
         // Module Ordres de Mission (BTP / Déplacements Chantiers)
         sDb.run(`CREATE TABLE IF NOT EXISTS missions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
