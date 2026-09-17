@@ -2796,6 +2796,97 @@ app.post('/api/attendance/bulk', authenticateToken, async (req, res) => {
         });
     } catch (err) {
         sendError(res, 500, err.message, 'DATABASE_ERROR');
+});
+
+// ==========================================
+// API PAIE & VARIABLES SAGE (SEV)
+// ==========================================
+app.get('/api/payroll/variables', authenticateToken, async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const { mois } = req.query;
+        let sql = `SELECT * FROM payroll_variables WHERE (company_id = ? OR company_id = 1)`;
+        const params = [companyId];
+        if (mois) {
+            sql += ` AND mois = ?`;
+            params.push(mois);
+        }
+        const rows = await queryAll(sql, params);
+        res.json(rows);
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.post('/api/payroll/variables', authenticateToken, authorizeRoles('admin', 'assistant'), async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const { variables, mois } = req.body; // Array of { emp_id, h15, h50, h75, h100, prime_btp, jours_absence }
+        
+        if (!variables || !Array.isArray(variables) || !mois) {
+            return sendError(res, 400, 'Données variables ou mois invalides', 'INVALID_DATA');
+        }
+
+        for (const item of variables) {
+            await queryRun(`
+                INSERT INTO payroll_variables (company_id, emp_id, mois, h15, h50, h75, h100, prime_btp, jours_absence)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(company_id, emp_id, mois) DO UPDATE SET
+                h15 = excluded.h15,
+                h50 = excluded.h50,
+                h75 = excluded.h75,
+                h100 = excluded.h100,
+                prime_btp = excluded.prime_btp,
+                jours_absence = excluded.jours_absence
+            `, [
+                companyId, item.emp_id, mois,
+                item.h15 || 0, item.h50 || 0, item.h75 || 0, item.h100 || 0,
+                item.prime_btp || 0, item.jours_absence || 0
+            ]);
+        }
+
+        logAuditAction(req, 'MAJ_VARIABLES_PAIE', `Saisie des variables de paie SEV pour ${mois} (${variables.length} employés)`);
+        res.json({ message: `Variables de paie pour ${mois} enregistrées avec succès` });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
+    }
+});
+
+app.post('/api/payroll/close', authenticateToken, authorizeRoles('admin', 'assistant'), async (req, res) => {
+    try {
+        const companyId = req.company_id || 1;
+        const { periode, masseNette, masseBrute, nbEmployes, records } = req.body;
+
+        if (!periode) {
+            return sendError(res, 400, 'Période obligatoire', 'MISSING_FIELDS');
+        }
+
+        const dateCloture = new Date().toISOString().split('T')[0];
+
+        const historyResult = await queryRun(`
+            INSERT INTO payroll_history (company_id, periode, dateCloture, masseNette, masseBrute, nbEmployes)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `, [companyId, periode, dateCloture, masseNette || 0, masseBrute || 0, nbEmployes || 0]);
+
+        const historyId = historyResult.lastID;
+
+        if (records && Array.isArray(records)) {
+            for (const r of records) {
+                await queryRun(`
+                    INSERT INTO payroll_records (company_id, history_id, periode, empId, matricule, nom, departement, poste, baseSalary, brutTotal, itsNet, cnpsSalarial, cmuSalarial, netAPayer, chargesPatronales, dateCloture)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                `, [
+                    companyId, historyId, periode, r.empId, r.matricule, r.nom, r.departement, r.poste,
+                    r.baseSalary || 0, r.brutTotal || 0, r.itsNet || 0, r.cnpsSalarial || 0, r.cmuSalarial || 0,
+                    r.netAPayer || 0, r.chargesPatronales || 0, dateCloture
+                ]);
+            }
+        }
+
+        logAuditAction(req, 'CLOTURE_PAIE', `Clôture officielle de la paie pour ${periode} (${nbEmployes} salariés)`);
+        res.json({ message: `La paie de la période ${periode} a été clôturée avec succès` });
+    } catch (err) {
+        sendError(res, 500, err.message, 'DATABASE_ERROR');
     }
 });
 

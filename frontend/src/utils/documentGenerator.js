@@ -1500,10 +1500,25 @@ export const generateOfficialCIVBulletin = (emp, payslipDetails, company, select
         </tr>
       </thead>
       <tbody>
+        ${(payslipDetails.rubriques && payslipDetails.rubriques.length > 0) ? 
+          payslipDetails.rubriques.map(r => `
+          <tr class="${r.isTotal ? 'bold-row' : ''}">
+            <td class="cell-center">${r.code ? r.code.replace('R', '') : ''}</td>
+            <td><strong>${r.designation}</strong></td>
+            <td class="cell-center">${r.nombre ? formatTaux(r.nombre) : ''}</td>
+            <td class="cell-num">${formatNum(r.base)}</td>
+            <td class="cell-num">${formatNum(r.gain)}</td>
+            <td class="cell-num" style="${r.code === 'R750' ? 'color: #dc2626;' : ''}">${formatNum(r.retenue)}</td>
+            <td class="cell-center">${r.tauxPatronal ? formatTaux(r.tauxPatronal) : (r.tauxSalarial ? formatTaux(r.tauxSalarial) : '')}</td>
+            <td class="cell-num">${formatNum(r.patronal)}</td>
+            <td class="cell-num"></td>
+          </tr>
+          `).join('')
+          : `
         <tr>
-          <td class="cell-center">10</td>
+          <td class="cell-center">100</td>
           <td>SALAIRE DE BASE</td>
-          <td class="cell-center"></td>
+          <td class="cell-center">173,33</td>
           <td class="cell-num">${formatNum(base)}</td>
           <td class="cell-num">${formatNum(base)}</td>
           <td class="cell-num"></td>
@@ -1513,7 +1528,7 @@ export const generateOfficialCIVBulletin = (emp, payslipDetails, company, select
         </tr>
         ${sursalaire > 0 ? `
         <tr>
-          <td class="cell-center">20</td>
+          <td class="cell-center">110</td>
           <td>SURSALAIRE</td>
           <td class="cell-center"></td>
           <td class="cell-num">${formatNum(sursalaire)}</td>
@@ -1525,7 +1540,7 @@ export const generateOfficialCIVBulletin = (emp, payslipDetails, company, select
         </tr>` : ''}
         ${primeAnc > 0 ? `
         <tr>
-          <td class="cell-center">30</td>
+          <td class="cell-center">120</td>
           <td>PRIME D'ANCIENNETE</td>
           <td class="cell-center"></td>
           <td class="cell-num">${formatNum(base)}</td>
@@ -1537,7 +1552,7 @@ export const generateOfficialCIVBulletin = (emp, payslipDetails, company, select
         </tr>` : ''}
         ${logement > 0 ? `
         <tr>
-          <td class="cell-center">40</td>
+          <td class="cell-center">210</td>
           <td>INDEMNITE DE LOGEMENT (15%)</td>
           <td class="cell-center"></td>
           <td class="cell-num">${formatNum(base)}</td>
@@ -1549,8 +1564,8 @@ export const generateOfficialCIVBulletin = (emp, payslipDetails, company, select
         </tr>` : ''}
         ${risque > 0 ? `
         <tr>
-          <td class="cell-center">50</td>
-          <td>INDEMNITE DE RISQUE</td>
+          <td class="cell-center">135</td>
+          <td>INDEMNITE DE RISQUE BTP</td>
           <td class="cell-center"></td>
           <td class="cell-num">${formatNum(risque)}</td>
           <td class="cell-num">${formatNum(risque)}</td>
@@ -1561,8 +1576,8 @@ export const generateOfficialCIVBulletin = (emp, payslipDetails, company, select
         </tr>` : ''}
 
         <tr class="bold-row">
-          <td class="cell-center"></td>
-          <td><strong>Total Brut</strong></td>
+          <td class="cell-center">300</td>
+          <td><strong>TOTAL SALAIRE BRUT</strong></td>
           <td class="cell-center"></td>
           <td class="cell-num"><strong>${formatNum(brutImposable)}</strong></td>
           <td class="cell-num"><strong>${formatNum(brutTotal)}</strong></td>
@@ -1587,12 +1602,12 @@ export const generateOfficialCIVBulletin = (emp, payslipDetails, company, select
           <td class="cell-center">415</td>
           <td>CMU (COUVERTURE MALADIE UNIVERSELLE)</td>
           <td class="cell-center"></td>
+          <td class="cell-num">1 000</td>
           <td class="cell-num"></td>
-          <td class="cell-num"></td>
-          <td class="cell-num">500</td>
+          <td class="cell-num">1 000</td>
           <td class="cell-center"></td>
           <td class="cell-num"></td>
-          <td class="cell-num">500</td>
+          <td class="cell-num">1 000</td>
         </tr>
         <tr>
           <td class="cell-center">452</td>
@@ -1620,7 +1635,7 @@ export const generateOfficialCIVBulletin = (emp, payslipDetails, company, select
           <td class="cell-center">480</td>
           <td>PRESTATION FAMILIALE (PF)</td>
           <td class="cell-center"></td>
-          <td class="cell-num">75 000</td>
+          <td class="cell-num">70 000</td>
           <td class="cell-center"></td>
           <td class="cell-num"></td>
           <td class="cell-center">5,75</td>
@@ -1631,7 +1646,7 @@ export const generateOfficialCIVBulletin = (emp, payslipDetails, company, select
           <td class="cell-center">481</td>
           <td>ASSURANCE MATERNITE</td>
           <td class="cell-center"></td>
-          <td class="cell-num">75 000</td>
+          <td class="cell-num">70 000</td>
           <td class="cell-center">0,00</td>
           <td class="cell-num">0</td>
           <td class="cell-center">0,75</td>
@@ -1642,7 +1657,7 @@ export const generateOfficialCIVBulletin = (emp, payslipDetails, company, select
           <td class="cell-center">490</td>
           <td>ACCIDENT DE TRAVAIL (AT)</td>
           <td class="cell-center"></td>
-          <td class="cell-num">75 000</td>
+          <td class="cell-num">70 000</td>
           <td class="cell-center"></td>
           <td class="cell-num"></td>
           <td class="cell-center">3,00</td>
@@ -1696,7 +1711,7 @@ export const generateOfficialCIVBulletin = (emp, payslipDetails, company, select
         </tr>
 
         <tr>
-          <td class="cell-center">708</td>
+          <td class="cell-center">200</td>
           <td>PRIME DE TRANSPORT (EXONÉRÉE)</td>
           <td class="cell-center"></td>
           <td class="cell-num">${formatNum(transport)}</td>
@@ -1729,6 +1744,7 @@ export const generateOfficialCIVBulletin = (emp, payslipDetails, company, select
           <td class="cell-num"></td>
           <td class="cell-num"></td>
         </tr>
+        `}
       </tbody>
     </table>
 

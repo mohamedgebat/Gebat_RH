@@ -678,6 +678,23 @@ function initSQLiteSchema(sDb) {
             FOREIGN KEY(project_id) REFERENCES projects(id)
         )`);
 
+        sDb.run(`CREATE TABLE IF NOT EXISTS payroll_variables (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            company_id INTEGER DEFAULT 1,
+            emp_id INTEGER NOT NULL,
+            mois TEXT NOT NULL,
+            h15 REAL DEFAULT 0,
+            h50 REAL DEFAULT 0,
+            h75 REAL DEFAULT 0,
+            h100 REAL DEFAULT 0,
+            prime_btp REAL DEFAULT 0,
+            jours_absence REAL DEFAULT 0,
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(company_id) REFERENCES companies(id),
+            FOREIGN KEY(emp_id) REFERENCES employees(id),
+            UNIQUE(company_id, emp_id, mois)
+        )`);
+
         // Module Ordres de Mission (BTP / Déplacements Chantiers)
         sDb.run(`CREATE TABLE IF NOT EXISTS missions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -103,42 +103,67 @@ export const calculateITSBrut = (salaireBrutImposable) => {
  * @param {number} advanceDeduction - Montant des avances ou retenues à déduire ce mois
  * @returns {object} Éléments détaillés de paie
  */
-export const calculateDetailedPaie = (emp, advanceDeduction = 0) => {
+/**
+ * Calcule tous les éléments de la fiche de paie d'un employé selon le Moteur de Rubriques Sage 100c.
+ * @param {object} emp - Employé avec ses informations de salaire et familiales
+ * @param {number} advanceDeduction - Montant des avances ou retenues à déduire ce mois
+ * @param {object} variables - Éléments variables du mois (heures supp, primes, absences)
+ * @returns {object} Éléments détaillés de paie avec tableau de rubriques Sage
+ */
+export const calculateDetailedPaie = (emp, advanceDeduction = 0, variables = {}) => {
   const base = emp.salaireBase || 0;
   
-  // 1. Prime d'Ancienneté (CCI Côte d'Ivoire : 1% par an après 2 ans)
+  // Éléments variables mensuels
+  const h15 = parseFloat(variables.h15) || 0;
+  const h50 = parseFloat(variables.h50) || 0;
+  const h75 = parseFloat(variables.h75) || 0;
+  const h100 = parseFloat(variables.h100) || 0;
+  const primeBtp = parseFloat(variables.primeBtp || variables.prime_btp) || 0;
+  const joursAbsence = parseFloat(variables.joursAbsence || variables.jours_absence) || 0;
+
+  // 1. Déduction Absences non payées
+  const retenueAbsence = joursAbsence > 0 ? Math.round((base / 30) * joursAbsence) : 0;
+  const baseApresAbsence = Math.max(0, base - retenueAbsence);
+
+  // 2. Heures Supplémentaires
+  const overtimeDetails = calculateOvertimePay(base, h15, h50, h75, h100);
+
+  // 3. Prime d'Ancienneté (CCI Côte d'Ivoire : 1% par an après 2 ans)
   const seniorityYears = calculateSeniority(emp.dateEmbauche);
   const primeAnc = seniorityYears >= 2 ? Math.round(base * (seniorityYears / 100)) : 0;
   
-  // 2. Indemnités
+  // 4. Indemnités et Primes
   const transport = 30000; // Indemnité de transport obligatoire (Abidjan)
   const logement = Math.round(base * 0.15); // Indemnité de logement standard (15%)
   const risque = (emp.departement === 'Sécurité' || emp.departement === 'BTP') ? 25000 : 0;
   
-  // 3. Salaire Brut Total
-  const brutTotal = base + primeAnc + transport + logement + risque;
+  // 5. Salaire Brut Total
+  const brutTotal = baseApresAbsence + overtimeDetails.totalPay + primeAnc + primeBtp + transport + logement + risque;
   
   // Exemption Transport en Côte d'Ivoire (non imposable & non cotisable jusqu'à 30 000 FCFA)
   const transportExempte = Math.min(transport, 30000);
   
-  // 4. Assiette Fiscale et Sociale (Salaire Brut Imposable)
-  const brutImposable = brutTotal - transportExempte;
+  // 6. Assiette Fiscale et Sociale (Salaire Brut Imposable)
+  const brutImposable = Math.max(0, brutTotal - transportExempte);
   
-  // 5. CNPS Salariale (6.3% Retraite, Plafond mensuel de 3 375 000 FCFA depuis 2023)
+  // 7. CNPS Salariale (6.3% Retraite, Plafond mensuel de 3 375 000 FCFA depuis 2023)
   const cnpsBase = Math.min(brutImposable, 3375000);
   const cnpsSalarial = Math.round(cnpsBase * 0.063);
+  const cmuSalarial = 1000; // CMU Salariale forfaitaire 1 000 FCFA
+  const cmuPatronal = 1000; // CMU Patronale forfaitaire 1 000 FCFA
   
-  // 6. CNPS Patronale
+  // 8. CNPS Patronale
   // - Retraite Régime Général : 7.7% (plafond 3 375 000 FCFA)
   // - Prestations Familiales : 5.75% (plafond 70 000 FCFA)
-  // - Accidents du Travail : 3% (plafond 70 000 FCFA, taux standard moyen)
+  // - Assurance Maternité : 0.75% (plafond 70 000 FCFA)
+  // - Accidents du Travail : 3% (plafond 70 000 FCFA, taux standard BTP)
   const cnpsPatronalRetraite = cnpsBase * 0.077;
   const cnpsPatronalPF = Math.min(brutImposable, 70000) * 0.0575;
+  const cnpsPatronalAM = Math.min(brutImposable, 70000) * 0.0075;
   const cnpsPatronalAT = Math.min(brutImposable, 70000) * 0.03;
-  const cnpsPatronal = Math.round(cnpsPatronalRetraite + cnpsPatronalPF + cnpsPatronalAT);
+  const cnpsPatronal = Math.round(cnpsPatronalRetraite + cnpsPatronalPF + cnpsPatronalAM + cnpsPatronalAT);
   
-  // 7. Taxes Patronales Directes (DGI Côte d'Ivoire)
-  // - ITS Patronal: 1.2% pour les ivoiriens, 12% pour les expatriés
+  // 9. Taxes Patronales Directes (DGI Côte d'Ivoire)
   const isExpat = emp.nationalite === 'Expatrié';
   const tauxItsPatronal = isExpat ? 0.12 : 0.012;
   const itsPatronal = Math.round(brutImposable * tauxItsPatronal);
@@ -146,20 +171,82 @@ export const calculateDetailedPaie = (emp, advanceDeduction = 0) => {
   const fdfp = Math.round(brutImposable * 0.006); // FDFP 0.6%
   const totalTaxesPatronales = itsPatronal + taxeApprentissage + fdfp;
   
-  // 8. Impôts sur Salaires (ITS Salarial 2024)
+  // 10. Impôts sur Salaires (ITS Salarial 2024)
   const itsBrut = calculateITSBrut(brutImposable);
   const parts = calculateParts(emp.situationMatrimoniale, emp.nbEnfants);
   const ricf = calculateRICF(parts);
   const itsNet = Math.max(0, itsBrut - ricf);
   
-  // 9. Salaire Net à Payer (déduction de l'avance sur salaire)
+  // 11. Retenues Avances & Prêts
   const avanceSurSalaire = Math.max(0, Math.round(advanceDeduction));
-  const netAPayer = Math.max(0, brutTotal - cnpsSalarial - itsNet - avanceSurSalaire);
+
+  // 12. Net à Payer
+  const totalRetenuesSalariales = cnpsSalarial + cmuSalarial + itsNet + avanceSurSalaire;
+  const netAPayer = Math.max(0, brutTotal - totalRetenuesSalariales);
+
+  // --- CONSTRUCTION DE LA GRILLE DES RUBRIQUES DU PLAN DE PAIE SAGE 100c ---
+  const rubriques = [];
+
+  rubriques.push({ code: 'R100', designation: 'SALAIRE DE BASE', nombre: 173.33, base, tauxSalarial: null, gain: base, retenue: null, tauxPatronal: null, patronal: null });
+
+  if (retenueAbsence > 0) {
+    rubriques.push({ code: 'R105', designation: `ABSENCES NON PAYÉES (${joursAbsence} j)`, nombre: joursAbsence, base, tauxSalarial: null, gain: null, retenue: retenueAbsence, tauxPatronal: null, patronal: null });
+  }
+
+  if (overtimeDetails.totalPay > 0) {
+    if (h15 > 0) rubriques.push({ code: 'R141', designation: 'HEURES SUPP. 15%', nombre: h15, base: overtimeDetails.tauxHoraire, tauxSalarial: 115, gain: overtimeDetails.pay15, retenue: null, tauxPatronal: null, patronal: null });
+    if (h50 > 0) rubriques.push({ code: 'R142', designation: 'HEURES SUPP. 50%', nombre: h50, base: overtimeDetails.tauxHoraire, tauxSalarial: 150, gain: overtimeDetails.pay50, retenue: null, tauxPatronal: null, patronal: null });
+    if (h75 > 0) rubriques.push({ code: 'R143', designation: 'HEURES SUPP. 75%', nombre: h75, base: overtimeDetails.tauxHoraire, tauxSalarial: 175, gain: overtimeDetails.pay75, retenue: null, tauxPatronal: null, patronal: null });
+    if (h100 > 0) rubriques.push({ code: 'R144', designation: 'HEURES SUPP. 100%', nombre: h100, base: overtimeDetails.tauxHoraire, tauxSalarial: 200, gain: overtimeDetails.pay100, retenue: null, tauxPatronal: null, patronal: null });
+  }
+
+  if (primeAnc > 0) {
+    rubriques.push({ code: 'R120', designation: "PRIME D'ANCIENNETÉ", nombre: seniorityYears, base, tauxSalarial: seniorityYears, gain: primeAnc, retenue: null, tauxPatronal: null, patronal: null });
+  }
+
+  if (primeBtp > 0) {
+    rubriques.push({ code: 'R130', designation: 'PRIMES CHANTIER BTP / PANIER', nombre: null, base: primeBtp, tauxSalarial: null, gain: primeBtp, retenue: null, tauxPatronal: null, patronal: null });
+  }
+
+  if (logement > 0) {
+    rubriques.push({ code: 'R210', designation: 'INDEMNITÉ DE LOGEMENT (15%)', nombre: null, base, tauxSalarial: 15, gain: logement, retenue: null, tauxPatronal: null, patronal: null });
+  }
+
+  if (risque > 0) {
+    rubriques.push({ code: 'R135', designation: 'INDEMNITÉ DE RISQUE BTP', nombre: null, base: risque, tauxSalarial: null, gain: risque, retenue: null, tauxPatronal: null, patronal: null });
+  }
+
+  rubriques.push({ code: 'R200', designation: 'INDEMNITÉ DE TRANSPORT (EXONÉRÉE)', nombre: null, base: transport, tauxSalarial: null, gain: transport, retenue: null, tauxPatronal: null, patronal: null });
+
+  // Totaux Bruts
+  rubriques.push({ code: 'R300', designation: 'TOTAL SALAIRE BRUT', nombre: null, base: brutTotal, tauxSalarial: null, gain: brutTotal, retenue: null, tauxPatronal: null, patronal: null, isTotal: true });
+
+  // Retenues Fiscales & Sociales Salariales
+  rubriques.push({ code: 'R414', designation: 'IMPÔT SALARIAL (ITS NET DGI)', nombre: null, base: brutImposable, tauxSalarial: null, gain: null, retenue: itsNet, tauxPatronal: null, patronal: null });
+  rubriques.push({ code: 'R415', designation: 'CMU (COUVERTURE MALADIE UNIVERSELLE)', nombre: null, base: 1000, tauxSalarial: null, gain: null, retenue: cmuSalarial, tauxPatronal: null, patronal: cmuPatronal });
+  rubriques.push({ code: 'R452', designation: 'CNPS RETRAITE SALARIÉ', nombre: null, base: cnpsBase, tauxSalarial: 6.30, gain: null, retenue: cnpsSalarial, tauxPatronal: null, patronal: null });
+
+  // Cotisations Patronales
+  rubriques.push({ code: 'R470', designation: 'CNPS RETRAITE PATRONALE', nombre: null, base: cnpsBase, tauxSalarial: null, gain: null, retenue: null, tauxPatronal: 7.70, patronal: Math.round(cnpsPatronalRetraite) });
+  rubriques.push({ code: 'R480', designation: 'CNPS PRESTATIONS FAMILIALES (PF)', nombre: null, base: Math.min(brutImposable, 70000), tauxSalarial: null, gain: null, retenue: null, tauxPatronal: 5.75, patronal: Math.round(cnpsPatronalPF) });
+  rubriques.push({ code: 'R481', designation: 'CNPS ASSURANCE MATERNITÉ', nombre: null, base: Math.min(brutImposable, 70000), tauxSalarial: null, gain: null, retenue: null, tauxPatronal: 0.75, patronal: Math.round(cnpsPatronalAM) });
+  rubriques.push({ code: 'R490', designation: 'CNPS ACCIDENT DU TRAVAIL (AT BTP)', nombre: null, base: Math.min(brutImposable, 70000), tauxSalarial: null, gain: null, retenue: null, tauxPatronal: 3.00, patronal: Math.round(cnpsPatronalAT) });
+  rubriques.push({ code: 'R500', designation: 'ITS PATRONAL DGI', nombre: null, base: brutImposable, tauxSalarial: null, gain: null, retenue: null, tauxPatronal: tauxItsPatronal * 100, patronal: itsPatronal });
+  rubriques.push({ code: 'R520', designation: "TAXE D'APPRENTISSAGE (TA DGI)", nombre: null, base: brutImposable, tauxSalarial: null, gain: null, retenue: null, tauxPatronal: 0.40, patronal: taxeApprentissage });
+  rubriques.push({ code: 'R530', designation: 'TAXE FORMATION CONTINUE (FDFP)', nombre: null, base: brutImposable, tauxSalarial: null, gain: null, retenue: null, tauxPatronal: 0.60, patronal: fdfp });
+
+  if (avanceSurSalaire > 0) {
+    rubriques.push({ code: 'R750', designation: 'RETENUE AVANCE SUR SALAIRE', nombre: null, base: avanceSurSalaire, tauxSalarial: null, gain: null, retenue: avanceSurSalaire, tauxPatronal: null, patronal: null });
+  }
 
   return {
     base,
     seniorityYears,
     primeAnc,
+    primeBtp,
+    joursAbsence,
+    retenueAbsence,
+    overtimeDetails,
     transport,
     transportExempte,
     logement,
@@ -168,10 +255,13 @@ export const calculateDetailedPaie = (emp, advanceDeduction = 0) => {
     brutImposable,
     cnpsBase,
     cnpsSalarial,
+    cmuSalarial,
+    cmuPatronal,
     cnpsPatronal,
     cnpsPatronalDetails: {
       retraite: Math.round(cnpsPatronalRetraite),
       prestationsFamiliales: Math.round(cnpsPatronalPF),
+      assuranceMaternite: Math.round(cnpsPatronalAM),
       accidentTravail: Math.round(cnpsPatronalAT)
     },
     taxesPatronalesDetails: {
@@ -186,7 +276,10 @@ export const calculateDetailedPaie = (emp, advanceDeduction = 0) => {
     ricf,
     itsNet,
     avanceSurSalaire,
-    netAPayer
+    totalRetenuesSalariales,
+    totalChargesPatronales: cnpsPatronal + totalTaxesPatronales + cmuPatronal,
+    netAPayer,
+    rubriques
   };
 };
 

@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useData } from '../context/DataContext';
 import PageHeader from '../components/PageHeader';
 import { 
   Calculator, Download, Printer, CheckCircle2, TrendingUp, Info, 
   PieChart, ArrowUpRight, DollarSign, FileText, Smartphone, ShieldCheck, 
   Plus, Check, X, Building, Wallet, HardHat, FileSpreadsheet, Share2, 
-  MessageCircle, Send, AlertTriangle, Layers, UserCheck, Briefcase, Mail
+  MessageCircle, Send, AlertTriangle, Layers, UserCheck, Briefcase, Mail, Sliders, Save
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
@@ -16,7 +16,7 @@ const Payroll = () => {
   const { data, loading, refreshData } = useData();
   const [selectedMonth, setSelectedMonth] = useState('Juin 2026');
   const [selectedEmpForPayslip, setSelectedEmpForPayslip] = useState(null);
-  const [activeTab, setActiveTab] = useState('journal'); // 'journal', 'advances', 'declarations', 'projects', 'export'
+  const [activeTab, setActiveTab] = useState('journal'); // 'journal', 'sev', 'projects', 'advances', 'declarations', 'export'
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showAllocationModal, setShowAllocationModal] = useState(false);
@@ -24,6 +24,77 @@ const Payroll = () => {
   const [newAdvance, setNewAdvance] = useState({ empId: '', montant: '', moisRemboursement: 'Juin 2026', motif: '' });
   const [newProject, setNewProject] = useState({ code: '', nom: '', client: '', site: 'Abidjan', budget_mo: '', chef_chantier: '' });
   const [newAllocation, setNewAllocation] = useState({ emp_id: '', project_id: '', heures_allouees: 173.33, mois: 'Juin 2026' });
+
+  // Variables mensuelles par employé pour la grille Sage (SEV)
+  const [monthlyVariables, setMonthlyVariables] = useState({});
+  const [isSavingVariables, setIsSavingVariables] = useState(false);
+
+  useEffect(() => {
+    fetchMonthlyVariables();
+  }, [selectedMonth]);
+
+  const fetchMonthlyVariables = async () => {
+    try {
+      const res = await axios.get(`/api/payroll/variables?mois=${encodeURIComponent(selectedMonth)}`);
+      if (res.data && Array.isArray(res.data)) {
+        const varsMap = {};
+        res.data.forEach(v => {
+          varsMap[v.emp_id] = {
+            h15: v.h15 || 0,
+            h50: v.h50 || 0,
+            h75: v.h75 || 0,
+            h100: v.h100 || 0,
+            primeBtp: v.prime_btp || 0,
+            joursAbsence: v.jours_absence || 0
+          };
+        });
+        setMonthlyVariables(varsMap);
+      }
+    } catch (err) {
+      console.warn("Impossible de charger les variables mensuelles de paie:", err.message);
+    }
+  };
+
+  const handleVariableChange = (empId, field, value) => {
+    const val = parseFloat(value) || 0;
+    setMonthlyVariables(prev => ({
+      ...prev,
+      [empId]: {
+        ...(prev[empId] || { h15: 0, h50: 0, h75: 0, h100: 0, primeBtp: 0, joursAbsence: 0 }),
+        [field]: val
+      }
+    }));
+  };
+
+  const handleSaveVariables = async () => {
+    setIsSavingVariables(true);
+    try {
+      const activeEmps = (data?.employees || []).filter(e => e.statut === 'Actif');
+      const variablesArray = activeEmps.map(emp => {
+        const v = monthlyVariables[emp.id] || {};
+        return {
+          emp_id: emp.id,
+          h15: v.h15 || 0,
+          h50: v.h50 || 0,
+          h75: v.h75 || 0,
+          h100: v.h100 || 0,
+          prime_btp: v.primeBtp || 0,
+          jours_absence: v.joursAbsence || 0
+        };
+      });
+
+      await axios.post('/api/payroll/variables', {
+        mois: selectedMonth,
+        variables: variablesArray
+      });
+
+      alert(`✅ Grille des variables de paie SEV pour ${selectedMonth} enregistrée avec succès !`);
+    } catch (err) {
+      alert("Erreur lors de l'enregistrement des variables : " + (err.response?.data?.message || err.message));
+    } finally {
+      setIsSavingVariables(false);
+    }
+  };
 
   const handleCloseMonth = async () => {
     if (window.confirm(`Voulez-vous clôturer la paie pour ${selectedMonth} ? Cette action est irréversible.`)) {
@@ -35,7 +106,8 @@ const Payroll = () => {
             const recordsToSave = activeEmps.map(emp => {
               const empAdvances = (data?.advances || []).filter(a => a.empId === emp.id && a.statut === 'Approuvé');
               const advanceTotal = empAdvances.reduce((sum, a) => sum + (a.montant || 0), 0);
-              const p = calculateDetailedPaie(emp, advanceTotal);
+              const empVars = monthlyVariables[emp.id] || {};
+              const p = calculateDetailedPaie(emp, advanceTotal, empVars);
               totalMasseNette += p.netAPayer;
               totalMasseBrute += p.brutTotal;
 
@@ -77,7 +149,8 @@ const Payroll = () => {
 
   const calculatePaie = (emp) => {
     const advanceDeduction = getEmpAdvanceDeduction(emp.id);
-    const details = calculateDetailedPaie(emp, advanceDeduction);
+    const empVars = monthlyVariables[emp.id] || {};
+    const details = calculateDetailedPaie(emp, advanceDeduction, empVars);
     return { 
       brut: details.brutTotal, 
       cnpsSalarial: details.cnpsSalarial, 
@@ -394,6 +467,12 @@ const Payroll = () => {
           <Calculator size={15} /> Journal de Paie
         </button>
         <button 
+          onClick={() => setActiveTab('sev')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'sev' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-900'}`}
+        >
+          <Sliders size={15} /> Saisie des Variables (SEV Sage)
+        </button>
+        <button 
           onClick={() => setActiveTab('projects')}
           className={`px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 whitespace-nowrap ${activeTab === 'projects' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-900'}`}
         >
@@ -529,6 +608,166 @@ const Payroll = () => {
                     )}
                   </tbody>
               </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 1.5: SAISIE DES VARIABLES PAR LOT (SAGE MATRIX INPUT - SEV) */}
+      {activeTab === 'sev' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm">
+            <div>
+              <h3 className="font-black text-slate-800 uppercase text-sm flex items-center gap-2">
+                <Sliders size={18} className="text-amber-500" /> Saisie des Éléments Variables par Lot (SEV Sage 100c)
+              </h3>
+              <p className="text-xs text-slate-500 font-medium mt-0.5">
+                Saisissez les heures supplémentaires, primes BTP et absences pour <strong>{selectedMonth}</strong> sans ouvrir chaque fiche une par une.
+              </p>
+            </div>
+            <button
+              onClick={handleSaveVariables}
+              disabled={isSavingVariables}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-lg flex items-center gap-2"
+            >
+              <Save size={16} /> {isSavingVariables ? 'Enregistrement...' : 'Enregistrer la Grille SEV'}
+            </button>
+          </div>
+
+          <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-200 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs font-medium border-collapse">
+                <thead className="bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest">
+                  <tr>
+                    <th className="px-4 py-4 text-left">Salarié</th>
+                    <th className="px-4 py-4 text-right">Base FCFA</th>
+                    <th className="px-3 py-4 text-center bg-slate-800">Absences (j)</th>
+                    <th className="px-3 py-4 text-center bg-amber-900/60">HS 15% (h)</th>
+                    <th className="px-3 py-4 text-center bg-amber-900/60">HS 50% (h)</th>
+                    <th className="px-3 py-4 text-center bg-amber-900/60">HS 75% (h)</th>
+                    <th className="px-3 py-4 text-center bg-amber-900/60">HS 100% (h)</th>
+                    <th className="px-3 py-4 text-center bg-emerald-900/60">Primes BTP (F)</th>
+                    <th className="px-4 py-4 text-right bg-emerald-950">Net Estimé (FCFA)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {activeEmps.map((emp) => {
+                    const vars = monthlyVariables[emp.id] || { h15: 0, h50: 0, h75: 0, h100: 0, primeBtp: 0, joursAbsence: 0 };
+                    const paie = calculatePaie(emp);
+
+                    return (
+                      <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-4 py-3 border-r border-slate-200">
+                          <p className="font-black text-slate-900 uppercase">{emp.nom} {emp.prenoms}</p>
+                          <p className="text-[10px] font-bold text-slate-400 font-mono">{emp.matricule} • {emp.poste}</p>
+                        </td>
+                        <td className="px-4 py-3 text-right font-mono font-bold text-slate-700 border-r border-slate-200">
+                          {new Intl.NumberFormat('fr-FR').format(emp.salaireBase || 0)}
+                        </td>
+
+                        {/* Absences */}
+                        <td className="px-2 py-2 text-center bg-slate-50 border-r border-slate-200">
+                          <input
+                            type="number"
+                            min="0"
+                            max="30"
+                            step="0.5"
+                            value={vars.joursAbsence || ''}
+                            onChange={(e) => handleVariableChange(emp.id, 'joursAbsence', e.target.value)}
+                            placeholder="0"
+                            className="w-14 text-center font-mono font-bold text-xs p-1.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500/40 outline-none"
+                          />
+                        </td>
+
+                        {/* HS 15% */}
+                        <td className="px-2 py-2 text-center bg-amber-50/40 border-r border-slate-200">
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={vars.h15 || ''}
+                            onChange={(e) => handleVariableChange(emp.id, 'h15', e.target.value)}
+                            placeholder="0"
+                            className="w-14 text-center font-mono font-bold text-xs p-1.5 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500/40 outline-none bg-white"
+                          />
+                        </td>
+
+                        {/* HS 50% */}
+                        <td className="px-2 py-2 text-center bg-amber-50/40 border-r border-slate-200">
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={vars.h50 || ''}
+                            onChange={(e) => handleVariableChange(emp.id, 'h50', e.target.value)}
+                            placeholder="0"
+                            className="w-14 text-center font-mono font-bold text-xs p-1.5 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500/40 outline-none bg-white"
+                          />
+                        </td>
+
+                        {/* HS 75% */}
+                        <td className="px-2 py-2 text-center bg-amber-50/40 border-r border-slate-200">
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={vars.h75 || ''}
+                            onChange={(e) => handleVariableChange(emp.id, 'h75', e.target.value)}
+                            placeholder="0"
+                            className="w-14 text-center font-mono font-bold text-xs p-1.5 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500/40 outline-none bg-white"
+                          />
+                        </td>
+
+                        {/* HS 100% */}
+                        <td className="px-2 py-2 text-center bg-amber-50/40 border-r border-slate-200">
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={vars.h100 || ''}
+                            onChange={(e) => handleVariableChange(emp.id, 'h100', e.target.value)}
+                            placeholder="0"
+                            className="w-14 text-center font-mono font-bold text-xs p-1.5 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500/40 outline-none bg-white"
+                          />
+                        </td>
+
+                        {/* Prime BTP / Panier */}
+                        <td className="px-2 py-2 text-center bg-emerald-50/40 border-r border-slate-200">
+                          <input
+                            type="number"
+                            min="0"
+                            step="1000"
+                            value={vars.primeBtp || ''}
+                            onChange={(e) => handleVariableChange(emp.id, 'primeBtp', e.target.value)}
+                            placeholder="0"
+                            className="w-24 text-right font-mono font-bold text-xs p-1.5 border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-500/40 outline-none bg-white"
+                          />
+                        </td>
+
+                        {/* Net à Payer Estimé */}
+                        <td className="px-4 py-3 text-right bg-emerald-50/60">
+                          <span className="font-mono font-black text-emerald-700 text-sm">
+                            {new Intl.NumberFormat('fr-FR').format(paie.net)} F
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
+              <span className="text-xs font-bold text-slate-500 uppercase">
+                {activeEmps.length} employés configurés pour la paie de {selectedMonth}
+              </span>
+              <button
+                onClick={handleSaveVariables}
+                disabled={isSavingVariables}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md flex items-center gap-2"
+              >
+                <Save size={15} /> Enregistrer la Grille SEV
+              </button>
+            </div>
           </div>
         </div>
       )}
